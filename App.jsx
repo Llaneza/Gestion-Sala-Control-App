@@ -171,7 +171,8 @@ export default function App() {
           <div>
             <div className="no-print" style={{ display: 'flex', justifyContent: 'center', gap: 10, marginBottom: 20, alignItems: 'center', flexWrap: 'wrap' }}>
               <button onClick={() => setMonth(month === 0 ? 11 : month - 1)}>‹</button>
-              <h2 style={{ margin: 0, width: 180, textAlign: 'center' }}>{MONTHS[month]}</h2>
+              {/* CORRECCIÓN AQUÍ: Se añade el activeYear al lado del mes */}
+              <h2 style={{ margin: 0, width: 220, textAlign: 'center' }}>{MONTHS[month]} {activeYear}</h2>
               <button onClick={() => setMonth(month === 11 ? 0 : month + 1)}>›</button>
               <button 
                 onClick={() => { setIsExporting(true); setTimeout(() => { window.print(); setIsExporting(false); }, 500); }} 
@@ -184,7 +185,7 @@ export default function App() {
               const mi = isExporting ? mIdx : month;
               return (
                 <div key={mName} className={isExporting ? "print-break" : ""}>
-                   {isExporting && <h2 style={{ textAlign: 'center', color: '#000' }}>{mName.toUpperCase()} {activeYear}</h2>}
+                   <h2 style={{ textAlign: 'center', color: isExporting ? '#000' : t.title }}>{mName.toUpperCase()} {activeYear}</h2>
                    <div style={{ background: t.card, borderRadius: 12, padding: 10, overflowX: 'auto', border: `1px solid ${t.border}`, marginBottom: 20 }}>
                     <div className="calendar-grid" style={{ display: 'grid', gridTemplateColumns: `150px repeat(${dim(activeYear, mi)}, 1fr)`, gap: 1 }}>
                       <div className="sticky-col" />

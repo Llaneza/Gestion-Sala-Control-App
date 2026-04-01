@@ -145,35 +145,56 @@ export default function App() {
       <style>{`
         @media print { .no-print { display: none !important; } .print-break { page-break-after: always; } body { background: white !important; color: black !important; } }
         
-        /* ESTILOS PC */
+        /* CONTENEDOR PRINCIPAL DEL CALENDARIO */
+        .calendar-container {
+          background: ${t.card}; 
+          border-radius: 12px; 
+          padding: 0; 
+          overflow-x: auto; 
+          border: 1px solid ${t.border}; 
+          margin-bottom: 40px; 
+          box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
+          position: relative;
+        }
+
         .calendar-grid { 
           display: grid; 
           grid-template-columns: 160px repeat(${dim(activeYear, month)}, 1fr); 
-          gap: 1px;
+          gap: 0px;
+          min-width: max-content;
         }
-        .cell-day { height: 35px; display: flex; align-items: center; justify-content: center; border-top: 1px solid ${t.border}; }
 
-        /* ESTILOS MÓVIL (Menos de 768px) */
+        /* COLUMNA FIJA BLINDADA */
+        .sticky-col { 
+          position: sticky; 
+          left: 0; 
+          background: ${t.card} !important; 
+          z-index: 100; 
+          border-right: 2px solid ${t.border} !important; 
+        }
+
+        .cell-day { 
+          height: 38px; 
+          display: flex; 
+          align-items: center; 
+          justify-content: center; 
+          border-top: 1px solid ${t.border};
+          border-right: 1px solid ${t.border === "#1E2D45" ? "#152033" : "#f1f5f9"};
+        }
+
         @media (max-width: 768px) {
           .calendar-grid { 
-            grid-template-columns: 90px repeat(${dim(activeYear, month)}, 40px) !important; 
-            gap: 0 !important; 
+            grid-template-columns: 90px repeat(${dim(activeYear, month)}, 42px) !important; 
           }
           .sticky-col { 
-            position: sticky; 
-            left: 0; 
-            background: ${t.card} !important; 
-            z-index: 10; 
-            border-right: 2px solid ${t.border} !important; 
             box-shadow: 4px 0 8px rgba(0,0,0,0.4);
           }
-          .cell-day { height: 45px !important; font-size: 11px !important; }
+          .cell-day { height: 48px !important; font-size: 11px !important; }
           .nav-btn { padding: 12px 5px !important; font-size: 9px !important; flex: 1; }
-          .header-title { font-size: 12px !important; }
         }
       `}</style>
       
-      <header className="no-print" style={{ background: t.card, padding: "10px 20px", display: 'flex', justifyContent: 'space-between', borderBottom: `1px solid ${t.border}`, alignItems: 'center', position: 'sticky', top: 0, zIndex: 110 }}>
+      <header className="no-print" style={{ background: t.card, padding: "10px 20px", display: 'flex', justifyContent: 'space-between', borderBottom: `1px solid ${t.border}`, alignItems: 'center', position: 'sticky', top: 0, zIndex: 200 }}>
         <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
           <span className="header-title" style={{ fontWeight: 800, color: t.accent, fontSize: 16 }}>SALA DE CONTROL</span>
           <select value={activeYear} onChange={e => setAY(Number(e.target.value))} style={{ background: t.bg, color: t.accent, border: `1px solid ${t.accent}`, borderRadius: 4, padding: '4px 8px', cursor: 'pointer' }}>
@@ -183,7 +204,7 @@ export default function App() {
         <button onClick={() => setSession(null)} style={{ background: '#EF444422', color: '#EF4444', border: 'none', padding: '6px 12px', borderRadius: 4, fontSize: 11, fontWeight: 'bold', cursor: 'pointer' }}>SALIR</button>
       </header>
 
-      <nav className="no-print" style={{ display: 'flex', background: t.card, borderBottom: `1px solid ${t.border}`, position: 'sticky', top: 50, zIndex: 105, justifyContent: 'center' }}>
+      <nav className="no-print" style={{ display: 'flex', background: t.card, borderBottom: `1px solid ${t.border}`, position: 'sticky', top: 48, zIndex: 190, justifyContent: 'center' }}>
         <div style={{ display: 'flex', width: '100%', maxWidth: 800 }}>
           {["calendar", "stats", canEdit && "editor", isAdmin && "config"].filter(Boolean).map(v => (
             <button key={v} className="nav-btn" onClick={() => setView(v)} style={{ padding: '15px 20px', color: view === v ? t.accent : t.sub, background: 'none', border: 'none', cursor: 'pointer', fontWeight: 'bold', borderBottom: view === v ? `3px solid ${t.accent}` : 'none', transition: '0.2s' }}>{v.toUpperCase()}</button>
@@ -214,9 +235,9 @@ export default function App() {
               return (
                 <div key={mName} className={isExporting ? "print-break" : ""}>
                    <h2 style={{ textAlign: 'center', color: isExporting ? '#000' : t.title, fontSize: 20, marginBottom: 15 }}>{mName.toUpperCase()} {activeYear}</h2>
-                   <div style={{ background: t.card, borderRadius: 12, padding: "0", overflowX: 'auto', border: `1px solid ${t.border}`, marginBottom: 40, boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}>
+                   <div className="calendar-container">
                     <div className="calendar-grid">
-                      <div className="sticky-col" style={{ height: 40, background: t.bg }} />
+                      <div className="sticky-col" style={{ height: 40, background: t.bg, borderBottom: `1px solid ${t.border}` }} />
                       {Array.from({ length: dim(activeYear, mi) }).map((_, i) => (
                         <div key={i} className="cell-day" style={{ textAlign: 'center', fontSize: 11, background: t.bg }}>
                           <div>

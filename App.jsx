@@ -143,7 +143,7 @@ export default function App() {
   return (
     <div style={{ minHeight: "100vh", background: t.bg, color: t.text, fontFamily: 'monospace' }}>
       <style>{`
-        @media print { .no-print { display: none !important; } }
+        @media print { .no-print { display: none !important; } .print-break { page-break-after: always; } body { background: white !important; color: black !important; } }
         @media (max-width: 768px) {
           .calendar-grid { grid-template-columns: 100px repeat(${dim(activeYear, month)}, 40px) !important; }
           .sticky-col { position: sticky; left: 0; background: ${t.card}; z-index: 5; border-right: 1px solid ${t.border}; }
@@ -169,35 +169,47 @@ export default function App() {
       <main style={{ padding: 20 }}>
         {view === "calendar" && (
           <div>
-            <div className="no-print" style={{ display: 'flex', justifyContent: 'center', gap: 10, marginBottom: 20, alignItems: 'center' }}>
+            <div className="no-print" style={{ display: 'flex', justifyContent: 'center', gap: 10, marginBottom: 20, alignItems: 'center', flexWrap: 'wrap' }}>
               <button onClick={() => setMonth(month === 0 ? 11 : month - 1)}>‹</button>
               <h2 style={{ margin: 0, width: 180, textAlign: 'center' }}>{MONTHS[month]}</h2>
               <button onClick={() => setMonth(month === 11 ? 0 : month + 1)}>›</button>
-              <button onClick={() => window.print()} style={{ marginLeft: 20, background: t.accent, color: '#000', border: 'none', padding: '5px 10px', borderRadius: 4, fontWeight: 'bold' }}>PDF</button>
+              <button 
+                onClick={() => { setIsExporting(true); setTimeout(() => { window.print(); setIsExporting(false); }, 500); }} 
+                style={{ marginLeft: 20, background: '#6366F1', color: '#fff', border: 'none', padding: '8px 15px', borderRadius: 6, fontWeight: 'bold', cursor: 'pointer' }}>
+                PDF ANUAL
+              </button>
             </div>
             
-            <div style={{ background: t.card, borderRadius: 12, padding: 10, overflowX: 'auto', border: `1px solid ${t.border}` }}>
-              <div className="calendar-grid" style={{ display: 'grid', gridTemplateColumns: `150px repeat(${dim(activeYear, month)}, 1fr)`, gap: 1 }}>
-                <div className="sticky-col" />
-                {Array.from({ length: dim(activeYear, month) }).map((_, i) => (
-                  <div key={i} style={{ textAlign: 'center', fontSize: 10 }}>
-                    <div style={{ color: dow(activeYear, month, i+1) >= 5 ? '#EF4444' : t.sub }}>{DOW_S[dow(activeYear, month, i+1)]}</div>
-                    <div style={{ fontWeight: 'bold' }}>{i+1}</div>
-                  </div>
-                ))}
-                {ops.map(op => (
-                  <div key={op.id} style={{ display: 'contents' }}>
-                    <div className="sticky-col" style={{ padding: '8px 5px', fontSize: 11, borderTop: `1px solid ${t.border}`, display: 'flex', alignItems: 'center', gap: 5 }}>
-                      <Av name={op.name} color={op.color} size={18} /> {op.name}
+            {(isExporting ? MONTHS : [MONTHS[month]]).map((mName, mIdx) => {
+              const mi = isExporting ? mIdx : month;
+              return (
+                <div key={mName} className={isExporting ? "print-break" : ""}>
+                   {isExporting && <h2 style={{ textAlign: 'center', color: '#000' }}>{mName.toUpperCase()} {activeYear}</h2>}
+                   <div style={{ background: t.card, borderRadius: 12, padding: 10, overflowX: 'auto', border: `1px solid ${t.border}`, marginBottom: 20 }}>
+                    <div className="calendar-grid" style={{ display: 'grid', gridTemplateColumns: `150px repeat(${dim(activeYear, mi)}, 1fr)`, gap: 1 }}>
+                      <div className="sticky-col" />
+                      {Array.from({ length: dim(activeYear, mi) }).map((_, i) => (
+                        <div key={i} style={{ textAlign: 'center', fontSize: 10 }}>
+                          <div style={{ color: dow(activeYear, mi, i+1) >= 5 ? '#EF4444' : t.sub }}>{DOW_S[dow(activeYear, mi, i+1)]}</div>
+                          <div style={{ fontWeight: 'bold' }}>{i+1}</div>
+                        </div>
+                      ))}
+                      {ops.map(op => (
+                        <div key={op.id} style={{ display: 'contents' }}>
+                          <div className="sticky-col" style={{ padding: '8px 5px', fontSize: 11, borderTop: `1px solid ${t.border}`, display: 'flex', alignItems: 'center', gap: 5 }}>
+                            <Av name={op.name} color={op.color} size={18} /> {op.name}
+                          </div>
+                          {Array.from({ length: dim(activeYear, mi) }).map((_, i) => {
+                            const a = asgn[mk(activeYear, mi+1, i+1)]?.[op.id];
+                            return <div key={i} style={{ textAlign: 'center', fontSize: 10, borderTop: `1px solid ${t.border}`, lineHeight: '35px' }}>{a || '·'}</div>
+                          })}
+                        </div>
+                      ))}
                     </div>
-                    {Array.from({ length: dim(activeYear, month) }).map((_, i) => {
-                      const a = asgn[mk(activeYear, month+1, i+1)]?.[op.id];
-                      return <div key={i} style={{ textAlign: 'center', fontSize: 10, borderTop: `1px solid ${t.border}`, lineHeight: '35px' }}>{a || '·'}</div>
-                    })}
                   </div>
-                ))}
-              </div>
-            </div>
+                </div>
+              );
+            })}
           </div>
         )}
 
@@ -218,7 +230,14 @@ export default function App() {
         {view === "config" && isAdmin && (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 20 }}>
             <div style={{ background: t.card, padding: 20, borderRadius: 12, border: `1px solid ${t.border}` }}>
-              <h3>Operadores</h3>
+              <h3>Gestión Operadores</h3>
+              <div style={{ display: 'flex', gap: 5, marginBottom: 15 }}>
+                <input id="newOpN" placeholder="Nombre" style={{ flex: 1, padding: 8 }} />
+                <button onClick={() => {
+                  const n = document.getElementById('newOpN').value;
+                  if(n) setOps([...ops, { id: Date.now(), name: n, color: '#'+Math.random().toString(16).slice(2,8), calendar: {} }]);
+                }}>Añadir</button>
+              </div>
               {ops.map(o => (
                 <div key={o.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0' }}>
                   <span>{o.name}</span>
@@ -230,7 +249,7 @@ export default function App() {
             <div style={{ background: t.card, padding: 20, borderRadius: 12, border: `1px solid ${t.border}` }}>
               <h3>Accesos (Admin/Editor)</h3>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: 15 }}>
-                <input id="adU" placeholder="User" style={{ width: '45%' }} />
+                <input id="adU" placeholder="Usuario" style={{ width: '45%' }} />
                 <input id="adP" type="password" placeholder="Pass" style={{ width: '45%' }} />
                 <select id="adR" style={{ width: '45%' }}>
                   <option value="admin">Admin</option>
@@ -239,11 +258,12 @@ export default function App() {
                 <button onClick={() => {
                   const u = document.getElementById('adU').value, p = document.getElementById('adP').value, r = document.getElementById('adR').value;
                   if(u && p) setAdmins([...admins, { user: u, passHash: simpleHash(p), role: r }]);
-                }}>Añadir</button>
+                }} style={{ width: '100%', marginTop: 5 }}>Añadir Acceso</button>
               </div>
               {admins.map(a => (
-                <div key={a.user} style={{ fontSize: 12, padding: '5px 0', borderTop: `1px solid ${t.border}` }}>
-                  {a.user} ({a.role}) {a.role !== 'superadmin' && <button onClick={() => setAdmins(admins.filter(x => x.user !== a.user))}>×</button>}
+                <div key={a.user} style={{ fontSize: 12, padding: '5px 0', borderTop: `1px solid ${t.border}`, display: 'flex', justifyContent: 'space-between' }}>
+                  <span>{a.user} ({a.role})</span>
+                  {a.role !== 'superadmin' && <button onClick={() => setAdmins(admins.filter(x => x.user !== a.user))} style={{ background: 'none', border: 'none', color: '#EF4444' }}>×</button>}
                 </div>
               ))}
             </div>

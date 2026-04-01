@@ -142,46 +142,49 @@ export default function App() {
 
   return (
     <div style={{ minHeight: "100vh", background: t.bg, color: t.text, fontFamily: 'monospace' }}>
-      <header style={{ background: t.card, padding: "10px 20px", display: 'flex', justifyContent: 'space-between', borderBottom: `1px solid ${t.border}` }}>
-        <span style={{ fontWeight: 800, color: t.accent }}>SALA DE CONTROL</span>
+      <header style={{ background: t.card, padding: "10px 20px", display: 'flex', justifyContent: 'space-between', borderBottom: `1px solid ${t.border}`, alignItems: 'center' }}>
+        <span style={{ fontWeight: 800, color: t.accent, fontSize: 18 }}>SALA DE CONTROL</span>
         <div style={{ display: 'flex', gap: 15, alignItems: 'center' }}>
-          <span style={{ fontSize: 10 }}>{session.user} ({session.role})</span>
-          <button onClick={() => setSession(null)} style={{ background: '#EF444422', color: '#EF4444', border: 'none', padding: '4px 8px', borderRadius: 4, cursor: 'pointer' }}>Salir</button>
+          <span style={{ fontSize: 10, color: t.sub }}>{session.user} ({session.role})</span>
+          <button onClick={() => setSession(null)} style={{ background: '#EF444422', color: '#EF4444', border: 'none', padding: '6px 12px', borderRadius: 6, cursor: 'pointer', fontWeight: 'bold' }}>Salir</button>
         </div>
       </header>
 
       <nav style={{ display: 'flex', background: t.card, borderBottom: `1px solid ${t.border}` }}>
         {["calendar", "stats", canEdit && "editor", isAdmin && "config"].filter(Boolean).map(v => (
-          <button key={v} onClick={() => setView(v)} style={{ padding: '12px 20px', background: 'none', border: 'none', color: view === v ? t.accent : t.sub, borderBottom: view === v ? `2px solid ${t.accent}` : 'none', cursor: 'pointer', fontWeight: 'bold' }}>{v.toUpperCase()}</button>
+          <button key={v} onClick={() => setView(v)} style={{ padding: '15px 20px', background: 'none', border: 'none', color: view === v ? t.accent : t.sub, borderBottom: view === v ? `3px solid ${t.accent}` : 'none', cursor: 'pointer', fontWeight: 'bold' }}>
+            {v === "calendar" ? "CALENDARIO" : v === "stats" ? "ESTADÍSTICAS" : v === "editor" ? "EDITOR" : "CONFIG"}
+          </button>
         ))}
       </nav>
 
       <main style={{ padding: 20 }}>
         {view === "calendar" && (
            <div>
-             <div style={{ display: 'flex', justifyContent: 'center', gap: 15, marginBottom: 20, alignItems: 'center' }}>
-               <button onClick={() => setMonth(month === 0 ? 11 : month - 1)}>‹</button>
-               <h2 style={{ color: t.title, margin: 0 }}>{MONTHS[month]} {activeYear}</h2>
-               <button onClick={() => setMonth(month === 11 ? 0 : month + 1)}>›</button>
+             <div style={{ display: 'flex', justifyContent: 'center', gap: 20, marginBottom: 25, alignItems: 'center' }}>
+               <button onClick={() => setMonth(month === 0 ? 11 : month - 1)} style={{ padding: '8px 15px', borderRadius: 6, background: t.card, color: t.text, border: `1px solid ${t.border}`, cursor: 'pointer' }}>‹ Ant</button>
+               <h2 style={{ color: t.title, margin: 0, minWidth: 200, textAlign: 'center' }}>{MONTHS[month]} {activeYear}</h2>
+               <button onClick={() => setMonth(month === 11 ? 0 : month + 1)} style={{ padding: '8px 15px', borderRadius: 6, background: t.card, color: t.text, border: `1px solid ${t.border}`, cursor: 'pointer' }}>Sig ›</button>
              </div>
              <div style={{ background: t.card, borderRadius: 12, padding: 15, border: `1px solid ${t.border}`, overflowX: 'auto' }}>
                <div style={{ display: 'grid', gridTemplateColumns: `150px repeat(${dim(activeYear, month)}, 1fr)`, gap: 1 }}>
                  <div />
                  {Array.from({ length: dim(activeYear, month) }).map((_, i) => (
-                   <div key={i} style={{ textAlign: 'center', fontSize: 9 }}>
+                   <div key={i} style={{ textAlign: 'center', fontSize: 10, paddingBottom: 10 }}>
                      <div style={{ color: dow(activeYear, month, i+1) >= 5 ? '#EF4444' : t.sub }}>{DOW_S[dow(activeYear, month, i+1)]}</div>
                      <div style={{ fontWeight: 'bold', color: t.title }}>{i+1}</div>
                    </div>
                  ))}
                  {ops.map(op => (
                    <div key={op.id} style={{ display: 'contents' }}>
-                     <div style={{ padding: '6px 0', borderTop: `1px solid ${t.border}`, fontSize: 10, display: 'flex', alignItems: 'center', gap: 5 }}>
-                       <Av name={op.name} color={op.color} size={18} />
-                       <span>{op.name}</span>
+                     <div style={{ padding: '8px 0', borderTop: `1px solid ${t.border}`, fontSize: 11, display: 'flex', alignItems: 'center', gap: 8 }}>
+                       <Av name={op.name} color={op.color} size={20} />
+                       <span style={{ fontWeight: 'bold' }}>{op.name}</span>
                      </div>
                      {Array.from({ length: dim(activeYear, month) }).map((_, i) => {
                        const a = asgn[mk(activeYear, month+1, i+1)]?.[op.id];
-                       return <div key={i} style={{ borderTop: `1px solid ${t.border}`, textAlign: 'center', fontSize: 10, lineHeight: '30px' }}>{a || '·'}</div>
+                       const color = a === 'SC' ? '#10B981' : a === 'CA' ? '#3B82F6' : ABSENCE[a]?.color || t.sub;
+                       return <div key={i} style={{ borderTop: `1px solid ${t.border}`, textAlign: 'center', fontSize: 11, lineHeight: '35px', fontWeight: 'bold', color }}>{a === 'SC' ? 'SC' : a || '·'}</div>
                      })}
                    </div>
                  ))}
@@ -191,12 +194,12 @@ export default function App() {
         )}
 
         {view === "stats" && (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 15 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: 20 }}>
             {stats.map(s => (
-              <div key={s.id} style={{ background: t.card, padding: 20, borderRadius: 12, border: `1px solid ${t.border}` }}>
-                <div style={{ fontWeight: 'bold', color: t.title }}>{s.name}</div>
-                <div style={{ fontSize: 24, color: t.accent, fontWeight: 800 }}>{s.sc} SC</div>
-                <div style={{ fontSize: 11, color: t.sub }}>{s.hSC} Horas</div>
+              <div key={s.id} style={{ background: t.card, padding: 25, borderRadius: 12, border: `1px solid ${t.border}` }}>
+                <div style={{ fontWeight: 'bold', color: t.title, fontSize: 18, marginBottom: 10 }}>{s.name}</div>
+                <div style={{ fontSize: 32, color: t.accent, fontWeight: 900 }}>{s.sc} SC</div>
+                <div style={{ fontSize: 14, color: t.sub, marginTop: 5 }}>Equivale a {s.hSC} horas anuales</div>
               </div>
             ))}
           </div>
@@ -213,26 +216,29 @@ function EditorComponent({ ops, setOps, activeYear, off, theme: t }) {
   const [selAb, setSelAb] = useState("VA");
   return (
     <div style={{ background: t.card, padding: 25, borderRadius: 12, border: `1px solid ${t.border}` }}>
-      <select value={selOp} onChange={e => setSelOp(Number(e.target.value))} style={{ padding: 10, background: t.bg, color: t.text, borderRadius: 6, marginBottom: 20 }}>
-        {ops.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
-      </select>
-      <div style={{ display: 'flex', gap: 10, marginBottom: 20 }}>
+      <div style={{ marginBottom: 20 }}>
+        <label style={{ fontSize: 12, color: t.sub, display: 'block', marginBottom: 5 }}>SELECCIONAR OPERADOR:</label>
+        <select value={selOp} onChange={e => setSelOp(Number(e.target.value))} style={{ padding: 12, background: t.bg, color: t.text, borderRadius: 8, border: `1px solid ${t.border}`, width: '100%', maxWidth: 300 }}>
+          {ops.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
+        </select>
+      </div>
+      <div style={{ display: 'flex', gap: 15, marginBottom: 30 }}>
         {Object.keys(ABSENCE).map(k => (
-          <button key={k} onClick={() => setSelAb(k)} style={{ padding: '8px 15px', borderRadius: 6, border: `2px solid ${ABSENCE[k].color}`, background: selAb === k ? ABSENCE[k].color : 'transparent', color: selAb === k ? '#fff' : ABSENCE[k].color, fontWeight: 'bold', cursor: 'pointer' }}>{ABSENCE[k].icon} {k}</button>
+          <button key={k} onClick={() => setSelAb(k)} style={{ padding: '12px 20px', borderRadius: 8, border: `2px solid ${ABSENCE[k].color}`, background: selAb === k ? ABSENCE[k].color : 'transparent', color: selAb === k ? '#fff' : ABSENCE[k].color, fontWeight: 'bold', cursor: 'pointer' }}>{ABSENCE[k].icon} {ABSENCE[k].label}</button>
         ))}
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 15 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 20 }}>
         {MONTHS.map((m, mi) => (
-          <div key={m} style={{ background: t.bg, padding: 12, borderRadius: 8, border: `1px solid ${t.border}` }}>
-            <div style={{ fontSize: 11, fontWeight: 'bold', marginBottom: 10, color: t.accent }}>{m.toUpperCase()}</div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 3 }}>
+          <div key={m} style={{ background: t.bg, padding: 15, borderRadius: 10, border: `1px solid ${t.border}` }}>
+            <div style={{ fontSize: 12, fontWeight: 'bold', marginBottom: 10, color: t.accent, textAlign: 'center' }}>{m.toUpperCase()}</div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4 }}>
               {Array.from({ length: dim(activeYear, mi) }).map((_, di) => {
                 const k = mk(activeYear, mi + 1, di + 1), status = ops.find(o => o.id === selOp)?.calendar?.[k];
                 return (
                   <div key={di} onClick={() => {
                     const newOps = ops.map(o => { if (o.id !== selOp) return o; const newCal = { ...o.calendar }; if (newCal[k] === selAb) delete newCal[k]; else newCal[k] = selAb; return { ...o, calendar: newCal }; });
                     setOps(newOps);
-                  }} style={{ height: 30, background: status ? ABSENCE[status].color : t.card, borderRadius: 4, fontSize: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>{di+1}</div>
+                  }} style={{ height: 35, background: status ? ABSENCE[status].color : t.card, color: status ? '#fff' : t.text, borderRadius: 6, fontSize: 11, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', border: `1px solid ${t.border}` }}>{di+1}</div>
                 );
               })}
             </div>
@@ -246,15 +252,18 @@ function EditorComponent({ ops, setOps, activeYear, off, theme: t }) {
 function LoginScreen({ admins, onLogin, theme: t }) {
   const [user, setUser] = useState(""), [pass, setPass] = useState("");
   return (
-    <div style={{ minHeight: "100vh", background: t.bg, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: 'monospace' }}>
-      <div style={{ background: t.card, border: `1px solid ${t.border}`, borderRadius: 16, padding: 30, width: 300 }}>
-        <h2 style={{ textAlign: 'center', color: t.title }}>SALA DE CONTROL</h2>
-        <input value={user} onChange={e => setUser(e.target.value)} placeholder="Usuario" style={{ width: "100%", padding: 12, marginBottom: 15, background: t.bg, border: `1px solid ${t.border}`, color: t.text, borderRadius: 8, boxSizing: 'border-box' }} />
-        <input type="password" value={pass} onChange={e => setPass(e.target.value)} placeholder="Pass" style={{ width: "100%", padding: 12, marginBottom: 15, background: t.bg, border: `1px solid ${t.border}`, color: t.text, borderRadius: 8, boxSizing: 'border-box' }} />
+    <div style={{ minHeight: "100vh", background: t.bg, display: "flex", alignItems: "center", justifyContent: "center", padding: 20, fontFamily: 'monospace' }}>
+      <div style={{ background: t.card, border: `1px solid ${t.border}`, borderRadius: 20, padding: 40, width: "100%", maxWidth: 350, boxShadow: '0 10px 30px rgba(0,0,0,0.5)' }}>
+        <h2 style={{ textAlign: 'center', color: t.title, fontSize: 24, marginBottom: 30, letterSpacing: 2 }}>SALA DE CONTROL</h2>
+        <input value={user} onChange={e => setUser(e.target.value)} placeholder="Usuario" style={{ width: "100%", padding: 15, marginBottom: 15, background: t.bg, border: `1px solid ${t.border}`, color: t.text, borderRadius: 10, boxSizing: 'border-box' }} />
+        <input type="password" value={pass} onChange={e => setPass(e.target.value)} placeholder="Contraseña" style={{ width: "100%", padding: 15, marginBottom: 25, background: t.bg, border: `1px solid ${t.border}`, color: t.text, borderRadius: 10, boxSizing: 'border-box' }} />
         <button onClick={() => {
           const found = admins.find(a => a.user === user && a.passHash === simpleHash(pass));
           if (found) onLogin(found); else alert("Acceso denegado");
-        }} style={{ width: "100%", padding: 12, background: t.accent, color: '#000', border: "none", borderRadius: 8, fontWeight: "bold", cursor: "pointer" }}>Entrar</button>
+        }} style={{ width: "100%", padding: 15, background: t.accent, color: '#000', border: "none", borderRadius: 10, fontWeight: "bold", cursor: "pointer", fontSize: 16 }}>Entrar</button>
+        <div style={{ textAlign: 'center', marginTop: 25 }}>
+          <button onClick={() => onLogin({ role: "guest", user: "Invitado" })} style={{ background: "transparent", color: t.sub, border: "none", cursor: "pointer", textDecoration: "underline", fontSize: 13 }}>Acceso Invitado (Solo Lectura)</button>
+        </div>
       </div>
     </div>
   );

@@ -50,7 +50,7 @@ const TURNO_DEF = {
   D: { color: "#64748B", label: "Descanso" }
 };
 
-// --- UTILS TEMPORALES ---
+// --- UTILS ---
 const dim = (y, m) => new Date(y, m + 1, 0).getDate();
 const dow = (y, m, d) => { const r = new Date(y, m, d).getDay(); return r === 0 ? 6 : r - 1; };
 const dse = (y, m, d) => Math.round((new Date(y, m, d) - new Date(1970, 0, 1)) / 86400000);
@@ -61,7 +61,7 @@ function cshift(y, m, d, off = 0) {
   return CYCLE[Math.floor(pos / 7)][pos % 7];
 }
 
-// --- ALGORITMO DE EQUIDAD ---
+// --- ALGORITMO ---
 function autoAssign(ops, targetYear, off) {
   const hSC = {}, nSC = {}, pairs = {};
   ops.forEach(o => { hSC[o.id] = 0; nSC[o.id] = 0; pairs[o.id] = {}; ops.forEach(other => { if(o.id !== other.id) pairs[o.id][other.id] = 0; }); });
@@ -107,14 +107,12 @@ function computeStats(ops, year, asgn, off) {
   });
 }
 
-// --- COMPONENTES UI ---
 const Av = ({ name, color, size = 24 }) => (
   <div style={{ width: size, height: size, borderRadius: 8, background: color || '#ccc', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: size * 0.4, color: '#000', fontWeight: 'bold' }}>
     {name?.substring(0, 2).toUpperCase() || "??"}
   </div>
 );
 
-// --- PRINCIPAL ---
 export default function App() {
   const currentYear = new Date().getFullYear();
   const [session, setSession] = useState(null);
@@ -132,140 +130,120 @@ export default function App() {
   const [activeYear, setAY] = useState(currentYear);
   const [month, setMonth] = useState(new Date().getMonth());
   const [isExporting, setIsExporting] = useState(false);
-
-  const [themeMode, setThemeMode] = useState(() => {
-    const hour = new Date().getHours();
-    return (hour >= 8 && hour < 20) ? 'light' : 'dark';
-  });
+  const [themeMode, setThemeMode] = useState('dark');
   const t = THEMES[themeMode];
 
   const isAdmin = session?.role === "admin" || session?.role === "superadmin";
   const canEdit = isAdmin || session?.role === "editor";
-
   const asgn = useMemo(() => autoAssign(ops, activeYear, off), [ops, activeYear, off]);
   const stats = useMemo(() => computeStats(ops, activeYear, asgn, off), [ops, activeYear, asgn, off]);
 
   if (!session) return <LoginScreen admins={admins} onLogin={setSession} theme={t} />;
 
   return (
-    <div style={{ minHeight: "100vh", background: t.bg, color: t.text, fontFamily: 'monospace', transition: 'background 0.3s' }}>
+    <div style={{ minHeight: "100vh", background: t.bg, color: t.text, fontFamily: 'monospace' }}>
       <style>{`
-        @media print { .no-print { display: none !important; } body { background: white !important; } }
-        /* Estilo para que el calendario sea cómodo en móvil */
+        @media print { .no-print { display: none !important; } }
         @media (max-width: 768px) {
-          .calendar-grid {
-            grid-template-columns: 80px repeat(${dim(activeYear, month)}, 35px) !important;
-          }
-          .op-name-cell {
-            position: sticky;
-            left: 0;
-            background: ${t.card};
-            z-index: 2;
-            width: 80px !important;
-          }
+          .calendar-grid { grid-template-columns: 100px repeat(${dim(activeYear, month)}, 40px) !important; }
+          .sticky-col { position: sticky; left: 0; background: ${t.card}; z-index: 5; border-right: 1px solid ${t.border}; }
         }
       `}</style>
-
-      <header className="no-print" style={{ background: t.card, borderBottom: `1px solid ${t.border}`, padding: "10px 20px", display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 15 }}>
+      
+      <header className="no-print" style={{ background: t.card, padding: "10px 20px", display: 'flex', justifyContent: 'space-between', borderBottom: `1px solid ${t.border}`, alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
           <span style={{ fontWeight: 800, color: t.accent }}>SALA DE CONTROL</span>
-          <select value={activeYear} onChange={(e) => setAY(Number(e.target.value))} style={{ background: t.bg, color: t.accent, border: `1px solid ${t.accent}`, borderRadius: 4, padding: '2px 5px' }}>
-            {Array.from({ length: 10 }, (_, i) => 2024 + i).map(y => <option key={y} value={y}>{y}</option>)}
+          <select value={activeYear} onChange={e => setAY(Number(e.target.value))} style={{ background: t.bg, color: t.accent, border: `1px solid ${t.accent}`, borderRadius: 4 }}>
+            {[2024, 2025, 2026, 2027].map(y => <option key={y} value={y}>{y}</option>)}
           </select>
         </div>
-        <div style={{ display: 'flex', gap: 15, alignItems: 'center' }}>
-          <button onClick={() => setThemeMode(themeMode === 'dark' ? 'light' : 'dark')} style={{ background: 'none', border: 'none', fontSize: 18, cursor: 'pointer' }}>{themeMode === 'dark' ? '☀️' : '🌙'}</button>
-          <span style={{ fontSize: 10, color: t.sub }}>{session.user} ({session.role})</span>
-          <button onClick={() => setSession(null)} style={{ background: '#EF444422', color: '#EF4444', border: 'none', padding: '4px 8px', borderRadius: 4, cursor: 'pointer', fontSize: 10 }}>Salir</button>
-        </div>
+        <button onClick={() => setSession(null)} style={{ background: '#EF444422', color: '#EF4444', border: 'none', padding: '5px 10px', borderRadius: 4, fontSize: 10 }}>SALIR</button>
       </header>
 
-      <nav className="no-print" style={{ background: t.card, display: 'flex', borderBottom: `1px solid ${t.border}`, overflowX: 'auto' }}>
+      <nav className="no-print" style={{ display: 'flex', background: t.card, borderBottom: `1px solid ${t.border}`, overflowX: 'auto' }}>
         {["calendar", "stats", canEdit && "editor", isAdmin && "config"].filter(Boolean).map(v => (
-          <button key={v} onClick={() => setView(v)} style={{ padding: '12px 20px', background: 'none', border: 'none', color: view === v ? t.accent : t.sub, borderBottom: view === v ? `2px solid ${t.accent}` : 'none', cursor: 'pointer', fontWeight: 'bold', minWidth: 'fit-content' }}>{v.toUpperCase()}</button>
+          <button key={v} onClick={() => setView(v)} style={{ padding: 15, color: view === v ? t.accent : t.sub, background: 'none', border: 'none', cursor: 'pointer', fontWeight: 'bold' }}>{v.toUpperCase()}</button>
         ))}
       </nav>
 
-      <main style={{ padding: '20px 10px' }}>
+      <main style={{ padding: 20 }}>
         {view === "calendar" && (
           <div>
-            <div className="no-print" style={{ display: 'flex', justifyContent: 'center', gap: 10, marginBottom: 20, alignItems: 'center', position: 'relative', flexWrap: 'wrap' }}>
-              <button onClick={() => month === 0 ? (setMonth(11), setAY(activeYear - 1)) : setMonth(month - 1)} style={{ background: t.card, color: t.text, border: `1px solid ${t.border}`, padding: '8px 15px', borderRadius: 6, cursor: 'pointer' }}>‹</button>
-              <div style={{ width: 180, textAlign: 'center' }}>
-                <h2 style={{ color: t.title, margin: 0, fontSize: 18 }}>{MONTHS[month]} {activeYear}</h2>
-              </div>
-              <button onClick={() => month === 11 ? (setMonth(0), setAY(activeYear + 1)) : setMonth(month + 1)} style={{ background: t.card, color: t.text, border: `1px solid ${t.border}`, padding: '8px 15px', borderRadius: 6, cursor: 'pointer' }}>›</button>
-              <button onClick={() => { setIsExporting(true); setTimeout(() => { window.print(); setIsExporting(false); }, 500); }} style={{ background: '#6366F1', color: '#fff', border: 'none', padding: '8px 16px', borderRadius: 6, fontWeight: 'bold', cursor: 'pointer', fontSize: 12 }}>PDF</button>
+            <div className="no-print" style={{ display: 'flex', justifyContent: 'center', gap: 10, marginBottom: 20, alignItems: 'center' }}>
+              <button onClick={() => setMonth(month === 0 ? 11 : month - 1)}>‹</button>
+              <h2 style={{ margin: 0, width: 180, textAlign: 'center' }}>{MONTHS[month]}</h2>
+              <button onClick={() => setMonth(month === 11 ? 0 : month + 1)}>›</button>
+              <button onClick={() => window.print()} style={{ marginLeft: 20, background: t.accent, color: '#000', border: 'none', padding: '5px 10px', borderRadius: 4, fontWeight: 'bold' }}>PDF</button>
             </div>
-
-            {(isExporting ? MONTHS : [MONTHS[month]]).map((mName, mIdx) => {
-              const mi = isExporting ? mIdx : month;
-              return (
-                <div key={mName} style={{ marginBottom: isExporting ? 40 : 0, pageBreakAfter: 'always' }}>
-                  <h3 style={{ color: t.accent, textAlign: 'center', fontSize: 16 }}>{mName.toUpperCase()} {activeYear}</h3>
-                  <div style={{ overflowX: 'auto', background: t.card, borderRadius: 12, padding: 10, border: `1px solid ${t.border}`, WebkitOverflowScrolling: 'touch' }}>
-                    <div className="calendar-grid" style={{ display: 'grid', gridTemplateColumns: `150px repeat(${dim(activeYear, mi)}, 1fr)`, gap: 1 }}>
-                      <div className="op-name-cell" />
-                      {Array.from({ length: dim(activeYear, mi) }).map((_, i) => (
-                        <div key={i} style={{ textAlign: 'center', fontSize: 9, minWidth: 30 }}>
-                          <div style={{ color: dow(activeYear, mi, i + 1) >= 5 ? '#EF4444' : t.sub }}>{DOW_S[dow(activeYear, mi, i + 1)]}</div>
-                          <div style={{ fontWeight: 'bold', color: t.title }}>{i + 1}</div>
-                          <div style={{ color: TURNO_DEF[cshift(activeYear, mi, i + 1, off)].color, fontSize: 8 }}>{cshift(activeYear, mi, i + 1, off)}</div>
-                        </div>
-                      ))}
-                      {ops.map(op => (
-                        <div key={op.id} style={{ display: 'contents' }}>
-                          <div className="op-name-cell" style={{ padding: '10px 0', borderTop: `1px solid ${t.border}`, fontSize: 10, display: 'flex', alignItems: 'center', gap: 5 }}>
-                            <Av name={op.name} color={op.color} size={18} />
-                            <span style={{ color: t.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{op.name}</span>
-                          </div>
-                          {Array.from({ length: dim(activeYear, mi) }).map((_, i) => {
-                            const t_code = cshift(activeYear, mi, i + 1, off);
-                            const a = asgn[mk(activeYear, mi + 1, i + 1)]?.[op.id];
-                            const bg = t_code === 'D' ? (themeMode === 'dark' ? 'rgba(255,255,255,0.03)' : '#F8FAFC') : 'transparent';
-                            return <div key={i} style={{ borderTop: `1px solid ${t.border}`, background: bg, textAlign: 'center', fontSize: 10, fontWeight: 'bold', lineHeight: '35px', color: a === 'SC' ? '#10B981' : (a === 'CA' ? '#3B82F6' : ABSENCE[a]?.color || t.sub) }}>{a === 'SC' ? 'SC' : (a || '·')}</div>
-                          })}
-                        </div>
-                      ))}
-                    </div>
+            
+            <div style={{ background: t.card, borderRadius: 12, padding: 10, overflowX: 'auto', border: `1px solid ${t.border}` }}>
+              <div className="calendar-grid" style={{ display: 'grid', gridTemplateColumns: `150px repeat(${dim(activeYear, month)}, 1fr)`, gap: 1 }}>
+                <div className="sticky-col" />
+                {Array.from({ length: dim(activeYear, month) }).map((_, i) => (
+                  <div key={i} style={{ textAlign: 'center', fontSize: 10 }}>
+                    <div style={{ color: dow(activeYear, month, i+1) >= 5 ? '#EF4444' : t.sub }}>{DOW_S[dow(activeYear, month, i+1)]}</div>
+                    <div style={{ fontWeight: 'bold' }}>{i+1}</div>
                   </div>
-                </div>
-              );
-            })}
+                ))}
+                {ops.map(op => (
+                  <div key={op.id} style={{ display: 'contents' }}>
+                    <div className="sticky-col" style={{ padding: '8px 5px', fontSize: 11, borderTop: `1px solid ${t.border}`, display: 'flex', alignItems: 'center', gap: 5 }}>
+                      <Av name={op.name} color={op.color} size={18} /> {op.name}
+                    </div>
+                    {Array.from({ length: dim(activeYear, month) }).map((_, i) => {
+                      const a = asgn[mk(activeYear, month+1, i+1)]?.[op.id];
+                      return <div key={i} style={{ textAlign: 'center', fontSize: 10, borderTop: `1px solid ${t.border}`, lineHeight: '35px' }}>{a || '·'}</div>
+                    })}
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         )}
 
         {view === "stats" && (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: 15 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 15 }}>
             {stats.map(s => (
               <div key={s.id} style={{ background: t.card, padding: 20, borderRadius: 12, border: `1px solid ${t.border}` }}>
-                <div style={{ fontWeight: 'bold', fontSize: 16, marginBottom: 10, color: t.title }}>{s.name}</div>
-                <div style={{ fontSize: 24, color: t.accent, fontWeight: 800 }}>{s.sc} SC</div>
-                <div style={{ color: '#818CF8', fontSize: 12 }}>Noches SC: {s.nSC}</div>
-                <div style={{ fontSize: 11, color: t.sub, marginTop: 5 }}>Total: {s.hSC} Horas Anuales</div>
+                <div style={{ fontWeight: 'bold', color: t.accent }}>{s.name}</div>
+                <div style={{ fontSize: 24, fontWeight: 800 }}>{s.sc} SC</div>
+                <div style={{ fontSize: 12, color: t.sub }}>{s.hSC} Horas / {s.nSC} Noches</div>
               </div>
             ))}
           </div>
         )}
 
-        {view === "editor" && canEdit && <EditorComponent ops={ops} setOps={setOps} activeYear={activeYear} off={off} theme={t} />}
+        {view === "editor" && <EditorComponent ops={ops} setOps={setOps} activeYear={activeYear} theme={t} off={off} />}
 
         {view === "config" && isAdmin && (
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 20 }}>
-             {/* Configuración simplificada para móvil */}
-             <div style={{ background: t.card, padding: 20, borderRadius: 12, border: `1px solid ${t.border}` }}>
-              <h3 style={{ marginTop: 0, color: t.title }}>Gestión Operadores</h3>
-              <div style={{ display: 'flex', gap: 10, marginBottom: 20 }}>
-                <input id="newOpN" placeholder="Nombre" style={{ padding: 10, background: t.bg, border: `1px solid ${t.border}`, color: t.text, flex: 1, borderRadius: 8 }} />
-                <button onClick={() => {
-                  const n = document.getElementById('newOpN').value;
-                  if (n) { setOps([...ops, { id: Date.now(), name: n, color: '#' + Math.random().toString(16).slice(2, 8), calendar: {} }]); document.getElementById('newOpN').value = ''; }
-                }} style={{ background: t.accent, border: 'none', padding: '0 15px', borderRadius: 8, color: '#000', fontWeight: 'bold' }}>+</button>
-              </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 20 }}>
+            <div style={{ background: t.card, padding: 20, borderRadius: 12, border: `1px solid ${t.border}` }}>
+              <h3>Operadores</h3>
               {ops.map(o => (
-                <div key={o.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: `1px solid ${t.border}` }}>
+                <div key={o.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0' }}>
                   <span>{o.name}</span>
-                  <button onClick={() => setOps(ops.filter(x => x.id !== o.id))} style={{ color: '#EF4444', background: 'none', border: 'none' }}>Eliminar</button>
+                  <button onClick={() => setOps(ops.filter(x => x.id !== o.id))} style={{ color: '#EF4444', background: 'none', border: 'none' }}>×</button>
+                </div>
+              ))}
+            </div>
+            
+            <div style={{ background: t.card, padding: 20, borderRadius: 12, border: `1px solid ${t.border}` }}>
+              <h3>Accesos (Admin/Editor)</h3>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: 15 }}>
+                <input id="adU" placeholder="User" style={{ width: '45%' }} />
+                <input id="adP" type="password" placeholder="Pass" style={{ width: '45%' }} />
+                <select id="adR" style={{ width: '45%' }}>
+                  <option value="admin">Admin</option>
+                  <option value="editor">Editor</option>
+                </select>
+                <button onClick={() => {
+                  const u = document.getElementById('adU').value, p = document.getElementById('adP').value, r = document.getElementById('adR').value;
+                  if(u && p) setAdmins([...admins, { user: u, passHash: simpleHash(p), role: r }]);
+                }}>Añadir</button>
+              </div>
+              {admins.map(a => (
+                <div key={a.user} style={{ fontSize: 12, padding: '5px 0', borderTop: `1px solid ${t.border}` }}>
+                  {a.user} ({a.role}) {a.role !== 'superadmin' && <button onClick={() => setAdmins(admins.filter(x => x.user !== a.user))}>×</button>}
                 </div>
               ))}
             </div>
@@ -276,34 +254,44 @@ export default function App() {
   );
 }
 
-function EditorComponent({ ops, setOps, activeYear, off, theme: t }) {
+function EditorComponent({ ops, setOps, activeYear, theme: t, off }) {
   const [selOp, setSelOp] = useState(ops[0]?.id);
   const [selAb, setSelAb] = useState("VA");
   return (
-    <div style={{ background: t.card, padding: 15, borderRadius: 12, border: `1px solid ${t.border}` }}>
-      <div style={{ marginBottom: 20 }}>
-        <div style={{ fontSize: 11, color: t.sub, marginBottom: 5 }}>OPERADOR:</div>
-        <select value={selOp} onChange={e => setSelOp(Number(e.target.value))} style={{ padding: 12, background: t.bg, color: t.text, border: `1px solid ${t.border}`, borderRadius: 8, width: '100%' }}>
-          {ops.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
-        </select>
+    <div style={{ background: t.card, padding: 20, borderRadius: 12 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 20, marginBottom: 20 }}>
+        <div>
+          <select value={selOp} onChange={e => setSelOp(Number(e.target.value))} style={{ padding: 10, borderRadius: 8 }}>
+            {ops.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
+          </select>
+          <div style={{ display: 'flex', gap: 5, marginTop: 10 }}>
+            {Object.keys(ABSENCE).map(k => (
+              <button key={k} onClick={() => setSelAb(k)} style={{ background: selAb === k ? ABSENCE[k].color : 'transparent', border: `2px solid ${ABSENCE[k].color}`, color: selAb === k ? '#000' : ABSENCE[k].color, padding: '5px 10px', borderRadius: 6, fontWeight: 'bold' }}>{ABSENCE[k].icon} {k}</button>
+            ))}
+          </div>
+        </div>
+        <div style={{ background: t.bg, padding: 10, borderRadius: 8, fontSize: 11 }}>
+          <div style={{ fontWeight: 'bold', marginBottom: 5 }}>LEYENDA TURNOS</div>
+          {Object.entries(TURNO_DEF).map(([k, v]) => (
+            <div key={k} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+              <div style={{ width: 10, height: 10, background: v.color }} /> {v.label} ({k})
+            </div>
+          ))}
+        </div>
       </div>
-      <div style={{ display: 'flex', gap: 8, marginBottom: 20, overflowX: 'auto', paddingBottom: 10 }}>
-        {Object.keys(ABSENCE).map(k => (
-          <button key={k} onClick={() => setSelAb(k)} style={{ padding: '10px 15px', borderRadius: 8, border: `2px solid ${ABSENCE[k].color}`, background: selAb === k ? ABSENCE[k].color : 'transparent', color: selAb === k ? '#fff' : ABSENCE[k].color, fontWeight: 'bold', whiteSpace: 'nowrap' }}>{ABSENCE[k].icon} {k}</button>
-        ))}
-      </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 10 }}>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 15 }}>
         {MONTHS.map((m, mi) => (
-          <div key={m} style={{ background: t.bg, padding: 10, borderRadius: 8, border: `1px solid ${t.border}` }}>
-            <div style={{ fontSize: 11, fontWeight: 'bold', marginBottom: 10, color: t.accent }}>{m.toUpperCase()}</div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 3 }}>
+          <div key={m} style={{ background: t.bg, padding: 10, borderRadius: 8 }}>
+            <div style={{ fontSize: 11, fontWeight: 'bold', marginBottom: 5 }}>{m.toUpperCase()}</div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 2 }}>
               {Array.from({ length: dim(activeYear, mi) }).map((_, di) => {
-                const k = mk(activeYear, mi + 1, di + 1), status = ops.find(o => o.id === selOp)?.calendar?.[k], turno = cshift(activeYear, mi, di + 1, off);
+                const k = mk(activeYear, mi + 1, di + 1), status = ops.find(o => o.id === selOp)?.calendar?.[k], tCode = cshift(activeYear, mi, di + 1, off);
                 return (
                   <div key={di} onClick={() => {
                     const newOps = ops.map(o => { if (o.id !== selOp) return o; const newCal = { ...o.calendar }; if (newCal[k] === selAb) delete newCal[k]; else newCal[k] = selAb; return { ...o, calendar: newCal }; });
                     setOps(newOps);
-                  }} style={{ height: 28, background: status ? ABSENCE[status].color : t.card, color: status ? '#fff' : t.text, borderRadius: 4, fontSize: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontWeight: 'bold', borderBottom: `3px solid ${TURNO_DEF[turno].color}` }}>{di + 1}</div>
+                  }} style={{ height: 30, background: status ? ABSENCE[status].color : t.card, borderBottom: `3px solid ${TURNO_DEF[tCode].color}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, cursor: 'pointer', borderRadius: 4 }}>{di + 1}</div>
                 );
               })}
             </div>
@@ -315,19 +303,18 @@ function EditorComponent({ ops, setOps, activeYear, off, theme: t }) {
 }
 
 function LoginScreen({ admins, onLogin, theme: t }) {
-  const [user, setUser] = useState(""), [pass, setPass] = useState(""), [err, setErr] = useState("");
+  const [user, setUser] = useState(""), [pass, setPass] = useState("");
   return (
-    <div style={{ minHeight: "100vh", background: t.bg, display: "flex", alignItems: "center", justifyContent: "center", padding: 20, fontFamily: 'monospace' }}>
-      <div style={{ background: t.card, border: `1px solid ${t.border}`, borderRadius: 16, padding: 30, width: "100%", maxWidth: 320 }}>
-        <h2 style={{ textAlign: 'center', color: t.title, marginBottom: 20 }}>SALA DE CONTROL</h2>
-        <input value={user} onChange={e => setUser(e.target.value)} placeholder="Usuario" style={{ width: "100%", padding: 12, marginBottom: 15, background: t.bg, border: `1px solid ${t.border}`, color: t.text, borderRadius: 8, boxSizing: 'border-box' }} />
-        <input type="password" value={pass} onChange={e => setPass(e.target.value)} placeholder="Contraseña" style={{ width: "100%", padding: 12, marginBottom: 15, background: t.bg, border: `1px solid ${t.border}`, color: t.text, borderRadius: 8, boxSizing: 'border-box' }} />
-        {err && <div style={{ color: "#EF4444", fontSize: 12, marginBottom: 10 }}>{err}</div>}
+    <div style={{ minHeight: "100vh", background: t.bg, display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <div style={{ background: t.card, padding: 30, borderRadius: 16, width: 300, border: `1px solid ${t.border}` }}>
+        <h2 style={{ textAlign: 'center', color: t.accent }}>SALA DE CONTROL</h2>
+        <input value={user} onChange={e => setUser(e.target.value)} placeholder="Usuario" style={{ width: '100%', padding: 10, marginBottom: 10 }} />
+        <input type="password" value={pass} onChange={e => setPass(e.target.value)} placeholder="Pass" style={{ width: '100%', padding: 10, marginBottom: 20 }} />
         <button onClick={() => {
-          const found = admins.find(a => a.user === user && a.passHash === simpleHash(pass));
-          if (found) onLogin(found); else setErr("Acceso denegado");
-        }} style={{ width: "100%", padding: 12, background: t.accent, color: '#000', border: "none", borderRadius: 8, fontWeight: "bold", cursor: "pointer" }}>Entrar</button>
-        <button onClick={() => onLogin({ role: "guest", user: "Invitado" })} style={{ width: "100%", marginTop: 15, background: "transparent", color: t.sub, border: "none", cursor: "pointer", textDecoration: "underline" }}>Acceso Invitado</button>
+          const f = admins.find(a => a.user === user && a.passHash === simpleHash(pass));
+          if(f) onLogin(f); else alert("Error");
+        }} style={{ width: '100%', padding: 10, background: t.accent, border: 'none', fontWeight: 'bold' }}>ENTRAR</button>
+        <button onClick={() => onLogin({ role: "guest", user: "Invitado" })} style={{ width: '100%', marginTop: 10, background: 'none', border: 'none', color: t.sub, textDecoration: 'underline' }}>Acceso Invitado</button>
       </div>
     </div>
   );

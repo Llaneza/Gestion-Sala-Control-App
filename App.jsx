@@ -114,7 +114,6 @@ const Av = ({ name, color, size = 24 }) => (
 );
 
 export default function App() {
-  // --- INICIALIZACIÓN CON FECHA REAL ACTUAL ---
   const today = new Date();
   const currentYear = today.getFullYear();
   const currentMonth = today.getMonth();
@@ -131,11 +130,8 @@ export default function App() {
   ]);
   const [off, setOff] = usePersisted("sc_cycle_offset_v4", -11);
   const [view, setView] = useState("calendar");
-  
-  // Seteamos año y mes actual al arrancar
   const [activeYear, setAY] = useState(currentYear);
   const [month, setMonth] = useState(currentMonth);
-  
   const [isExporting, setIsExporting] = useState(false);
   const [themeMode, setThemeMode] = useState('dark');
   const t = THEMES[themeMode];
@@ -144,6 +140,25 @@ export default function App() {
   const canEdit = isAdmin || session?.role === "editor";
   const asgn = useMemo(() => autoAssign(ops, activeYear, off), [ops, activeYear, off]);
   const stats = useMemo(() => computeStats(ops, activeYear, asgn, off), [ops, activeYear, asgn, off]);
+
+  // --- LÓGICA DE NAVEGACIÓN DE MESES CON SALTO DE AÑO ---
+  const handlePrevMonth = () => {
+    if (month === 0) {
+      setMonth(11);
+      setAY(prev => prev - 1);
+    } else {
+      setMonth(month - 1);
+    }
+  };
+
+  const handleNextMonth = () => {
+    if (month === 11) {
+      setMonth(0);
+      setAY(prev => prev + 1);
+    } else {
+      setMonth(month + 1);
+    }
+  };
 
   if (!session) return <LoginScreen admins={admins} onLogin={setSession} theme={t} />;
 
@@ -203,7 +218,7 @@ export default function App() {
         <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
           <span className="header-title" style={{ fontWeight: 800, color: t.accent, fontSize: 16 }}>SALA DE CONTROL</span>
           <select value={activeYear} onChange={e => setAY(Number(e.target.value))} style={{ background: t.bg, color: t.accent, border: `1px solid ${t.accent}`, borderRadius: 4, padding: '4px 8px', cursor: 'pointer' }}>
-            {[2024, 2025, 2026, 2027].map(y => <option key={y} value={y}>{y}</option>)}
+            {[2024, 2025, 2026, 2027, 2028, 2029, 2030].map(y => <option key={y} value={y}>{y}</option>)}
           </select>
         </div>
         <button onClick={() => setSession(null)} style={{ background: '#EF444422', color: '#EF4444', border: 'none', padding: '6px 12px', borderRadius: 4, fontSize: 11, fontWeight: 'bold', cursor: 'pointer' }}>SALIR</button>
@@ -221,9 +236,9 @@ export default function App() {
         {view === "calendar" && (
           <div>
             <div className="no-print" style={{ display: 'flex', justifyContent: 'center', gap: 8, marginBottom: 25, alignItems: 'center', flexWrap: 'nowrap' }}>
-              <button style={{ padding: '10px 15px', borderRadius: 8, border: `1px solid ${t.border}`, background: t.card, color: t.text, cursor: 'pointer', minWidth: '80px' }} onClick={() => setMonth(month === 0 ? 11 : month - 1)}>Ant.</button>
+              <button style={{ padding: '10px 15px', borderRadius: 8, border: `1px solid ${t.border}`, background: t.card, color: t.text, cursor: 'pointer', minWidth: '80px' }} onClick={handlePrevMonth}>Ant.</button>
               <h2 style={{ margin: 0, minWidth: 140, textAlign: 'center', fontSize: 18, color: t.title }}>{MONTHS[month]} {activeYear}</h2>
-              <button style={{ padding: '10px 15px', borderRadius: 8, border: `1px solid ${t.border}`, background: t.card, color: t.text, cursor: 'pointer', minWidth: '80px' }} onClick={() => setMonth(month === 11 ? 0 : month + 1)}>Sig.</button>
+              <button style={{ padding: '10px 15px', borderRadius: 8, border: `1px solid ${t.border}`, background: t.card, color: t.text, cursor: 'pointer', minWidth: '80px' }} onClick={handleNextMonth}>Sig.</button>
             </div>
 
             <div style={{ textAlign: 'center', marginBottom: 20 }}>

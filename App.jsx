@@ -134,7 +134,7 @@ export default function App() {
   const [month, setMonth] = useState(currentMonth);
   const [isExporting, setIsExporting] = useState(false);
 
-  // --- TEMAS ---
+  // --- TEMAS (AUTO + MANUAL) ---
   const [themeMode, setThemeMode] = useState('dark');
   const [manualTheme, setManualTheme] = useState(false);
 
@@ -159,7 +159,7 @@ export default function App() {
   if (!session) return <LoginScreen admins={admins} onLogin={setSession} theme={t} />;
 
   return (
-    <div style={{ minHeight: "100vh", background: t.bg, color: t.text, fontFamily: 'monospace', transition: 'background 0.3s, color 0.3s' }}>
+    <div style={{ minHeight: "100vh", background: t.bg, color: t.text, fontFamily: 'monospace', transition: 'background 0.3s' }}>
       <style>{`
         @media print { .no-print { display: none !important; } .print-break { page-break-after: always; } body { background: white !important; color: black !important; } }
         .calendar-container { background: ${t.card}; border-radius: 12px; padding: 0; overflow-x: auto; border: 1px solid ${t.border}; margin-bottom: 40px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); position: relative; }
@@ -216,13 +216,13 @@ export default function App() {
                         <div key={op.id} style={{ display: 'contents' }}>
                           <div className="sticky-col" style={{ padding: '10px 12px', fontSize: 13, borderTop: `1px solid ${t.border}`, display: 'flex', alignItems: 'center', gap: 8 }}>
                             <Av name={op.name} color={op.color} size={20} /> 
-                            <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontWeight: 'bold', color: t.text }}>{op.name}</span>
+                            <span style={{ fontWeight: 'bold', color: t.text }}>{op.name}</span>
                           </div>
                           {Array.from({ length: dim(activeYear, mi) }).map((_, i) => {
-                            const dateKey = mk(activeYear, mi+1, i+1), absenceCode = op.calendar?.[dateKey], rotationCode = cshift(activeYear, mi, i+1, off);
+                            const dk = mk(activeYear, mi+1, i+1), abs = op.calendar?.[dk], rot = cshift(activeYear, mi, i+1, off);
                             return (
-                              <div key={i} className="cell-day" style={{ textAlign: 'center', fontSize: 12, borderTop: `1px solid ${t.border}`, color: absenceCode ? '#000' : (rotationCode === 'D' ? t.sub : t.text), background: absenceCode ? ABSENCE[absenceCode].color : 'transparent', fontWeight: rotationCode !== 'D' ? 'bold' : 'normal' }}>
-                                {absenceCode || rotationCode}
+                              <div key={i} className="cell-day" style={{ borderTop: `1px solid ${t.border}`, color: abs ? '#000' : (rot === 'D' ? t.sub : t.text), background: abs ? ABSENCE[abs].color : 'transparent', fontWeight: rot !== 'D' ? 'bold' : 'normal' }}>
+                                {abs || rot}
                               </div>
                             );
                           })}
@@ -241,9 +241,8 @@ export default function App() {
             {stats.map(s => (
               <div key={s.id} style={{ background: t.card, padding: 25, borderRadius: 16, border: `1px solid ${t.border}` }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 15 }}><Av name={s.name} color={s.color} size={32} /><div style={{ fontWeight: 'bold', color: t.accent, fontSize: 18 }}>{s.name}</div></div>
-                <div style={{ fontSize: 32, fontWeight: 800, marginBottom: 5 }}>{s.sc} SC</div>
-                <div style={{ fontSize: 14, color: t.sub }}>{s.hSC} Horas Totales</div>
-                <div style={{ fontSize: 14, color: t.sub }}>{s.nSC} Turnos de Noche</div>
+                <div style={{ fontSize: 32, fontWeight: 800 }}>{s.sc} SC</div>
+                <div style={{ fontSize: 14, color: t.sub }}>{s.hSC} Horas / {s.nSC} Noches</div>
               </div>
             ))}
           </div>
@@ -254,18 +253,40 @@ export default function App() {
         {view === "config" && isAdmin && (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: 30 }}>
             <div style={{ background: t.card, padding: 25, borderRadius: 16, border: `1px solid ${t.border}` }}>
-              <h3 style={{ marginTop: 0, color: t.accent }}>⚙️ GESTIÓN DE OPERADORES</h3>
+              <h3 style={{ marginTop: 0, color: t.accent }}>⚙️ OPERADORES</h3>
               <div style={{ display: 'flex', gap: 10, marginBottom: 20 }}>
-                <input id="newOpN" placeholder="Nuevo nombre..." style={{ flex: 1, padding: 12, borderRadius: 8, border: `1px solid ${t.border}`, background: t.bg, color: t.text }} />
-                <button style={{ padding: '0 20px', background: t.accent, border: 'none', borderRadius: 8, fontWeight: 'bold', cursor: 'pointer' }} onClick={() => {
+                <input id="newOpN" placeholder="Nombre..." style={{ flex: 1, padding: 12, borderRadius: 8, border: `1px solid ${t.border}`, background: t.bg, color: t.text }} />
+                <button onClick={() => {
                   const n = document.getElementById('newOpN').value;
                   if(n) { setOps([...ops, { id: Date.now(), name: n, color: '#'+Math.random().toString(16).slice(2,8), calendar: {} }]); document.getElementById('newOpN').value = ''; }
-                }}>AÑADIR</button>
+                }} style={{ padding: '0 20px', background: t.accent, border: 'none', borderRadius: 8, fontWeight: 'bold', cursor: 'pointer' }}>AÑADIR</button>
               </div>
               {ops.map(o => (
-                <div key={o.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderTop: `1px solid ${t.border}`, alignItems: 'center' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}><div style={{ width: 12, height: 12, borderRadius: '50%', background: o.color }} /><span style={{ fontSize: 15 }}>{o.name}</span></div>
-                  <button onClick={() => setOps(ops.filter(x => x.id !== o.id))} style={{ color: '#EF4444', background: '#EF444411', border: 'none', width: 30, height: 30, borderRadius: 6, cursor: 'pointer' }}>×</button>
+                <div key={o.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderTop: `1px solid ${t.border}` }}>
+                  <span>{o.name}</span>
+                  <button onClick={() => setOps(ops.filter(x => x.id !== o.id))} style={{ color: '#EF4444', background: 'none', border: 'none', cursor: 'pointer' }}>×</button>
+                </div>
+              ))}
+            </div>
+
+            <div style={{ background: t.card, padding: 25, borderRadius: 16, border: `1px solid ${t.border}` }}>
+              <h3 style={{ marginTop: 0, color: t.accent }}>🔐 ACCESOS (ADMINS)</h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
+                <input id="adU" placeholder="Usuario" style={{ padding: 10, borderRadius: 8, border: `1px solid ${t.border}`, background: t.bg, color: t.text }} />
+                <input id="adP" type="password" placeholder="Pass" style={{ padding: 10, borderRadius: 8, border: `1px solid ${t.border}`, background: t.bg, color: t.text }} />
+                <select id="adR" style={{ padding: 10, borderRadius: 8, background: t.bg, color: t.text }}>
+                  <option value="admin">Admin</option>
+                  <option value="editor">Editor</option>
+                </select>
+                <button onClick={() => {
+                  const u = document.getElementById('adU').value, p = document.getElementById('adP').value, r = document.getElementById('adR').value;
+                  if(u && p) { setAdmins([...admins, { user: u, passHash: simpleHash(p), role: r }]); }
+                }} style={{ padding: 12, background: t.accent, border: 'none', borderRadius: 8, fontWeight: 'bold', cursor: 'pointer' }}>CREAR</button>
+              </div>
+              {admins.map(a => (
+                <div key={a.user} style={{ padding: '8px 0', borderTop: `1px solid ${t.border}`, display: 'flex', justifyContent: 'space-between' }}>
+                  <span>{a.user} <small>({a.role})</small></span>
+                  {a.role !== 'superadmin' && <button onClick={() => setAdmins(admins.filter(x => x.user !== a.user))} style={{ color: '#EF4444', border: 'none', background: 'none', cursor: 'pointer' }}>×</button>}
                 </div>
               ))}
             </div>
@@ -281,32 +302,39 @@ function EditorComponent({ ops, setOps, activeYear, theme: t, off }) {
   const [selAb, setSelAb] = useState("VA");
   return (
     <div style={{ background: t.card, padding: 25, borderRadius: 16, border: `1px solid ${t.border}` }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 20, marginBottom: 30 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 20, marginBottom: 30, flexWrap: 'wrap' }}>
         <div style={{ flex: 1, minWidth: 280 }}>
-          <label style={{ fontSize: 12, color: t.sub, marginBottom: 5, display: 'block' }}>1. SELECCIONA OPERADOR:</label>
-          <select value={selOp} onChange={e => setSelOp(Number(e.target.value))} style={{ padding: 12, borderRadius: 8, width: '100%', fontSize: 16, background: t.bg, color: t.text, border: `1px solid ${t.border}` }}>
+          <label style={{ fontSize: 12, color: t.sub }}>OPERADOR:</label>
+          <select value={selOp} onChange={e => setSelOp(Number(e.target.value))} style={{ padding: 12, width: '100%', background: t.bg, color: t.text, border: `1px solid ${t.border}`, borderRadius: 8, marginBottom: 15 }}>
             {ops.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
           </select>
-          <label style={{ fontSize: 12, color: t.sub, marginBottom: 5, mt: 15, display: 'block', marginTop: 15 }}>2. SELECCIONA TIPO DE AUSENCIA:</label>
-          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: 10 }}>
             {Object.keys(ABSENCE).map(k => (
-              <button key={k} onClick={() => setSelAb(k)} style={{ background: selAb === k ? ABSENCE[k].color : 'transparent', border: `2px solid ${ABSENCE[k].color}`, color: selAb === k ? '#000' : ABSENCE[k].color, padding: '10px 20px', borderRadius: 8, fontWeight: 'bold', cursor: 'pointer' }}>{ABSENCE[k].icon} {ABSENCE[k].label}</button>
+              <button key={k} onClick={() => setSelAb(k)} style={{ background: selAb === k ? ABSENCE[k].color : 'transparent', border: `2px solid ${ABSENCE[k].color}`, color: selAb === k ? '#000' : ABSENCE[k].color, padding: '10px', borderRadius: 8, cursor: 'pointer', fontWeight: 'bold' }}>{ABSENCE[k].icon} {ABSENCE[k].label}</button>
             ))}
           </div>
         </div>
+        <div style={{ background: t.bg, padding: 15, borderRadius: 12, border: `1px solid ${t.border}`, minWidth: 200 }}>
+          <div style={{ fontSize: 11, fontWeight: 'bold', marginBottom: 8, color: t.accent }}>LEYENDA DE TURNOS</div>
+          {Object.entries(TURNO_DEF).map(([k, v]) => (
+            <div key={k} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, marginBottom: 4 }}>
+              <div style={{ width: 12, height: 4, background: v.color, borderRadius: 2 }} /> {v.label}
+            </div>
+          ))}
+        </div>
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: 20 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 15 }}>
         {MONTHS.map((m, mi) => (
-          <div key={m} style={{ background: t.bg, padding: 15, borderRadius: 12, border: `1px solid ${t.border}` }}>
-            <div style={{ fontSize: 14, fontWeight: 'bold', marginBottom: 12, textAlign: 'center', color: t.accent }}>{m.toUpperCase()}</div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 5 }}>
+          <div key={m} style={{ background: t.bg, padding: 12, borderRadius: 10, border: `1px solid ${t.border}` }}>
+            <div style={{ fontSize: 12, fontWeight: 'bold', marginBottom: 10, textAlign: 'center' }}>{m.toUpperCase()}</div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4 }}>
               {Array.from({ length: dim(activeYear, mi) }).map((_, di) => {
-                const k = mk(activeYear, mi + 1, di + 1), status = ops.find(o => o.id === selOp)?.calendar?.[k], tCode = cshift(activeYear, mi, di + 1, off);
+                const k = mk(activeYear, mi + 1, di + 1), status = ops.find(o => o.id === selOp)?.calendar?.[k], rot = cshift(activeYear, mi, di + 1, off);
                 return (
                   <div key={di} onClick={() => {
                     const newOps = ops.map(o => { if (o.id !== selOp) return o; const newCal = { ...o.calendar }; if (newCal[k] === selAb) delete newCal[k]; else newCal[k] = selAb; return { ...o, calendar: newCal }; });
                     setOps(newOps);
-                  }} style={{ height: 38, background: status ? ABSENCE[status].color : t.card, borderBottom: `4px solid ${TURNO_DEF[tCode].color}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, cursor: 'pointer', borderRadius: 6, fontWeight: 'bold', color: status ? '#000' : t.text }}>{di + 1}</div>
+                  }} style={{ height: 32, background: status ? ABSENCE[status].color : t.card, borderBottom: `3px solid ${TURNO_DEF[rot].color}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, cursor: 'pointer', borderRadius: 4, color: status ? '#000' : t.text }}>{di + 1}</div>
                 );
               })}
             </div>
@@ -322,18 +350,15 @@ function LoginScreen({ admins, onLogin, theme: t }) {
   return (
     <div style={{ minHeight: "100vh", background: t.bg, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
       <div style={{ background: t.card, padding: 40, borderRadius: 24, width: "100%", maxWidth: 380, border: `1px solid ${t.border}` }}>
-        <div style={{ textAlign: 'center', marginBottom: 40 }}>
-          <div style={{ fontSize: 40, marginBottom: 10 }}>🛡️</div>
-          <h2 style={{ margin: 0, color: t.accent, letterSpacing: 2 }}>SALA DE CONTROL</h2>
-        </div>
+        <h2 style={{ textAlign: 'center', color: t.accent, marginBottom: 30 }}>SALA DE CONTROL</h2>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 15 }}>
-          <input value={user} onChange={e => setUser(e.target.value)} placeholder="Usuario" style={{ width: '100%', padding: 14, borderRadius: 12, border: `1px solid ${t.border}`, background: t.bg, color: t.text }} />
-          <input type="password" value={pass} onChange={e => setPass(e.target.value)} placeholder="Contraseña" style={{ width: '100%', padding: 14, borderRadius: 12, border: `1px solid ${t.border}`, background: t.bg, color: t.text }} />
+          <input value={user} onChange={e => setUser(e.target.value)} placeholder="Usuario" style={{ padding: 14, borderRadius: 12, border: `1px solid ${t.border}`, background: t.bg, color: t.text }} />
+          <input type="password" value={pass} onChange={e => setPass(e.target.value)} placeholder="Contraseña" style={{ padding: 14, borderRadius: 12, border: `1px solid ${t.border}`, background: t.bg, color: t.text }} />
           <button onClick={() => {
             const f = admins.find(a => a.user === user && a.passHash === simpleHash(pass));
             if(f) onLogin(f); else alert("Acceso denegado");
-          }} style={{ width: '100%', padding: 16, background: t.accent, border: 'none', fontWeight: 'bold', borderRadius: 12, color: '#000', cursor: 'pointer' }}>ENTRAR</button>
-          <button onClick={() => onLogin({ role: "guest", user: "Invitado" })} style={{ width: '100%', marginTop: 10, background: 'none', border: 'none', color: t.sub, textDecoration: 'underline', cursor: 'pointer', fontSize: 13 }}>Acceso modo lectura</button>
+          }} style={{ padding: 16, background: t.accent, borderRadius: 12, border: 'none', fontWeight: 'bold', cursor: 'pointer' }}>ENTRAR</button>
+          <button onClick={() => onLogin({ role: "guest", user: "Invitado" })} style={{ background: 'none', border: 'none', color: t.sub, textDecoration: 'underline', cursor: 'pointer', fontSize: 13 }}>Acceso modo lectura</button>
         </div>
       </div>
     </div>

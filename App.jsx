@@ -1,21 +1,21 @@
 import { useState, useMemo, useEffect } from "react";
+// --- NUEVAS IMPORTACIONES DE FIREBASE ---
+import { initializeApp } from "firebase/app";
+import { getDatabase, ref, onValue, set } from "firebase/database";
 
-// --- PERSISTENCIA & TEMAS ---
-function usePersisted(key, def) {
-  const [s, set] = useState(() => {
-    try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : def; }
-    catch { return def; }
-  });
-  useEffect(() => {
-    try { localStorage.setItem(key, JSON.stringify(s)); } catch {}
-  }, [key, s]);
-  return [s, set];
-}
-
-const THEMES = {
-  dark: { bg: "#080F1E", card: "#0D1526", text: "#CBD5E1", title: "#FFFFFF", border: "#1E2D45", sub: "#475569", accent: "#34D399" },
-  light: { bg: "#F1F5F9", card: "#FFFFFF", text: "#334155", title: "#0F172A", border: "#CBD5E1", sub: "#64748B", accent: "#059669" }
+// --- TU CONFIGURACIÓN DE FIREBASE ---
+const firebaseConfig = {
+  apiKey: "AIzaSyAAW-KbrhHIzDyRTgmVjlzPa7TK8o9FeI4",
+  authDomain: "app-sala-control.firebaseapp.com",
+  projectId: "app-sala-control",
+  storageBucket: "app-sala-control.firebasestorage.app",
+  messagingSenderId: "622611612673",
+  appId: "1:622611612673:web:4200dcddc50292908c2c00"
 };
+
+// Inicializamos la conexión
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
 
 // --- CONFIGURACIÓN FIJA ---
 function simpleHash(str) {
@@ -28,6 +28,11 @@ const DEFAULT_ADMINS = [
   { user: "admin", passHash: simpleHash("admin1234"), role: "superadmin" },
   { user: "editor1", passHash: simpleHash("editor1234"), role: "editor" }
 ];
+
+const THEMES = {
+  dark: { bg: "#080F1E", card: "#0D1526", text: "#CBD5E1", title: "#FFFFFF", border: "#1E2D45", sub: "#475569", accent: "#34D399" },
+  light: { bg: "#F1F5F9", card: "#FFFFFF", text: "#334155", title: "#0F172A", border: "#CBD5E1", sub: "#64748B", accent: "#059669" }
+};
 
 const CYCLE = [
   ["M", "M", "D", "D", "N", "N", "N"],
@@ -118,14 +123,14 @@ const Av = ({ name, color, size = 24 }) => (
   </div>
 );
 
+// --- COMPONENTE PRINCIPAL ---
 export default function App() {
   const today = new Date();
-  const currentYear = today.getFullYear();
-  const currentMonth = today.getMonth();
-
   const [session, setSession] = useState(null);
-  const [admins, setAdmins] = usePersisted("sc_admins_v4", DEFAULT_ADMINS);
-  const [ops, setOps] = usePersisted("sc_ops_v4", [
+
+  // --- ESTADOS SINCRONIZADOS CON FIREBASE ---
+  const [admins, setAdmins] = useState(DEFAULT_ADMINS);
+  const [ops, setOps] = useState([
     { id: 1, name: "Alejandro", color: "#F472B6", calendar: {} },
     { id: 2, name: "Claudia", color: "#60A5FA", calendar: {} },
     { id: 3, name: "Toni", color: "#34D399", calendar: {} },
@@ -133,15 +138,39 @@ export default function App() {
     { id: 5, name: "Rosa", color: "#A78BFA", calendar: {} },
     { id: 6, name: "Kao", color: "#FB7185", calendar: {} },
   ]);
-  const [off, setOff] = usePersisted("sc_cycle_offset_v4", -11);
-  const [view, setView] = useState("calendar");
-  const [activeYear, setAY] = useState(currentYear);
-  const [month, setMonth] = useState(currentMonth);
-  const [isExporting, setIsExporting] = useState(false);
+  const [off, setOff] = useState(-11);
 
+  const [view, setView] = useState("calendar");
+  const [activeYear, setAY] = useState(today.getFullYear());
+  const [month, setMonth] = useState(today.getMonth());
   const [themeMode, setThemeMode] = useState('dark');
   const [manualTheme, setManualTheme] = useState(false);
 
+  // --- LÓGICA DE SINCRONIZACIÓN EN TIEMPO REAL ---
+  useEffect(() => {
+    // Escuchar Operadores
+    onValue(ref(db, 'ops'), (snapshot) => {
+      const data = snapshot.val();
+      if (data) setOps(data);
+    });
+    // Escuchar Admins
+    onValue(ref(db, 'admins'), (snapshot) => {
+      const data = snapshot.val();
+      if (data) setAdmins(data);
+    });
+    // Escuchar Offset
+    onValue(ref(db, 'offset'), (snapshot) => {
+      const data = snapshot.val();
+      if (data !== null) setOff(data);
+    });
+  }, []);
+
+  // Funciones para guardar en la nube
+  const saveOps = (newOps) => set(ref(db, 'ops'), newOps);
+  const saveAdmins = (newAdmins) => set(ref(db, 'admins'), newAdmins);
+  const saveOff = (newOff) => set(ref(db, 'offset'), newOff);
+
+  // Modo noche automático (tu lógica original)
   useEffect(() => {
     if (!manualTheme) {
       const hour = new Date().getHours();
@@ -176,7 +205,7 @@ export default function App() {
       
       <header className="no-print" style={{ background: t.card, padding: "10px 20px", display: 'flex', justifyContent: 'space-between', borderBottom: `1px solid ${t.border}`, alignItems: 'center', position: 'sticky', top: 0, zIndex: 200 }}>
         <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-          <span style={{ fontWeight: 800, color: t.accent, fontSize: 16 }}>SALA DE CONTROL</span>
+          <span style={{ fontWeight: 800, color: t.accent, fontSize: 16 }}>SALA DE CONTROL ☁️</span>
           <button onClick={toggleTheme} style={{ background: t.bg, border: `1px solid ${t.border}`, borderRadius: 8, padding: '4px 8px', cursor: 'pointer', fontSize: 14 }}>{themeMode === 'dark' ? '🌙' : '☀️'}</button>
           <select value={activeYear} onChange={e => setAY(Number(e.target.value))} style={{ background: t.bg, color: t.text, border: `1px solid ${t.border}`, borderRadius: 4, padding: '4px 8px', cursor: 'pointer' }}>
             {[2024, 2025, 2026, 2027, 2028, 2029, 2030].map(y => <option key={y} value={y}>{y}</option>)}
@@ -201,54 +230,45 @@ export default function App() {
               <h2 style={{ margin: 0, minWidth: 140, textAlign: 'center', fontSize: 18, color: t.title }}>{MONTHS[month]} {activeYear}</h2>
               <button style={{ padding: '10px 15px', borderRadius: 8, border: `1px solid ${t.border}`, background: t.card, color: t.text, cursor: 'pointer', minWidth: '80px' }} onClick={handleNextMonth}>Sig.</button>
             </div>
-            {(isExporting ? MONTHS : [MONTHS[month]]).map((mName, mIdx) => {
-              const mi = isExporting ? mIdx : month;
-              return (
-                <div key={mName} className={isExporting ? "print-break" : ""}>
-                   <h2 style={{ textAlign: 'center', color: isExporting ? '#000' : t.title, fontSize: 20, marginBottom: 15 }}>{mName.toUpperCase()} {activeYear}</h2>
-                   <div className="calendar-container">
-                    <div className="calendar-grid">
-                      <div className="sticky-col" style={{ height: 55, background: t.bg, borderBottom: `1px solid ${t.border}` }} />
-                      {Array.from({ length: dim(activeYear, mi) }).map((_, i) => {
-                        const rotHeader = cshift(activeYear, mi, i+1, off);
-                        return (
-                          <div key={i} className="cell-day header-day" style={{ textAlign: 'center', background: t.bg }}>
-                            <span style={{ color: dow(activeYear, mi, i+1) >= 5 ? '#EF4444' : t.sub, fontSize: 9 }}>{DOW_S[dow(activeYear, mi, i+1)]}</span>
-                            <span style={{ fontWeight: 'bold', fontSize: 12 }}>{i+1}</span>
-                            <span style={{ fontSize: 10, fontWeight: '800', color: TURNO_DEF[rotHeader]?.color }}>{rotHeader === 'D' ? '' : rotHeader}</span>
-                          </div>
-                        );
-                      })}
-                      {ops.map(op => (
-                        <div key={op.id} style={{ display: 'contents' }}>
-                          <div className="sticky-col" style={{ padding: '10px 12px', fontSize: 13, borderTop: `1px solid ${t.border}`, display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <Av name={op.name} color={op.color} size={20} /> 
-                            <span style={{ fontWeight: 'bold', color: t.text }}>{op.name}</span>
-                          </div>
-                          {Array.from({ length: dim(activeYear, mi) }).map((_, i) => {
-                            const dk = mk(activeYear, mi+1, i+1), abs = op.calendar?.[dk], rot = cshift(activeYear, mi, i+1, off);
-                            const calcAsgn = asgn[dk]?.[op.id];
-                            const finalCode = abs || calcAsgn || rot;
-                            
-                            let cellBg = "transparent", cellColor = t.text;
-                            
-                            if (abs) { cellBg = ABSENCE[abs].color; cellColor = "#000"; }
-                            else if (calcAsgn === "SC") { cellBg = EXTRA_VISUALS.SC.bg; cellColor = EXTRA_VISUALS.SC.color; }
-                            else if (TURNO_DEF[rot]) { cellBg = TURNO_DEF[rot].bg; cellColor = TURNO_DEF[rot].color; }
-
-                            return (
-                              <div key={i} className="cell-day" style={{ borderTop: `1px solid ${t.border}`, background: cellBg, color: cellColor, fontWeight: rot !== 'D' || abs || calcAsgn === 'SC' ? 'bold' : 'normal' }}>
-                                {finalCode}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      ))}
+            
+            <h2 style={{ textAlign: 'center', color: t.title, fontSize: 20, marginBottom: 15 }}>{MONTHS[month].toUpperCase()} {activeYear}</h2>
+            <div className="calendar-container">
+              <div className="calendar-grid">
+                <div className="sticky-col" style={{ height: 55, background: t.bg, borderBottom: `1px solid ${t.border}` }} />
+                {Array.from({ length: dim(activeYear, month) }).map((_, i) => {
+                  const rotHeader = cshift(activeYear, month, i+1, off);
+                  return (
+                    <div key={i} className="cell-day header-day" style={{ textAlign: 'center', background: t.bg }}>
+                      <span style={{ color: dow(activeYear, month, i+1) >= 5 ? '#EF4444' : t.sub, fontSize: 9 }}>{DOW_S[dow(activeYear, month, i+1)]}</span>
+                      <span style={{ fontWeight: 'bold', fontSize: 12 }}>{i+1}</span>
+                      <span style={{ fontSize: 10, fontWeight: '800', color: TURNO_DEF[rotHeader]?.color }}>{rotHeader === 'D' ? '' : rotHeader}</span>
                     </div>
+                  );
+                })}
+                {ops.map(op => (
+                  <div key={op.id} style={{ display: 'contents' }}>
+                    <div className="sticky-col" style={{ padding: '10px 12px', fontSize: 13, borderTop: `1px solid ${t.border}`, display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <Av name={op.name} color={op.color} size={20} /> 
+                      <span style={{ fontWeight: 'bold', color: t.text }}>{op.name}</span>
+                    </div>
+                    {Array.from({ length: dim(activeYear, month) }).map((_, i) => {
+                      const dk = mk(activeYear, month+1, i+1), abs = op.calendar?.[dk], rot = cshift(activeYear, month, i+1, off);
+                      const calcAsgn = asgn[dk]?.[op.id];
+                      const finalCode = abs || calcAsgn || rot;
+                      let cellBg = "transparent", cellColor = t.text;
+                      if (abs) { cellBg = ABSENCE[abs].color; cellColor = "#000"; }
+                      else if (calcAsgn === "SC") { cellBg = EXTRA_VISUALS.SC.bg; cellColor = EXTRA_VISUALS.SC.color; }
+                      else if (TURNO_DEF[rot]) { cellBg = TURNO_DEF[rot].bg; cellColor = TURNO_DEF[rot].color; }
+                      return (
+                        <div key={i} className="cell-day" style={{ borderTop: `1px solid ${t.border}`, background: cellBg, color: cellColor, fontWeight: rot !== 'D' || abs || calcAsgn === 'SC' ? 'bold' : 'normal' }}>
+                          {finalCode}
+                        </div>
+                      );
+                    })}
                   </div>
-                </div>
-              );
-            })}
+                ))}
+              </div>
+            </div>
           </div>
         )}
 
@@ -264,7 +284,7 @@ export default function App() {
           </div>
         )}
 
-        {view === "editor" && <EditorComponent ops={ops} setOps={setOps} activeYear={activeYear} theme={t} off={off} />}
+        {view === "editor" && <EditorComponent ops={ops} saveOps={saveOps} activeYear={activeYear} theme={t} off={off} />}
 
         {view === "config" && isAdmin && (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: 30 }}>
@@ -274,13 +294,13 @@ export default function App() {
                 <input id="newOpN" placeholder="Nombre..." style={{ flex: 1, padding: 12, borderRadius: 8, border: `1px solid ${t.border}`, background: t.bg, color: t.text }} />
                 <button onClick={() => {
                   const n = document.getElementById('newOpN').value;
-                  if(n) { setOps([...ops, { id: Date.now(), name: n, color: '#'+Math.random().toString(16).slice(2,8), calendar: {} }]); document.getElementById('newOpN').value = ''; }
+                  if(n) { saveOps([...ops, { id: Date.now(), name: n, color: '#'+Math.random().toString(16).slice(2,8), calendar: {} }]); document.getElementById('newOpN').value = ''; }
                 }} style={{ padding: '0 20px', background: t.accent, border: 'none', borderRadius: 8, fontWeight: 'bold', cursor: 'pointer' }}>AÑADIR</button>
               </div>
               {ops.map(o => (
                 <div key={o.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderTop: `1px solid ${t.border}` }}>
                   <span>{o.name}</span>
-                  <button onClick={() => setOps(ops.filter(x => x.id !== o.id))} style={{ color: '#EF4444', background: 'none', border: 'none', cursor: 'pointer' }}>×</button>
+                  <button onClick={() => saveOps(ops.filter(x => x.id !== o.id))} style={{ color: '#EF4444', background: 'none', border: 'none', cursor: 'pointer' }}>×</button>
                 </div>
               ))}
             </div>
@@ -291,15 +311,21 @@ export default function App() {
                 <input id="adP" type="password" placeholder="Pass" style={{ padding: 10, borderRadius: 8, border: `1px solid ${t.border}`, background: t.bg, color: t.text }} />
                 <button onClick={() => {
                   const u = document.getElementById('adU').value, p = document.getElementById('adP').value;
-                  if(u && p) setAdmins([...admins, { user: u, passHash: simpleHash(p), role: 'admin' }]);
+                  if(u && p) saveAdmins([...admins, { user: u, passHash: simpleHash(p), role: 'admin' }]);
                 }} style={{ padding: 12, background: t.accent, border: 'none', borderRadius: 8, fontWeight: 'bold', cursor: 'pointer' }}>CREAR ADMIN</button>
               </div>
               {admins.map(a => (
                 <div key={a.user} style={{ padding: '8px 0', borderTop: `1px solid ${t.border}`, display: 'flex', justifyContent: 'space-between' }}>
                   <span>{a.user} <small>({a.role})</small></span>
-                  {a.role !== 'superadmin' && <button onClick={() => setAdmins(admins.filter(x => x.user !== a.user))} style={{ color: '#EF4444', border: 'none', background: 'none', cursor: 'pointer' }}>×</button>}
+                  {a.role !== 'superadmin' && <button onClick={() => saveAdmins(admins.filter(x => x.user !== a.user))} style={{ color: '#EF4444', border: 'none', background: 'none', cursor: 'pointer' }}>×</button>}
                 </div>
               ))}
+            </div>
+            {/* EDITOR DE OFFSET */}
+            <div style={{ background: t.card, padding: 25, borderRadius: 16, border: `1px solid ${t.border}` }}>
+              <h3 style={{ marginTop: 0, color: t.accent }}>🔄 AJUSTE DE CICLO (OFFSET)</h3>
+              <input type="number" value={off} onChange={e => saveOff(Number(e.target.value))} style={{ padding: 12, width: '100%', borderRadius: 8, border: `1px solid ${t.border}`, background: t.bg, color: t.text }} />
+              <p style={{ fontSize: 11, color: t.sub, marginTop: 10 }}>Cambia este valor si el cuadrante no coincide con el día actual.</p>
             </div>
           </div>
         )}
@@ -308,27 +334,19 @@ export default function App() {
   );
 }
 
-function EditorComponent({ ops, setOps, activeYear, theme: t, off }) {
+function EditorComponent({ ops, saveOps, activeYear, theme: t, off }) {
   const [selOp, setSelOp] = useState(ops[0]?.id);
   const [selAb, setSelAb] = useState("VA");
 
-  // Función de guardado mejorada y segura
   const toggleAbsence = (dateKey) => {
     const newOps = ops.map(o => {
       if (o.id !== selOp) return o;
-      
       const newCal = { ...(o.calendar || {}) };
-      // Si el día ya tiene esta ausencia específica, la quitamos. Si no, la ponemos.
-      if (newCal[dateKey] === selAb) {
-        delete newCal[dateKey];
-      } else {
-        newCal[dateKey] = selAb;
-      }
-      
+      if (newCal[dateKey] === selAb) delete newCal[dateKey];
+      else newCal[dateKey] = selAb;
       return { ...o, calendar: newCal };
     });
-    
-    setOps(newOps); // Esto dispara el hook usePersisted automáticamente
+    saveOps(newOps);
   };
 
   return (
@@ -364,22 +382,7 @@ function EditorComponent({ ops, setOps, activeYear, theme: t, off }) {
                 const status = ops.find(o => o.id === selOp)?.calendar?.[k];
                 const rot = cshift(activeYear, mi, di + 1, off);
                 return (
-                  <div 
-                    key={di} 
-                    onClick={() => toggleAbsence(k)} 
-                    style={{ 
-                      height: 32, 
-                      background: status ? ABSENCE[status].color : t.card, 
-                      borderBottom: `3px solid ${TURNO_DEF[rot]?.color || 'transparent'}`, 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      justifyContent: 'center', 
-                      fontSize: 10, 
-                      cursor: 'pointer', 
-                      borderRadius: 4, 
-                      color: status ? '#000' : t.text 
-                    }}
-                  >
+                  <div key={di} onClick={() => toggleAbsence(k)} style={{ height: 32, background: status ? ABSENCE[status].color : t.card, borderBottom: `3px solid ${TURNO_DEF[rot]?.color || 'transparent'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, cursor: 'pointer', borderRadius: 4, color: status ? '#000' : t.text }}>
                     {di + 1}
                   </div>
                 );

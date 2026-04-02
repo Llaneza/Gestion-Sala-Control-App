@@ -47,9 +47,12 @@ const DOW_S = ["L", "M", "X", "J", "V", "S", "D"];
 const TURNO_DEF = {
   M: { color: "#F59E0B", label: "Mañana", bg: "#F59E0B15" },
   N: { color: "#818CF8", label: "Noche", bg: "#818CF815" },
-  D: { color: "#64748B", label: "Descanso", bg: "transparent" },
-  SC: { color: "#34D399", label: "Servicio Control", bg: "#34D39925" },
-  CA: { color: "#475569", label: "Calle", bg: "transparent" }
+  D: { color: "#64748B", label: "Descanso", bg: "transparent" }
+};
+
+const EXTRA_VISUALS = {
+  SC: { color: "#34D399", bg: "#34D39925" },
+  CA: { color: "#475569", bg: "transparent" }
 };
 
 // --- UTILS ---
@@ -136,7 +139,6 @@ export default function App() {
   const [month, setMonth] = useState(currentMonth);
   const [isExporting, setIsExporting] = useState(false);
 
-  // --- TEMAS (AUTO + MANUAL) ---
   const [themeMode, setThemeMode] = useState('dark');
   const [manualTheme, setManualTheme] = useState(false);
 
@@ -219,30 +221,17 @@ export default function App() {
                           </div>
                           {Array.from({ length: dim(activeYear, mi) }).map((_, i) => {
                             const dk = mk(activeYear, mi+1, i+1), abs = op.calendar?.[dk], rot = cshift(activeYear, mi, i+1, off);
-                            const finalCode = abs || asgn[dk]?.[op.id] || rot;
+                            const calcAsgn = asgn[dk]?.[op.id];
+                            const finalCode = abs || calcAsgn || rot;
                             
-                            // Determinamos color de fondo y texto basado en el código final
-                            let cellBg = "transparent";
-                            let cellColor = t.text;
+                            let cellBg = "transparent", cellColor = t.text;
                             
-                            if (abs) {
-                              cellBg = ABSENCE[abs].color;
-                              cellColor = "#000";
-                            } else if (asgn[dk]?.[op.id] === "SC") {
-                              cellBg = TURNO_DEF.SC.bg;
-                              cellColor = TURNO_DEF.SC.color;
-                            } else if (TURNO_DEF[rot]) {
-                              cellBg = TURNO_DEF[rot].bg;
-                              cellColor = TURNO_DEF[rot].color;
-                            }
+                            if (abs) { cellBg = ABSENCE[abs].color; cellColor = "#000"; }
+                            else if (calcAsgn === "SC") { cellBg = EXTRA_VISUALS.SC.bg; cellColor = EXTRA_VISUALS.SC.color; }
+                            else if (TURNO_DEF[rot]) { cellBg = TURNO_DEF[rot].bg; cellColor = TURNO_DEF[rot].color; }
 
                             return (
-                              <div key={i} className="cell-day" style={{ 
-                                borderTop: `1px solid ${t.border}`, 
-                                background: cellBg,
-                                color: cellColor,
-                                fontWeight: rot !== 'D' || abs || asgn[dk]?.[op.id] === 'SC' ? 'bold' : 'normal'
-                              }}>
+                              <div key={i} className="cell-day" style={{ borderTop: `1px solid ${t.border}`, background: cellBg, color: cellColor, fontWeight: rot !== 'D' || abs || calcAsgn === 'SC' ? 'bold' : 'normal' }}>
                                 {finalCode}
                               </div>
                             );

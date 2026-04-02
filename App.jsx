@@ -170,6 +170,7 @@ export default function App() {
         .calendar-grid { display: grid; grid-template-columns: 160px repeat(${dim(activeYear, month)}, 1fr); gap: 0px; min-width: max-content; }
         .sticky-col { position: sticky; left: 0; background: ${t.card} !important; z-index: 100; border-right: 2px solid ${t.border} !important; }
         .cell-day { height: 38px; display: flex; align-items: center; justify-content: center; border-top: 1px solid ${t.border}; border-right: 1px solid ${t.border}; }
+        .header-day { height: 55px !important; flex-direction: column; gap: 2px; }
         @media (max-width: 768px) { .calendar-grid { grid-template-columns: 90px repeat(${dim(activeYear, month)}, 42px) !important; } .sticky-col { box-shadow: 4px 0 8px rgba(0,0,0,0.4); } .cell-day { height: 48px !important; font-size: 11px !important; } .nav-btn { padding: 12px 5px !important; font-size: 9px !important; flex: 1; } }
       `}</style>
       
@@ -207,12 +208,17 @@ export default function App() {
                    <h2 style={{ textAlign: 'center', color: isExporting ? '#000' : t.title, fontSize: 20, marginBottom: 15 }}>{mName.toUpperCase()} {activeYear}</h2>
                    <div className="calendar-container">
                     <div className="calendar-grid">
-                      <div className="sticky-col" style={{ height: 40, background: t.bg, borderBottom: `1px solid ${t.border}` }} />
-                      {Array.from({ length: dim(activeYear, mi) }).map((_, i) => (
-                        <div key={i} className="cell-day" style={{ textAlign: 'center', fontSize: 11, background: t.bg }}>
-                          <div><div style={{ color: dow(activeYear, mi, i+1) >= 5 ? '#EF4444' : t.sub, fontSize: 9 }}>{DOW_S[dow(activeYear, mi, i+1)]}</div><div style={{ fontWeight: 'bold' }}>{i+1}</div></div>
-                        </div>
-                      ))}
+                      <div className="sticky-col" style={{ height: 55, background: t.bg, borderBottom: `1px solid ${t.border}` }} />
+                      {Array.from({ length: dim(activeYear, mi) }).map((_, i) => {
+                        const rotHeader = cshift(activeYear, mi, i+1, off);
+                        return (
+                          <div key={i} className="cell-day header-day" style={{ textAlign: 'center', background: t.bg }}>
+                            <span style={{ color: dow(activeYear, mi, i+1) >= 5 ? '#EF4444' : t.sub, fontSize: 9 }}>{DOW_S[dow(activeYear, mi, i+1)]}</span>
+                            <span style={{ fontWeight: 'bold', fontSize: 12 }}>{i+1}</span>
+                            <span style={{ fontSize: 10, fontWeight: '800', color: TURNO_DEF[rotHeader]?.color }}>{rotHeader === 'D' ? '' : rotHeader}</span>
+                          </div>
+                        );
+                      })}
                       {ops.map(op => (
                         <div key={op.id} style={{ display: 'contents' }}>
                           <div className="sticky-col" style={{ padding: '10px 12px', fontSize: 13, borderTop: `1px solid ${t.border}`, display: 'flex', alignItems: 'center', gap: 8 }}>

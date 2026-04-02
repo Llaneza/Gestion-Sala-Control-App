@@ -215,10 +215,10 @@ export default function App() {
       <main style={{ padding: "20px 10px", maxWidth: 1400, margin: '0 auto' }}>
         {view === "calendar" && (
           <div>
-            <div className="no-print" style={{ display: 'flex', justifyContent: 'center', gap: 15, marginBottom: 25, alignItems: 'center' }}>
-              <button style={{ padding: '10px 20px', borderRadius: 8, border: `1px solid ${t.border}`, background: t.card, color: t.text, cursor: 'pointer' }} onClick={() => setMonth(month === 0 ? 11 : month - 1)}>Anterior</button>
-              <h2 style={{ margin: 0, minWidth: 200, textAlign: 'center', fontSize: 22, color: t.title }}>{MONTHS[month]} {activeYear}</h2>
-              <button style={{ padding: '10px 20px', borderRadius: 8, border: `1px solid ${t.border}`, background: t.card, color: t.text, cursor: 'pointer' }} onClick={() => setMonth(month === 11 ? 0 : month + 1)}>Siguiente</button>
+            <div className="no-print" style={{ display: 'flex', justifyContent: 'center', gap: 8, marginBottom: 25, alignItems: 'center', flexWrap: 'nowrap' }}>
+              <button style={{ padding: '10px 15px', borderRadius: 8, border: `1px solid ${t.border}`, background: t.card, color: t.text, cursor: 'pointer', minWidth: '80px' }} onClick={() => setMonth(month === 0 ? 11 : month - 1)}>Ant.</button>
+              <h2 style={{ margin: 0, minWidth: 140, textAlign: 'center', fontSize: 18, color: t.title }}>{MONTHS[month]} {activeYear}</h2>
+              <button style={{ padding: '10px 15px', borderRadius: 8, border: `1px solid ${t.border}`, background: t.card, color: t.text, cursor: 'pointer', minWidth: '80px' }} onClick={() => setMonth(month === 11 ? 0 : month + 1)}>Sig.</button>
             </div>
 
             <div style={{ textAlign: 'center', marginBottom: 20 }}>

@@ -311,6 +311,26 @@ export default function App() {
 function EditorComponent({ ops, setOps, activeYear, theme: t, off }) {
   const [selOp, setSelOp] = useState(ops[0]?.id);
   const [selAb, setSelAb] = useState("VA");
+
+  // Función de guardado mejorada y segura
+  const toggleAbsence = (dateKey) => {
+    const newOps = ops.map(o => {
+      if (o.id !== selOp) return o;
+      
+      const newCal = { ...(o.calendar || {}) };
+      // Si el día ya tiene esta ausencia específica, la quitamos. Si no, la ponemos.
+      if (newCal[dateKey] === selAb) {
+        delete newCal[dateKey];
+      } else {
+        newCal[dateKey] = selAb;
+      }
+      
+      return { ...o, calendar: newCal };
+    });
+    
+    setOps(newOps); // Esto dispara el hook usePersisted automáticamente
+  };
+
   return (
     <div style={{ background: t.card, padding: 25, borderRadius: 16, border: `1px solid ${t.border}` }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 20, marginBottom: 30, flexWrap: 'wrap' }}>
@@ -340,12 +360,28 @@ function EditorComponent({ ops, setOps, activeYear, theme: t, off }) {
             <div style={{ fontSize: 12, fontWeight: 'bold', marginBottom: 10, textAlign: 'center' }}>{m.toUpperCase()}</div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4 }}>
               {Array.from({ length: dim(activeYear, mi) }).map((_, di) => {
-                const k = mk(activeYear, mi + 1, di + 1), status = ops.find(o => o.id === selOp)?.calendar?.[k], rot = cshift(activeYear, mi, di + 1, off);
+                const k = mk(activeYear, mi + 1, di + 1);
+                const status = ops.find(o => o.id === selOp)?.calendar?.[k];
+                const rot = cshift(activeYear, mi, di + 1, off);
                 return (
-                  <div key={di} onClick={() => {
-                    const newOps = ops.map(o => { if (o.id !== selOp) return o; const newCal = { ...o.calendar }; if (newCal[k] === selAb) delete newCal[k]; else newCal[k] = selAb; return { ...o, calendar: newCal }; });
-                    setOps(newOps);
-                  }} style={{ height: 32, background: status ? ABSENCE[status].color : t.card, borderBottom: `3px solid ${TURNO_DEF[rot].color}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, cursor: 'pointer', borderRadius: 4, color: status ? '#000' : t.text }}>{di + 1}</div>
+                  <div 
+                    key={di} 
+                    onClick={() => toggleAbsence(k)} 
+                    style={{ 
+                      height: 32, 
+                      background: status ? ABSENCE[status].color : t.card, 
+                      borderBottom: `3px solid ${TURNO_DEF[rot]?.color || 'transparent'}`, 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'center', 
+                      fontSize: 10, 
+                      cursor: 'pointer', 
+                      borderRadius: 4, 
+                      color: status ? '#000' : t.text 
+                    }}
+                  >
+                    {di + 1}
+                  </div>
                 );
               })}
             </div>

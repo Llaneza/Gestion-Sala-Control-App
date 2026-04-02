@@ -145,7 +145,6 @@ export default function App() {
       <style>{`
         @media print { .no-print { display: none !important; } .print-break { page-break-after: always; } body { background: white !important; color: black !important; } }
         
-        /* CONTENEDOR PRINCIPAL DEL CALENDARIO */
         .calendar-container {
           background: ${t.card}; 
           border-radius: 12px; 
@@ -164,7 +163,6 @@ export default function App() {
           min-width: max-content;
         }
 
-        /* COLUMNA FIJA BLINDADA */
         .sticky-col { 
           position: sticky; 
           left: 0; 
@@ -253,8 +251,23 @@ export default function App() {
                             <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontWeight: 'bold' }}>{op.name}</span>
                           </div>
                           {Array.from({ length: dim(activeYear, mi) }).map((_, i) => {
-                            const a = asgn[mk(activeYear, mi+1, i+1)]?.[op.id];
-                            return <div key={i} className="cell-day" style={{ textAlign: 'center', fontSize: 12, borderTop: `1px solid ${t.border}` }}>{a || '·'}</div>
+                            const dateKey = mk(activeYear, mi+1, i+1);
+                            const absenceCode = op.calendar?.[dateKey];
+                            const rotationCode = cshift(activeYear, mi, i+1, off);
+                            
+                            // Mostrar ausencia si existe, si no, el turno de rotación
+                            return (
+                              <div key={i} className="cell-day" style={{ 
+                                textAlign: 'center', 
+                                fontSize: 12, 
+                                borderTop: `1px solid ${t.border}`,
+                                color: absenceCode ? '#000' : (rotationCode === 'D' ? t.sub : t.text),
+                                background: absenceCode ? ABSENCE[absenceCode].color : 'transparent',
+                                fontWeight: rotationCode !== 'D' ? 'bold' : 'normal'
+                              }}>
+                                {absenceCode ? absenceCode : rotationCode}
+                              </div>
+                            );
                           })}
                         </div>
                       ))}

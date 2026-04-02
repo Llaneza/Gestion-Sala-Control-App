@@ -45,9 +45,11 @@ const ABSENCE = {
 const MONTHS = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
 const DOW_S = ["L", "M", "X", "J", "V", "S", "D"];
 const TURNO_DEF = {
-  M: { color: "#F59E0B", label: "Mañana" },
-  N: { color: "#818CF8", label: "Noche" },
-  D: { color: "#64748B", label: "Descanso" }
+  M: { color: "#F59E0B", label: "Mañana", bg: "#F59E0B15" },
+  N: { color: "#818CF8", label: "Noche", bg: "#818CF815" },
+  D: { color: "#64748B", label: "Descanso", bg: "transparent" },
+  SC: { color: "#34D399", label: "Servicio Control", bg: "#34D39925" },
+  CA: { color: "#475569", label: "Calle", bg: "transparent" }
 };
 
 // --- UTILS ---
@@ -196,9 +198,6 @@ export default function App() {
               <h2 style={{ margin: 0, minWidth: 140, textAlign: 'center', fontSize: 18, color: t.title }}>{MONTHS[month]} {activeYear}</h2>
               <button style={{ padding: '10px 15px', borderRadius: 8, border: `1px solid ${t.border}`, background: t.card, color: t.text, cursor: 'pointer', minWidth: '80px' }} onClick={handleNextMonth}>Sig.</button>
             </div>
-            <div style={{ textAlign: 'center', marginBottom: 20 }}>
-              <button className="no-print" onClick={() => { setIsExporting(true); setTimeout(() => { window.print(); setIsExporting(false); }, 500); }} style={{ background: '#6366F1', color: '#fff', border: 'none', padding: '12px 24px', borderRadius: 8, fontWeight: 'bold', cursor: 'pointer' }}>🖨️ GENERAR PDF ANUAL</button>
-            </div>
             {(isExporting ? MONTHS : [MONTHS[month]]).map((mName, mIdx) => {
               const mi = isExporting ? mIdx : month;
               return (
@@ -220,9 +219,31 @@ export default function App() {
                           </div>
                           {Array.from({ length: dim(activeYear, mi) }).map((_, i) => {
                             const dk = mk(activeYear, mi+1, i+1), abs = op.calendar?.[dk], rot = cshift(activeYear, mi, i+1, off);
+                            const finalCode = abs || asgn[dk]?.[op.id] || rot;
+                            
+                            // Determinamos color de fondo y texto basado en el código final
+                            let cellBg = "transparent";
+                            let cellColor = t.text;
+                            
+                            if (abs) {
+                              cellBg = ABSENCE[abs].color;
+                              cellColor = "#000";
+                            } else if (asgn[dk]?.[op.id] === "SC") {
+                              cellBg = TURNO_DEF.SC.bg;
+                              cellColor = TURNO_DEF.SC.color;
+                            } else if (TURNO_DEF[rot]) {
+                              cellBg = TURNO_DEF[rot].bg;
+                              cellColor = TURNO_DEF[rot].color;
+                            }
+
                             return (
-                              <div key={i} className="cell-day" style={{ borderTop: `1px solid ${t.border}`, color: abs ? '#000' : (rot === 'D' ? t.sub : t.text), background: abs ? ABSENCE[abs].color : 'transparent', fontWeight: rot !== 'D' ? 'bold' : 'normal' }}>
-                                {abs || rot}
+                              <div key={i} className="cell-day" style={{ 
+                                borderTop: `1px solid ${t.border}`, 
+                                background: cellBg,
+                                color: cellColor,
+                                fontWeight: rot !== 'D' || abs || asgn[dk]?.[op.id] === 'SC' ? 'bold' : 'normal'
+                              }}>
+                                {finalCode}
                               </div>
                             );
                           })}
@@ -268,20 +289,15 @@ export default function App() {
                 </div>
               ))}
             </div>
-
             <div style={{ background: t.card, padding: 25, borderRadius: 16, border: `1px solid ${t.border}` }}>
               <h3 style={{ marginTop: 0, color: t.accent }}>🔐 ACCESOS (ADMINS)</h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
                 <input id="adU" placeholder="Usuario" style={{ padding: 10, borderRadius: 8, border: `1px solid ${t.border}`, background: t.bg, color: t.text }} />
                 <input id="adP" type="password" placeholder="Pass" style={{ padding: 10, borderRadius: 8, border: `1px solid ${t.border}`, background: t.bg, color: t.text }} />
-                <select id="adR" style={{ padding: 10, borderRadius: 8, background: t.bg, color: t.text }}>
-                  <option value="admin">Admin</option>
-                  <option value="editor">Editor</option>
-                </select>
                 <button onClick={() => {
-                  const u = document.getElementById('adU').value, p = document.getElementById('adP').value, r = document.getElementById('adR').value;
-                  if(u && p) { setAdmins([...admins, { user: u, passHash: simpleHash(p), role: r }]); }
-                }} style={{ padding: 12, background: t.accent, border: 'none', borderRadius: 8, fontWeight: 'bold', cursor: 'pointer' }}>CREAR</button>
+                  const u = document.getElementById('adU').value, p = document.getElementById('adP').value;
+                  if(u && p) setAdmins([...admins, { user: u, passHash: simpleHash(p), role: 'admin' }]);
+                }} style={{ padding: 12, background: t.accent, border: 'none', borderRadius: 8, fontWeight: 'bold', cursor: 'pointer' }}>CREAR ADMIN</button>
               </div>
               {admins.map(a => (
                 <div key={a.user} style={{ padding: '8px 0', borderTop: `1px solid ${t.border}`, display: 'flex', justifyContent: 'space-between' }}>
@@ -318,7 +334,7 @@ function EditorComponent({ ops, setOps, activeYear, theme: t, off }) {
           <div style={{ fontSize: 11, fontWeight: 'bold', marginBottom: 8, color: t.accent }}>LEYENDA DE TURNOS</div>
           {Object.entries(TURNO_DEF).map(([k, v]) => (
             <div key={k} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, marginBottom: 4 }}>
-              <div style={{ width: 12, height: 4, background: v.color, borderRadius: 2 }} /> {v.label}
+              <div style={{ width: 12, height: 12, background: v.color, borderRadius: 3, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 8, color: '#000', fontWeight: 'bold' }}>{k}</div> {v.label}
             </div>
           ))}
         </div>

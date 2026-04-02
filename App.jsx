@@ -114,7 +114,11 @@ const Av = ({ name, color, size = 24 }) => (
 );
 
 export default function App() {
-  const currentYear = new Date().getFullYear();
+  // --- INICIALIZACIÓN CON FECHA REAL ACTUAL ---
+  const today = new Date();
+  const currentYear = today.getFullYear();
+  const currentMonth = today.getMonth();
+
   const [session, setSession] = useState(null);
   const [admins, setAdmins] = usePersisted("sc_admins_v4", DEFAULT_ADMINS);
   const [ops, setOps] = usePersisted("sc_ops_v4", [
@@ -127,8 +131,11 @@ export default function App() {
   ]);
   const [off, setOff] = usePersisted("sc_cycle_offset_v4", -11);
   const [view, setView] = useState("calendar");
+  
+  // Seteamos año y mes actual al arrancar
   const [activeYear, setAY] = useState(currentYear);
-  const [month, setMonth] = useState(new Date().getMonth());
+  const [month, setMonth] = useState(currentMonth);
+  
   const [isExporting, setIsExporting] = useState(false);
   const [themeMode, setThemeMode] = useState('dark');
   const t = THEMES[themeMode];
@@ -254,8 +261,6 @@ export default function App() {
                             const dateKey = mk(activeYear, mi+1, i+1);
                             const absenceCode = op.calendar?.[dateKey];
                             const rotationCode = cshift(activeYear, mi, i+1, off);
-                            
-                            // Mostrar ausencia si existe, si no, el turno de rotación
                             return (
                               <div key={i} className="cell-day" style={{ 
                                 textAlign: 'center', 

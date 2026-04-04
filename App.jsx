@@ -157,7 +157,15 @@ export default function App() {
   const [view, setView] = useState("calendar");
   const [activeYear, setAY] = useState(today.getFullYear());
   const [month, setMonth] = useState(today.getMonth());
-  const [themeMode, setThemeMode] = useState('dark');
+  
+  // --- LÓGICA TEMA AUTOMÁTICO ---
+  const getSystemTheme = () => (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+  const [themeMode, setThemeMode] = useState(getSystemTheme());
+
+  useEffect(() => {
+    // Sincronizar el color de fondo del body con el tema seleccionado
+    document.body.style.backgroundColor = THEMES[themeMode].bg;
+  }, [themeMode]);
 
   useEffect(() => {
     onValue(ref(db, 'ops'), s => s.val() && setOps(s.val()));

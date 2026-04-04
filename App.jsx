@@ -178,7 +178,6 @@ export default function App() {
 
   const isAdmin = session?.role === "admin" || session?.role === "superadmin";
   const canEdit = isAdmin || session?.role === "editor";
-  // La pestaña EDITOR ahora es visible para todos
   const canViewEditor = true;
 
   const asgn = useMemo(() => autoAssign(ops, activeYear, off), [ops, activeYear, off]);
@@ -208,6 +207,8 @@ export default function App() {
           <select value={activeYear} onChange={e => setAY(Number(e.target.value))} style={{ background: t.bg, color: t.text, border: `1px solid ${t.border}`, borderRadius: 4, padding: '4px 8px', cursor: 'pointer' }}>
             {[2024, 2025, 2026, 2027, 2028, 2029, 2030].map(y => <option key={y} value={y}>{y}</option>)}
           </select>
+          {/* BOTÓN PDF RESTAURADO */}
+          <button onClick={() => window.print()} style={{ background: t.accent, color: '#000', border: 'none', padding: '6px 12px', borderRadius: 8, fontSize: 11, fontWeight: 'bold', cursor: 'pointer' }}>📄 EXPORTAR PDF ANUAL</button>
         </div>
         <button onClick={() => setSession(null)} style={{ background: '#EF444422', color: '#EF4444', border: 'none', padding: '6px 12px', borderRadius: 4, fontSize: 11, fontWeight: 'bold', cursor: 'pointer' }}>SALIR</button>
       </header>
@@ -336,7 +337,7 @@ function EditorComponent({ ops, saveOps, activeYear, theme: t, off, isReadOnly }
   const [selAb, setSelAb] = useState("VA");
 
   const toggleAbsence = (dateKey) => {
-    if (isReadOnly) return; // Protección contra edición en modo lectura
+    if (isReadOnly) return;
     const newOps = ops.map(o => {
       if (o.id !== selOp) return o;
       const newCal = { ...(o.calendar || {}) };
@@ -365,7 +366,6 @@ function EditorComponent({ ops, saveOps, activeYear, theme: t, off, isReadOnly }
           )}
         </div>
         
-        {/* LEYENDA SIEMPRE VISIBLE */}
         <div style={{ background: t.bg, padding: 15, borderRadius: 12, border: `1px solid ${t.border}`, minWidth: 200 }}>
           <div style={{ fontSize: 11, fontWeight: 'bold', marginBottom: 8, color: t.accent }}>LEYENDA DE TURNOS</div>
           {Object.entries(TURNO_DEF).map(([k, v]) => (

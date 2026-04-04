@@ -147,6 +147,9 @@ export default function App() {
   const isSuper = session?.role === "superadmin";
   const isAdmin = session?.role === "admin" || isSuper;
   const canEdit = isAdmin || session?.role === "editor";
+  // Invitados ahora ven el editor pero no pueden guardar
+  const canSeeEditor = canEdit || session?.role === "guest";
+
   const asgn = useMemo(() => autoAssign(ops, activeYear, off), [ops, activeYear, off]);
   const stats = useMemo(() => computeStats(ops, activeYear, asgn, off), [ops, activeYear, asgn, off]);
 
@@ -186,7 +189,7 @@ export default function App() {
 
       <nav className="no-print" style={{ display: 'flex', background: t.card, borderBottom: `1px solid ${t.border}`, position: 'sticky', top: 48, zIndex: 190, justifyContent: 'center' }}>
         <div style={{ display: 'flex', width: '100%', maxWidth: 800 }}>
-          {["calendar", "stats", canEdit && "editor", isAdmin && "config"].filter(Boolean).map(v => (
+          {["calendar", "stats", canSeeEditor && "editor", isAdmin && "config"].filter(Boolean).map(v => (
             <button key={v} onClick={() => setView(v)} style={{ flex: 1, padding: '15px 10px', color: view === v ? t.accent : t.sub, background: 'none', border: 'none', cursor: 'pointer', fontWeight: 'bold', borderBottom: view === v ? `3px solid ${t.accent}` : 'none' }}>{v.toUpperCase()}</button>
           ))}
         </div>
@@ -252,7 +255,7 @@ export default function App() {
           </div>
         )}
 
-        {view === "editor" && <EditorComponent ops={ops} saveOps={saveOps} activeYear={activeYear} theme={t} off={off} />}
+        {view === "editor" && <EditorComponent ops={ops} saveOps={saveOps} activeYear={activeYear} theme={t} off={off} canEdit={canEdit} />}
 
         {view === "config" && isAdmin && (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: 30 }}>
@@ -303,10 +306,11 @@ export default function App() {
   );
 }
 
-function EditorComponent({ ops, saveOps, activeYear, theme: t, off }) {
+function EditorComponent({ ops, saveOps, activeYear, theme: t, off, canEdit }) {
   const [selOp, setSelOp] = useState(ops[0]?.id);
   const [selAb, setSelAb] = useState("VA");
   const toggleAbsence = (dateKey) => {
+    if (!canEdit) return; // Si no tiene permisos, no hace nada
     const newOps = ops.map(o => {
       if (o.id !== selOp) return o;
       const newCal = { ...(o.calendar || {}) };
@@ -318,12 +322,13 @@ function EditorComponent({ ops, saveOps, activeYear, theme: t, off }) {
 
   return (
     <div style={{ background: t.card, padding: 25, borderRadius: 16, border: `1px solid ${t.border}` }}>
+      {!canEdit && <p style={{ color: '#EF4444', fontSize: 12, marginBottom: 15, fontWeight: 'bold' }}>⚠️ MODO LECTURA: No puedes modificar las ausencias.</p>}
       <select value={selOp} onChange={e => setSelOp(Number(e.target.value))} style={{ padding: 12, width: '100%', background: t.bg, color: t.text, border: `1px solid ${t.border}`, borderRadius: 8, marginBottom: 20 }}>
         {ops.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
       </select>
       <div style={{ display: 'flex', gap: 10, marginBottom: 20 }}>
         {Object.keys(ABSENCE).map(k => (
-          <button key={k} onClick={() => setSelAb(k)} style={{ background: selAb === k ? ABSENCE[k].color : 'transparent', border: `2px solid ${ABSENCE[k].color}`, color: selAb === k ? '#000' : ABSENCE[k].color, padding: '10px', borderRadius: 8, cursor: 'pointer', fontWeight: 'bold' }}>{ABSENCE[k].icon} {ABSENCE[k].label}</button>
+          <button key={k} onClick={() => setSelAb(k)} style={{ background: selAb === k ? ABSENCE[k].color : 'transparent', border: `2px solid ${ABSENCE[k].color}`, color: selAb === k ? '#000' : ABSENCE[k].color, padding: '10px', borderRadius: 8, cursor: 'pointer', fontWeight: 'bold', opacity: !canEdit && selAb !== k ? 0.5 : 1 }}>{ABSENCE[k].icon} {ABSENCE[k].label}</button>
         ))}
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 15 }}>
@@ -334,7 +339,7 @@ function EditorComponent({ ops, saveOps, activeYear, theme: t, off }) {
               {Array.from({ length: dim(activeYear, mi) }).map((_, di) => {
                 const k = mk(activeYear, mi + 1, di + 1), status = ops.find(o => o.id === selOp)?.calendar?.[k], rot = cshift(activeYear, mi, di + 1, off);
                 return (
-                  <div key={di} onClick={() => toggleAbsence(k)} style={{ height: 32, background: status ? ABSENCE[status].color : t.card, borderBottom: `3px solid ${TURNO_DEF[rot]?.color || 'transparent'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, cursor: 'pointer', borderRadius: 4, color: status ? '#000' : t.text }}>{di + 1}</div>
+                  <div key={di} onClick={() => toggleAbsence(k)} style={{ height: 32, background: status ? ABSENCE[status].color : t.card, borderBottom: `3px solid ${TURNO_DEF[rot]?.color || 'transparent'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, cursor: canEdit ? 'pointer' : 'default', borderRadius: 4, color: status ? '#000' : t.text }}>{di + 1}</div>
                 );
               })}
             </div>

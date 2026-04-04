@@ -148,29 +148,24 @@ export default function App() {
 
   // --- LÓGICA DE SINCRONIZACIÓN EN TIEMPO REAL ---
   useEffect(() => {
-    // Escuchar Operadores
     onValue(ref(db, 'ops'), (snapshot) => {
       const data = snapshot.val();
       if (data) setOps(data);
     });
-    // Escuchar Admins
     onValue(ref(db, 'admins'), (snapshot) => {
       const data = snapshot.val();
       if (data) setAdmins(data);
     });
-    // Escuchar Offset
     onValue(ref(db, 'offset'), (snapshot) => {
       const data = snapshot.val();
       if (data !== null) setOff(data);
     });
   }, []);
 
-  // Funciones para guardar en la nube
   const saveOps = (newOps) => set(ref(db, 'ops'), newOps);
   const saveAdmins = (newAdmins) => set(ref(db, 'admins'), newAdmins);
   const saveOff = (newOff) => set(ref(db, 'offset'), newOff);
 
-  // Modo noche automático (tu lógica original)
   useEffect(() => {
     if (!manualTheme) {
       const hour = new Date().getHours();
@@ -183,6 +178,9 @@ export default function App() {
 
   const isAdmin = session?.role === "admin" || session?.role === "superadmin";
   const canEdit = isAdmin || session?.role === "editor";
+  // La pestaña EDITOR ahora es visible para todos
+  const canViewEditor = true;
+
   const asgn = useMemo(() => autoAssign(ops, activeYear, off), [ops, activeYear, off]);
   const stats = useMemo(() => computeStats(ops, activeYear, asgn, off), [ops, activeYear, asgn, off]);
 
@@ -216,7 +214,7 @@ export default function App() {
 
       <nav className="no-print" style={{ display: 'flex', background: t.card, borderBottom: `1px solid ${t.border}`, position: 'sticky', top: 48, zIndex: 190, justifyContent: 'center' }}>
         <div style={{ display: 'flex', width: '100%', maxWidth: 800 }}>
-          {["calendar", "stats", canEdit && "editor", isAdmin && "config"].filter(Boolean).map(v => (
+          {["calendar", "stats", canViewEditor && "editor", isAdmin && "config"].filter(Boolean).map(v => (
             <button key={v} className="nav-btn" onClick={() => setView(v)} style={{ padding: '15px 20px', color: view === v ? t.accent : t.sub, background: 'none', border: 'none', cursor: 'pointer', fontWeight: 'bold', borderBottom: view === v ? `3px solid ${t.accent}` : 'none', transition: '0.2s' }}>{v.toUpperCase()}</button>
           ))}
         </div>
@@ -284,7 +282,7 @@ export default function App() {
           </div>
         )}
 
-        {view === "editor" && <EditorComponent ops={ops} saveOps={saveOps} activeYear={activeYear} theme={t} off={off} />}
+        {view === "editor" && <EditorComponent ops={ops} saveOps={saveOps} activeYear={activeYear} theme={t} off={off} isReadOnly={!canEdit} />}
 
         {view === "config" && isAdmin && (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: 30 }}>
@@ -321,7 +319,6 @@ export default function App() {
                 </div>
               ))}
             </div>
-            {/* EDITOR DE OFFSET */}
             <div style={{ background: t.card, padding: 25, borderRadius: 16, border: `1px solid ${t.border}` }}>
               <h3 style={{ marginTop: 0, color: t.accent }}>🔄 AJUSTE DE CICLO (OFFSET)</h3>
               <input type="number" value={off} onChange={e => saveOff(Number(e.target.value))} style={{ padding: 12, width: '100%', borderRadius: 8, border: `1px solid ${t.border}`, background: t.bg, color: t.text }} />
@@ -334,11 +331,12 @@ export default function App() {
   );
 }
 
-function EditorComponent({ ops, saveOps, activeYear, theme: t, off }) {
+function EditorComponent({ ops, saveOps, activeYear, theme: t, off, isReadOnly }) {
   const [selOp, setSelOp] = useState(ops[0]?.id);
   const [selAb, setSelAb] = useState("VA");
 
   const toggleAbsence = (dateKey) => {
+    if (isReadOnly) return; // Protección contra edición en modo lectura
     const newOps = ops.map(o => {
       if (o.id !== selOp) return o;
       const newCal = { ...(o.calendar || {}) };
@@ -353,16 +351,21 @@ function EditorComponent({ ops, saveOps, activeYear, theme: t, off }) {
     <div style={{ background: t.card, padding: 25, borderRadius: 16, border: `1px solid ${t.border}` }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 20, marginBottom: 30, flexWrap: 'wrap' }}>
         <div style={{ flex: 1, minWidth: 280 }}>
-          <label style={{ fontSize: 12, color: t.sub }}>OPERADOR:</label>
+          <label style={{ fontSize: 12, color: t.sub }}>VISTA ANUAL DE OPERADOR {isReadOnly && "(MODO LECTURA)"}:</label>
           <select value={selOp} onChange={e => setSelOp(Number(e.target.value))} style={{ padding: 12, width: '100%', background: t.bg, color: t.text, border: `1px solid ${t.border}`, borderRadius: 8, marginBottom: 15 }}>
             {ops.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
           </select>
-          <div style={{ display: 'flex', gap: 10 }}>
-            {Object.keys(ABSENCE).map(k => (
-              <button key={k} onClick={() => setSelAb(k)} style={{ background: selAb === k ? ABSENCE[k].color : 'transparent', border: `2px solid ${ABSENCE[k].color}`, color: selAb === k ? '#000' : ABSENCE[k].color, padding: '10px', borderRadius: 8, cursor: 'pointer', fontWeight: 'bold' }}>{ABSENCE[k].icon} {ABSENCE[k].label}</button>
-            ))}
-          </div>
+          
+          {!isReadOnly && (
+            <div style={{ display: 'flex', gap: 10 }}>
+              {Object.keys(ABSENCE).map(k => (
+                <button key={k} onClick={() => setSelAb(k)} style={{ background: selAb === k ? ABSENCE[k].color : 'transparent', border: `2px solid ${ABSENCE[k].color}`, color: selAb === k ? '#000' : ABSENCE[k].color, padding: '10px', borderRadius: 8, cursor: 'pointer', fontWeight: 'bold' }}>{ABSENCE[k].icon} {ABSENCE[k].label}</button>
+              ))}
+            </div>
+          )}
         </div>
+        
+        {/* LEYENDA SIEMPRE VISIBLE */}
         <div style={{ background: t.bg, padding: 15, borderRadius: 12, border: `1px solid ${t.border}`, minWidth: 200 }}>
           <div style={{ fontSize: 11, fontWeight: 'bold', marginBottom: 8, color: t.accent }}>LEYENDA DE TURNOS</div>
           {Object.entries(TURNO_DEF).map(([k, v]) => (
@@ -370,8 +373,14 @@ function EditorComponent({ ops, saveOps, activeYear, theme: t, off }) {
               <div style={{ width: 12, height: 12, background: v.color, borderRadius: 3, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 8, color: '#000', fontWeight: 'bold' }}>{k}</div> {v.label}
             </div>
           ))}
+          {Object.entries(ABSENCE).map(([k, v]) => (
+            <div key={k} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, marginBottom: 4 }}>
+               <span style={{ fontSize: 12 }}>{v.icon}</span> {v.label}
+            </div>
+          ))}
         </div>
       </div>
+      
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 15 }}>
         {MONTHS.map((m, mi) => (
           <div key={m} style={{ background: t.bg, padding: 12, borderRadius: 10, border: `1px solid ${t.border}` }}>
@@ -382,7 +391,18 @@ function EditorComponent({ ops, saveOps, activeYear, theme: t, off }) {
                 const status = ops.find(o => o.id === selOp)?.calendar?.[k];
                 const rot = cshift(activeYear, mi, di + 1, off);
                 return (
-                  <div key={di} onClick={() => toggleAbsence(k)} style={{ height: 32, background: status ? ABSENCE[status].color : t.card, borderBottom: `3px solid ${TURNO_DEF[rot]?.color || 'transparent'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, cursor: 'pointer', borderRadius: 4, color: status ? '#000' : t.text }}>
+                  <div key={di} 
+                       onClick={() => toggleAbsence(k)} 
+                       style={{ 
+                         height: 32, 
+                         background: status ? ABSENCE[status].color : t.card, 
+                         borderBottom: `3px solid ${TURNO_DEF[rot]?.color || 'transparent'}`, 
+                         display: 'flex', alignItems: 'center', justifyContent: 'center', 
+                         fontSize: 10, 
+                         cursor: isReadOnly ? 'default' : 'pointer', 
+                         borderRadius: 4, 
+                         color: status ? '#000' : t.text 
+                       }}>
                     {di + 1}
                   </div>
                 );

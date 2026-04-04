@@ -112,12 +112,12 @@ function CalendarGrid({ ops, year, month, off, asgn, t }) {
   const dCount = dim(year, month);
   return (
     <div className="calendar-container" style={{ background: t.card, borderRadius: 12, overflowX: "auto", border: `1px solid ${t.border}`, position: 'relative', marginBottom: 20 }}>
-      <div style={{ display: 'grid', gridTemplateColumns: `100px repeat(${dCount}, 45px)`, minWidth: 'max-content' }}>
+      {/* El grid-template-columns usa 1fr para que en PC se ajuste al ancho total sin scroll lateral */}
+      <div className="calendar-grid-main" style={{ display: 'grid', gridTemplateColumns: `120px repeat(${dCount}, 1fr)`, minWidth: '100%' }}>
         <div style={{ height: 50, background: t.bg, borderBottom: `1px solid ${t.border}`, position: 'sticky', left: 0, zIndex: 30 }} />
         {Array.from({ length: dCount }).map((_, i) => {
-          const rot = cshift(year, month, i+1, off);
           return (
-            <div key={i} style={{ textAlign: 'center', borderBottom: `1px solid ${t.border}`, background: t.bg, display: 'flex', flexDirection: 'column', height: 50, justifyContent: 'center' }}>
+            <div key={i} style={{ textAlign: 'center', borderBottom: `1px solid ${t.border}`, background: t.bg, display: 'flex', flexDirection: 'column', height: 50, justifyContent: 'center', minWidth: '30px' }}>
               <span style={{ color: dow(year, month, i+1) >= 5 ? '#EF4444' : t.sub, fontSize: 10 }}>{DOW_S[dow(year, month, i+1)]}</span>
               <span style={{ fontWeight: 'bold', fontSize: 13 }}>{i+1}</span>
             </div>
@@ -136,7 +136,7 @@ function CalendarGrid({ ops, year, month, off, asgn, t }) {
               else if (calc === "SC") { bg = EXTRA_VISUALS.SC.bg; col = EXTRA_VISUALS.SC.color; }
               else if (TURNO_DEF[rot]) { bg = TURNO_DEF[rot].bg; col = TURNO_DEF[rot].color; }
               return (
-                <div key={i} style={{ height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', borderTop: `1px solid ${t.border}`, background: bg, color: col, fontSize: 11, fontWeight: 'bold', borderRight: `1px solid ${t.border}33` }}>
+                <div key={i} style={{ height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', borderTop: `1px solid ${t.border}`, background: bg, color: col, fontSize: 11, fontWeight: 'bold', borderRight: `1px solid ${t.border}33`, minWidth: '30px' }}>
                   {code}
                 </div>
               );
@@ -175,23 +175,11 @@ export default function App() {
   const saveAdmins = (n) => set(ref(db, 'admins'), n);
   const saveOff = (n) => set(ref(db, 'offset'), n);
 
-  // --- LÓGICA DE NAVEGACIÓN DE MESES Y AÑOS ---
   const handleNextMonth = () => {
-    if (month === 11) {
-      setMonth(0);
-      setAY(prev => prev + 1);
-    } else {
-      setMonth(prev => prev + 1);
-    }
+    if (month === 11) { setMonth(0); setAY(prev => prev + 1); } else { setMonth(prev => prev + 1); }
   };
-
   const handlePrevMonth = () => {
-    if (month === 0) {
-      setMonth(11);
-      setAY(prev => prev - 1);
-    } else {
-      setMonth(prev => prev - 1);
-    }
+    if (month === 0) { setMonth(11); setAY(prev => prev - 1); } else { setMonth(prev => prev - 1); }
   };
 
   const t = THEMES[themeMode];
@@ -205,7 +193,8 @@ export default function App() {
   return (
     <div style={{ minHeight: "100vh", background: t.bg, color: t.text, fontFamily: 'sans-serif' }}>
       <style>{`
-        @media screen and (max-width: 600px) {
+        @media screen and (max-width: 800px) {
+          .calendar-grid-main { grid-template-columns: 100px repeat(31, 40px) !important; min-width: max-content !important; }
           .header-controls { flex-direction: column; gap: 10px; width: 100%; }
           .nav-menu { overflow-x: auto; justify-content: flex-start !important; padding: 0 10px; }
           .stats-grid { grid-template-columns: 1fr !important; }
@@ -252,13 +241,13 @@ export default function App() {
         ))}
       </nav>
 
-      <main className="no-print" style={{ padding: "15px", maxWidth: 1400, margin: '0 auto' }}>
+      <main className="no-print" style={{ padding: "15px", maxWidth: 1600, margin: '0 auto' }}>
         {view === "calendar" && (
           <div>
             <div style={{ display: 'flex', justifyContent: 'center', gap: 10, marginBottom: 20, alignItems: 'center' }}>
-              <button style={{padding:'8px 12px', cursor:'pointer', fontWeight:'bold'}} onClick={handlePrevMonth}>←</button>
-              <h2 style={{ margin: 0, fontSize: 18, minWidth: 160, textAlign: 'center' }}>{MONTHS[month].toUpperCase()} {activeYear}</h2>
-              <button style={{padding:'8px 12px', cursor:'pointer', fontWeight:'bold'}} onClick={handleNextMonth}>→</button>
+              <button style={{padding:'8px 12px', cursor:'pointer', fontWeight:'bold', background: t.card, border: `1px solid ${t.border}`, color: t.text}} onClick={handlePrevMonth}>←</button>
+              <h2 style={{ margin: 0, fontSize: 18, minWidth: 200, textAlign: 'center' }}>{MONTHS[month].toUpperCase()} {activeYear}</h2>
+              <button style={{padding:'8px 12px', cursor:'pointer', fontWeight:'bold', background: t.card, border: `1px solid ${t.border}`, color: t.text}} onClick={handleNextMonth}>→</button>
             </div>
             <CalendarGrid ops={ops} year={activeYear} month={month} off={off} asgn={asgn} t={t} />
           </div>
@@ -334,10 +323,21 @@ function EditorComponent({ ops, saveOps, activeYear, theme: t, off, isReadOnly }
         <select value={selOp} onChange={e => setSelOp(Number(e.target.value))} style={{ width: '100%', padding: 12, background: t.bg, color: t.text, borderRadius: 8, fontSize: 14 }}>
           {ops.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
         </select>
+        
+        {/* LEYENDA */}
+        <div style={{ marginTop: 15, padding: 12, background: t.bg, borderRadius: 10, display: 'flex', flexWrap: 'wrap', gap: 15, fontSize: 11, border: `1px solid ${t.border}` }}>
+          <div style={{display:'flex', gap:5, alignItems:'center'}}><div style={{width:12, height:12, background:TURNO_DEF.M.color, borderRadius:3}}></div> <b>M:</b> Mañana</div>
+          <div style={{display:'flex', gap:5, alignItems:'center'}}><div style={{width:12, height:12, background:TURNO_DEF.N.color, borderRadius:3}}></div> <b>N:</b> Noche</div>
+          <div style={{display:'flex', gap:5, alignItems:'center'}}><div style={{width:12, height:12, border:`1px solid ${t.sub}`, borderRadius:3}}></div> <b>D:</b> Descanso</div>
+          <div style={{display:'flex', gap:5, alignItems:'center'}}><div style={{width:12, height:12, background:ABSENCE.VA.color, borderRadius:3}}></div> <b>VA:</b> Vacaciones</div>
+          <div style={{display:'flex', gap:5, alignItems:'center'}}><div style={{width:12, height:12, background:ABSENCE.EN.color, borderRadius:3}}></div> <b>EN:</b> Entrenamiento</div>
+          <div style={{display:'flex', gap:5, alignItems:'center'}}><div style={{width:12, height:12, background:EXTRA_VISUALS.SC.color, borderRadius:3}}></div> <b>SC:</b> Sala Control</div>
+        </div>
+
         {!isReadOnly && (
-          <div style={{ marginTop: 10, display: 'flex', gap: 5, overflowX: 'auto', paddingBottom: 5 }}>
+          <div style={{ marginTop: 15, display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 5 }}>
             {Object.keys(ABSENCE).map(k => (
-              <button key={k} onClick={() => setSelAb(k)} style={{ background: selAb === k ? ABSENCE[k].color : 'transparent', border: `2px solid ${ABSENCE[k].color}`, color: selAb === k ? '#000' : ABSENCE[k].color, padding: '8px 12px', borderRadius: 8, whiteSpace: 'nowrap', fontSize: 12 }}>{ABSENCE[k].icon} {ABSENCE[k].label}</button>
+              <button key={k} onClick={() => setSelAb(k)} style={{ background: selAb === k ? ABSENCE[k].color : 'transparent', border: `2px solid ${ABSENCE[k].color}`, color: selAb === k ? '#000' : ABSENCE[k].color, padding: '10px 16px', borderRadius: 8, whiteSpace: 'nowrap', fontSize: 13, fontWeight:'bold', cursor:'pointer' }}>{ABSENCE[k].icon} {ABSENCE[k].label}</button>
             ))}
           </div>
         )}
@@ -350,7 +350,7 @@ function EditorComponent({ ops, saveOps, activeYear, theme: t, off, isReadOnly }
               {Array.from({ length: dim(activeYear, mi) }).map((_, di) => {
                 const k = mk(activeYear, mi+1, di+1), rot = cshift(activeYear, mi, di+1, off), abs = ops.find(o=>o.id===selOp)?.calendar?.[k];
                 return (
-                  <div key={di} onClick={() => toggleAbsence(k)} style={{ height: 35, display: 'flex', alignItems: 'center', justifyContent: 'center', background: abs ? ABSENCE[abs].color : t.card, borderBottom: `3px solid ${TURNO_DEF[rot]?.color}`, fontSize: 11, color: abs ? '#000' : t.text, borderRadius: 4 }}>{di+1}</div>
+                  <div key={di} onClick={() => toggleAbsence(k)} style={{ height: 35, display: 'flex', alignItems: 'center', justifyContent: 'center', background: abs ? ABSENCE[abs].color : t.card, borderBottom: `3px solid ${TURNO_DEF[rot]?.color}`, fontSize: 11, color: abs ? '#000' : t.text, borderRadius: 4, cursor: isReadOnly ? 'default' : 'pointer' }}>{di+1}</div>
                 );
               })}
             </div>

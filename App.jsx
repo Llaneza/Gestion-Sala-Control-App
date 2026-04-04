@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from "react";
 import { initializeApp } from "firebase/app";
 import { getDatabase, ref, onValue, set } from "firebase/database";
 
+// --- CONFIGURACIÓN Y CONSTANTES ---
 const firebaseConfig = {
   apiKey: "AIzaSyAAW-KbrhHIzDyRTgmVjlzPa7TK8o9FeI4",
   authDomain: "app-sala-control.firebaseapp.com",
@@ -47,6 +48,7 @@ const TURNO_DEF = {
 };
 const EXTRA_VISUALS = { SC: { color: "#34D399", bg: "#34D39925" }, CA: { color: "#475569", bg: "transparent" } };
 
+// --- HELPERS LÓGICOS ---
 const dim = (y, m) => new Date(y, m + 1, 0).getDate();
 const dow = (y, m, d) => { const r = new Date(y, m, d).getDay(); return r === 0 ? 6 : r - 1; };
 const dse = (y, m, d) => Math.round((new Date(y, m, d) - new Date(1970, 0, 1)) / 86400000);
@@ -108,26 +110,29 @@ const Av = ({ name, color, size = 24 }) => (
   </div>
 );
 
+// --- COMPONENTE GRILLA PRINCIPAL ---
 function CalendarGrid({ ops, year, month, off, asgn, t }) {
   const dCount = dim(year, month);
   return (
-    <div className="calendar-scroll-area" style={{ background: t.card, borderRadius: 12, overflowX: "auto", border: `1px solid ${t.border}`, marginBottom: 20 }}>
-      <div className="calendar-grid-wrapper" style={{ display: 'grid', gridTemplateColumns: `140px repeat(${dCount}, 1fr)`, minWidth: '100%' }}>
-        {/* Cabecera pegajosa */}
-        <div style={{ height: 50, background: t.card, borderBottom: `1px solid ${t.border}`, position: 'sticky', left: 0, zIndex: 40, borderRight: `2px solid ${t.border}` }} />
+    <div className="cal-container" style={{ background: t.card, borderRadius: 12, overflowX: "auto", border: `1px solid ${t.border}`, marginBottom: 20 }}>
+      <div className="cal-grid-base" style={{ display: 'grid', gridTemplateColumns: `140px repeat(${dCount}, 1fr)`, minWidth: '100%' }}>
+        
+        {/* Esquina pegajosa */}
+        <div style={{ height: 50, background: t.card, borderBottom: `2px solid ${t.border}`, position: 'sticky', left: 0, zIndex: 40, borderRight: `2px solid ${t.border}` }} />
+        
         {Array.from({ length: dCount }).map((_, i) => (
-          <div key={i} style={{ textAlign: 'center', borderBottom: `1px solid ${t.border}`, background: t.bg, display: 'flex', flexDirection: 'column', height: 50, justifyContent: 'center' }}>
+          <div key={i} style={{ textAlign: 'center', borderBottom: `2px solid ${t.border}`, background: t.bg, display: 'flex', flexDirection: 'column', height: 50, justifyContent: 'center', minWidth: '35px' }}>
             <span style={{ color: dow(year, month, i+1) >= 5 ? '#EF4444' : t.sub, fontSize: 10 }}>{DOW_S[dow(year, month, i+1)]}</span>
-            <span style={{ fontWeight: 'bold', fontSize: 13, color: t.title }}>{i+1}</span>
+            <span style={{ fontWeight: 'bold', fontSize: 13 }}>{i+1}</span>
           </div>
         ))}
 
         {ops.map(op => (
           <div key={op.id} style={{ display: 'contents' }}>
-            {/* Nombres pegajosos con fondo opaco */}
-            <div style={{ padding: '0 10px', height: 45, fontSize: 13, borderTop: `1px solid ${t.border}`, display: 'flex', alignItems: 'center', gap: 8, background: t.card, position: 'sticky', left: 0, zIndex: 30, borderRight: `2px solid ${t.border}`, color: t.text }}>
+            {/* Columna de nombres pegajosa */}
+            <div style={{ padding: '0 10px', height: 45, fontSize: 13, borderBottom: `1px solid ${t.border}`, display: 'flex', alignItems: 'center', gap: 8, background: t.card, position: 'sticky', left: 0, zIndex: 30, borderRight: `2px solid ${t.border}` }}>
               <Av name={op.name} color={op.color} size={22} /> 
-              <span style={{fontWeight:'bold', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis'}}>{op.name}</span>
+              <span style={{fontWeight:'bold', whiteSpace:'nowrap'}}>{op.name}</span>
             </div>
             
             {Array.from({ length: dCount }).map((_, i) => {
@@ -139,7 +144,7 @@ function CalendarGrid({ ops, year, month, off, asgn, t }) {
               else if (TURNO_DEF[rot]) { bg = TURNO_DEF[rot].bg; col = TURNO_DEF[rot].color; }
               
               return (
-                <div key={i} style={{ height: 45, display: 'flex', alignItems: 'center', justifyContent: 'center', borderTop: `1px solid ${t.border}`, background: bg, color: col, fontSize: 12, fontWeight: '900', borderRight: `1px solid ${t.border}11` }}>
+                <div key={i} style={{ height: 45, display: 'flex', alignItems: 'center', justifyContent: 'center', borderBottom: `1px solid ${t.border}`, background: bg, color: col, fontSize: 12, fontWeight: 'bold', borderRight: `1px solid ${t.border}11` }}>
                   {code}
                 </div>
               );
@@ -151,6 +156,7 @@ function CalendarGrid({ ops, year, month, off, asgn, t }) {
   );
 }
 
+// --- COMPONENTE PRINCIPAL APP ---
 export default function App() {
   const today = new Date();
   const [session, setSession] = useState(null);
@@ -160,11 +166,10 @@ export default function App() {
   const [view, setView] = useState("calendar");
   const [activeYear, setAY] = useState(today.getFullYear());
   const [month, setMonth] = useState(today.getMonth());
-  
-  const getSystemTheme = () => (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
-  const [themeMode, setThemeMode] = useState(getSystemTheme());
+  const [themeMode, setThemeMode] = useState(window.matchMedia?.('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
 
-  useEffect(() => { document.body.style.backgroundColor = THEMES[themeMode].bg; }, [themeMode]);
+  const t = THEMES[themeMode];
+  useEffect(() => { document.body.style.backgroundColor = t.bg; }, [t.bg]);
 
   useEffect(() => {
     onValue(ref(db, 'ops'), s => s.val() && setOps(s.val()));
@@ -176,11 +181,7 @@ export default function App() {
   const saveAdmins = (n) => set(ref(db, 'admins'), n);
   const saveOff = (n) => set(ref(db, 'offset'), n);
 
-  const handleNextMonth = () => { if (month === 11) { setMonth(0); setAY(prev => prev + 1); } else { setMonth(prev => prev + 1); } };
-  const handlePrevMonth = () => { if (month === 0) { setMonth(11); setAY(prev => prev - 1); } else { setMonth(prev => prev - 1); } };
-
-  const t = THEMES[themeMode];
-  const isAdmin = session?.role === "admin" || session?.role === "superadmin";
+  const isAdmin = session?.role === "superadmin" || session?.role === "admin";
   const canEdit = isAdmin || session?.role === "editor";
   const asgn = useMemo(() => autoAssign(ops, activeYear, off), [ops, activeYear, off]);
   const stats = useMemo(() => computeStats(ops, activeYear, asgn, off), [ops, activeYear, asgn, off]);
@@ -190,38 +191,28 @@ export default function App() {
   return (
     <div style={{ minHeight: "100vh", background: t.bg, color: t.text, fontFamily: 'sans-serif' }}>
       <style>{`
-        /* Desktop: Vista completa sin scroll lateral */
-        @media screen and (min-width: 1200px) {
-          .calendar-grid-wrapper { grid-template-columns: 140px repeat(31, 1fr) !important; width: 100% !important; min-width: 100% !important; }
+        /* Desktop: 31 días comprimidos para que quepan */
+        @media screen and (min-width: 1024px) {
+          .cal-grid-base { grid-template-columns: 140px repeat(31, 1fr) !important; width: 100% !important; }
         }
-        /* Mobile/Tablet: Scroll lateral con celdas de tamaño fijo */
-        @media screen and (max-width: 1199px) {
-          .calendar-grid-wrapper { grid-template-columns: 140px repeat(31, 40px) !important; width: max-content !important; }
+        /* Mobile: Celdas de 40px y scroll lateral con nombres fijos */
+        @media screen and (max-width: 1023px) {
+          .cal-grid-base { grid-template-columns: 140px repeat(31, 40px) !important; width: max-content !important; }
         }
-        @media screen and (max-width: 600px) {
-          .header-controls { flex-direction: column; gap: 10px; }
-          .nav-menu { overflow-x: auto; justify-content: flex-start !important; padding: 0 10px; }
-        }
-        @media print { .no-print { display: none !important; } .print-only { display: block !important; } }
-        .print-only { display: none; }
+        @media print { .no-print { display: none !important; } }
       `}</style>
 
-      <header className="no-print" style={{ background: t.card, padding: "15px", borderBottom: `1px solid ${t.border}`, position: 'sticky', top: 0, zIndex: 100 }}>
-        <div className="header-controls" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-            <span style={{ fontWeight: 900, color: t.accent }}>SALA CONTROL</span>
-            <button onClick={() => window.print()} style={{ background: t.accent, color: '#000', border: 'none', padding: '5px 10px', borderRadius: 4, fontWeight: 'bold', fontSize: 11 }}>PDF</button>
-          </div>
-          <div style={{display:'flex', gap:10}}>
-            <button onClick={() => setThemeMode(m => m === 'dark' ? 'light' : 'dark')} style={{ background: t.bg, border: `1px solid ${t.border}`, borderRadius: 6, padding: '5px' }}>{themeMode === 'dark' ? '🌙' : '☀️'}</button>
-            <button onClick={() => setSession(null)} style={{ background: '#EF444422', color: '#EF4444', border: 'none', padding: '5px 10px', borderRadius: 6, fontSize: 11, fontWeight: 'bold' }}>SALIR</button>
-          </div>
+      <header className="no-print" style={{ background: t.card, padding: "15px", borderBottom: `1px solid ${t.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'sticky', top: 0, zIndex: 100 }}>
+        <span style={{ fontWeight: 900, color: t.accent }}>SALA CONTROL</span>
+        <div style={{display:'flex', gap: 10}}>
+          <button onClick={() => setThemeMode(themeMode === 'dark' ? 'light' : 'dark')} style={{ background: t.bg, border: `1px solid ${t.border}`, borderRadius: 6, padding: '5px' }}>{themeMode === 'dark' ? '🌙' : '☀️'}</button>
+          <button onClick={() => setSession(null)} style={{ background: '#EF444422', color: '#EF4444', border: 'none', padding: '6px 12px', borderRadius: 6, fontWeight: 'bold' }}>SALIR</button>
         </div>
       </header>
 
-      <nav className="no-print nav-menu" style={{ display: 'flex', background: t.card, borderBottom: `1px solid ${t.border}`, justifyContent: 'center' }}>
+      <nav className="no-print" style={{ display: 'flex', background: t.card, borderBottom: `1px solid ${t.border}`, justifyContent: 'center', overflowX: 'auto' }}>
         {["calendar", "stats", "editor", isAdmin && "config"].filter(Boolean).map(v => (
-          <button key={v} onClick={() => setView(v)} style={{ padding: '15px 20px', color: view === v ? t.accent : t.sub, background: 'none', border: 'none', cursor: 'pointer', fontWeight: 'bold', borderBottom: view === v ? `3px solid ${t.accent}` : 'none', fontSize: 12 }}>{v.toUpperCase()}</button>
+          <button key={v} onClick={() => setView(v)} style={{ padding: '15px 20px', color: view === v ? t.accent : t.sub, background: 'none', border: 'none', fontWeight: 'bold', borderBottom: view === v ? `3px solid ${t.accent}` : 'none', cursor: 'pointer' }}>{v.toUpperCase()}</button>
         ))}
       </nav>
 
@@ -229,9 +220,9 @@ export default function App() {
         {view === "calendar" && (
           <div>
             <div style={{ display: 'flex', justifyContent: 'center', gap: 20, marginBottom: 20, alignItems: 'center' }}>
-              <button style={{padding:'10px 15px', background: t.card, border: `1px solid ${t.border}`, color: t.text, borderRadius: 8}} onClick={handlePrevMonth}>←</button>
-              <h2 style={{ margin: 0, fontSize: 18, minWidth: 200, textAlign: 'center' }}>{MONTHS[month].toUpperCase()} {activeYear}</h2>
-              <button style={{padding:'10px 15px', background: t.card, border: `1px solid ${t.border}`, color: t.text, borderRadius: 8}} onClick={handleNextMonth}>→</button>
+              <button style={{padding:'10px', background: t.card, color: t.text, border: `1px solid ${t.border}`, borderRadius: 8, cursor:'pointer'}} onClick={() => setMonth(m => m === 0 ? 11 : m - 1)}>←</button>
+              <h2 style={{ margin: 0, minWidth: 200, textAlign: 'center' }}>{MONTHS[month].toUpperCase()} {activeYear}</h2>
+              <button style={{padding:'10px', background: t.card, color: t.text, border: `1px solid ${t.border}`, borderRadius: 8, cursor:'pointer'}} onClick={() => setMonth(m => m === 11 ? 0 : m + 1)}>→</button>
             </div>
             <CalendarGrid ops={ops} year={activeYear} month={month} off={off} asgn={asgn} t={t} />
           </div>
@@ -243,9 +234,9 @@ export default function App() {
               <div key={s.id} style={{ background: t.card, padding: 20, borderRadius: 15, border: `1px solid ${t.border}` }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
                   <Av name={s.name} color={s.color} size={35} />
-                  <div style={{ fontWeight: 'bold', fontSize: 16, color: t.accent }}>{s.name}</div>
+                  <div style={{ fontWeight: 'bold', fontSize: 16 }}>{s.name}</div>
                 </div>
-                <div style={{ fontSize: 32, fontWeight: 900 }}>{s.sc} SC</div>
+                <div style={{ fontSize: 32, fontWeight: 900, color: t.accent }}>{s.sc} SC</div>
                 <div style={{ color: t.sub, fontSize: 13 }}>{s.hSC}h Totales | {s.nSC} Noches</div>
               </div>
             ))}
@@ -260,13 +251,14 @@ export default function App() {
               <h3>EQUIPO</h3>
               <div style={{ display: 'flex', gap: 5, marginBottom: 15 }}>
                 <input id="newOpN" placeholder="Nombre..." style={{ flex: 1, padding: 10, borderRadius: 6, background: t.bg, color: t.text, border: `1px solid ${t.border}` }} />
-                <button onClick={() => { const n = document.getElementById('newOpN').value; if(n) saveOps([...ops, { id: Date.now(), name: n, color: '#'+Math.random().toString(16).slice(2,8), calendar: {} }]); }} style={{ background: t.accent, border: 'none', padding: '10px', borderRadius: 6 }}>+</button>
+                <button onClick={() => { const n = document.getElementById('newOpN').value; if(n) saveOps([...ops, { id: Date.now(), name: n, color: '#'+Math.random().toString(16).slice(2,8), calendar: {} }]); }} style={{ background: t.accent, border: 'none', padding: '10px', borderRadius: 6, cursor: 'pointer' }}>+</button>
               </div>
-              {ops.map(o => <div key={o.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderTop: `1px solid ${t.border}` }}><span>{o.name}</span><button onClick={() => saveOps(ops.filter(x=>x.id!==o.id))} style={{color:'#EF4444', border:'none', background:'none'}}>Eliminar</button></div>)}
+              {ops.map(o => <div key={o.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderTop: `1px solid ${t.border}` }}><span>{o.name}</span><button onClick={() => saveOps(ops.filter(x=>x.id!==o.id))} style={{color:'#EF4444', border:'none', background:'none', cursor: 'pointer'}}>Eliminar</button></div>)}
             </div>
             <div style={{ background: t.card, padding: 20, borderRadius: 12, border: `1px solid ${t.border}` }}>
-              <h3>OFFSET: {off}</h3>
+              <h3>OFFSET GLOBAL: {off}</h3>
               <input type="range" min="-28" max="28" value={off} onChange={e => saveOff(Number(e.target.value))} style={{width:'100%'}} />
+              <p style={{fontSize: 11, color: t.sub, marginTop: 10}}>Ajusta el ciclo de 28 días para cuadrar con la realidad.</p>
             </div>
           </div>
         )}
@@ -275,11 +267,13 @@ export default function App() {
   );
 }
 
+// --- EDITOR DE AUSENCIAS ---
 function EditorComponent({ ops, saveOps, activeYear, theme: t, off, isReadOnly }) {
-  const [selOp, setSelOp] = useState(ops[0]?.id);
+  const [selOp, setSelOp] = useState(ops[0]?.id || null);
   const [selAb, setSelAb] = useState("VA");
+
   const toggleAbsence = (k) => {
-    if (isReadOnly) return;
+    if (isReadOnly || !selOp) return;
     const n = ops.map(o => {
       if (o.id !== selOp) return o;
       const c = { ...(o.calendar || {}) };
@@ -291,35 +285,26 @@ function EditorComponent({ ops, saveOps, activeYear, theme: t, off, isReadOnly }
 
   return (
     <div style={{ background: t.card, padding: "20px", borderRadius: 15, border: `1px solid ${t.border}` }}>
-      <div style={{ marginBottom: 20 }}>
-        <select value={selOp} onChange={e => setSelOp(Number(e.target.value))} style={{ width: '100%', padding: 12, background: t.bg, color: t.text, borderRadius: 8, border: `1px solid ${t.border}` }}>
-          {ops.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
-        </select>
-        
-        <div style={{ marginTop: 15, padding: 12, background: t.bg, borderRadius: 10, display: 'flex', flexWrap: 'wrap', gap: 15, fontSize: 11, border: `1px solid ${t.border}`, color: t.sub }}>
-          <div style={{display:'flex', gap:5, alignItems:'center'}}><div style={{width:12, height:12, background:TURNO_DEF.M.color, borderRadius:3}}></div> <b>M:</b> Mañana</div>
-          <div style={{display:'flex', gap:5, alignItems:'center'}}><div style={{width:12, height:12, background:TURNO_DEF.N.color, borderRadius:3}}></div> <b>N:</b> Noche</div>
-          <div style={{display:'flex', gap:5, alignItems:'center'}}><div style={{width:12, height:12, background:ABSENCE.VA.color, borderRadius:3}}></div> <b>VA:</b> Vacaciones</div>
-          <div style={{display:'flex', gap:5, alignItems:'center'}}><div style={{width:12, height:12, background:ABSENCE.EN.color, borderRadius:3}}></div> <b>EN:</b> Entrenamiento</div>
-        </div>
+      <select value={selOp} onChange={e => setSelOp(Number(e.target.value))} style={{ width: '100%', padding: 12, background: t.bg, color: t.text, borderRadius: 8, marginBottom: 20, border: `1px solid ${t.border}` }}>
+        <option value="">Selecciona Operador...</option>
+        {ops.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
+      </select>
 
-        {!isReadOnly && (
-          <div style={{ marginTop: 15, display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 5 }}>
-            {Object.keys(ABSENCE).map(k => (
-              <button key={k} onClick={() => setSelAb(k)} style={{ background: selAb === k ? ABSENCE[k].color : 'transparent', border: `2px solid ${ABSENCE[k].color}`, color: selAb === k ? '#000' : ABSENCE[k].color, padding: '10px 15px', borderRadius: 8, fontSize: 13, fontWeight:'bold' }}>{ABSENCE[k].icon} {ABSENCE[k].label}</button>
-            ))}
-          </div>
-        )}
+      <div style={{ display: 'flex', gap: 10, marginBottom: 20, overflowX: 'auto', paddingBottom: 10 }}>
+        {Object.keys(ABSENCE).map(k => (
+          <button key={k} onClick={() => setSelAb(k)} style={{ background: selAb === k ? ABSENCE[k].color : 'transparent', border: `2px solid ${ABSENCE[k].color}`, color: selAb === k ? '#000' : ABSENCE[k].color, padding: '10px 15px', borderRadius: 8, whiteSpace: 'nowrap', fontWeight: 'bold', cursor: 'pointer' }}>{ABSENCE[k].icon} {ABSENCE[k].label}</button>
+        ))}
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 20 }}>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 15 }}>
         {MONTHS.map((m, mi) => (
-          <div key={mi} style={{ background: t.bg, padding: 15, borderRadius: 12 }}>
-            <div style={{ textAlign: 'center', fontWeight: 'bold', fontSize: 14, marginBottom: 10 }}>{m.toUpperCase()}</div>
+          <div key={mi} style={{ background: t.bg, padding: 15, borderRadius: 12, border: `1px solid ${t.border}55` }}>
+            <div style={{ textAlign: 'center', fontWeight: 'bold', marginBottom: 10, fontSize: 14 }}>{m.toUpperCase()}</div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4 }}>
               {Array.from({ length: dim(activeYear, mi) }).map((_, di) => {
                 const k = mk(activeYear, mi+1, di+1), rot = cshift(activeYear, mi, di+1, off), abs = ops.find(o=>o.id===selOp)?.calendar?.[k];
                 return (
-                  <div key={di} onClick={() => toggleAbsence(k)} style={{ height: 38, display: 'flex', alignItems: 'center', justifyContent: 'center', background: abs ? ABSENCE[abs].color : t.card, borderBottom: `3px solid ${TURNO_DEF[rot]?.color}`, fontSize: 12, color: abs ? '#000' : t.text, borderRadius: 6, cursor: isReadOnly ? 'default' : 'pointer', fontWeight: 'bold' }}>{di+1}</div>
+                  <div key={di} onClick={() => toggleAbsence(k)} style={{ height: 35, display: 'flex', alignItems: 'center', justifyContent: 'center', background: abs ? ABSENCE[abs].color : t.card, borderBottom: `3px solid ${TURNO_DEF[rot]?.color}`, fontSize: 11, color: abs ? '#000' : t.text, borderRadius: 4, cursor: isReadOnly ? 'default' : 'pointer', fontWeight: 'bold' }}>{di+1}</div>
                 );
               })}
             </div>
@@ -330,19 +315,22 @@ function EditorComponent({ ops, saveOps, activeYear, theme: t, off, isReadOnly }
   );
 }
 
+// --- PANTALLA DE LOGIN ---
 function LoginScreen({ admins, onLogin, theme: t }) {
   const [user, setUser] = useState(""), [pass, setPass] = useState("");
+  const handleLogin = () => {
+    const f = admins.find(a => a.user === user && a.passHash === simpleHash(pass));
+    if(f) onLogin(f); else alert("Acceso denegado");
+  };
+
   return (
     <div style={{ height: "100vh", background: t.bg, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
       <div style={{ background: t.card, padding: 40, borderRadius: 25, border: `1px solid ${t.border}`, width: '100%', maxWidth: 350, textAlign: 'center' }}>
-        <h2 style={{ color: t.accent, marginBottom: 20 }}>SALA CONTROL</h2>
-        <input value={user} onChange={e => setUser(e.target.value)} placeholder="Usuario" style={{ width: '100%', padding: 15, marginBottom: 10, borderRadius: 10, background: t.bg, color: t.text, border: `1px solid ${t.border}` }} />
-        <input type="password" value={pass} onChange={e => setPass(e.target.value)} placeholder="Contraseña" style={{ width: '100%', padding: 15, marginBottom: 15, borderRadius: 10, background: t.bg, color: t.text, border: `1px solid ${t.border}` }} />
-        <button onClick={() => {
-          const f = admins.find(a => a.user === user && a.passHash === simpleHash(pass));
-          if(f) onLogin(f); else alert("Error");
-        }} style={{ width: '100%', background: t.accent, padding: 15, border: 'none', borderRadius: 10, fontWeight: 'bold' }}>ENTRAR</button>
-        <button onClick={() => onLogin({ role: "guest", user: "Invitado" })} style={{ marginTop: 20, background: 'none', border: 'none', color: t.sub, fontSize: 13 }}>Modo Invitado</button>
+        <h2 style={{ color: t.accent, marginBottom: 20, fontWeight: 900 }}>SALA CONTROL</h2>
+        <input value={user} onChange={e => setUser(e.target.value)} placeholder="Usuario" style={{ width: '100%', padding: 15, marginBottom: 10, borderRadius: 10, background: t.bg, color: t.text, border: `1px solid ${t.border}`, boxSizing: 'border-box' }} />
+        <input type="password" value={pass} onChange={e => setPass(e.target.value)} placeholder="Contraseña" style={{ width: '100%', padding: 15, marginBottom: 15, borderRadius: 10, background: t.bg, color: t.text, border: `1px solid ${t.border}`, boxSizing: 'border-box' }} />
+        <button onClick={handleLogin} style={{ width: '100%', background: t.accent, padding: 15, border: 'none', borderRadius: 10, fontWeight: 'bold', cursor: 'pointer', color: '#000' }}>ENTRAR</button>
+        <button onClick={() => onLogin({ role: "guest", user: "Invitado" })} style={{ marginTop: 20, background: 'none', border: 'none', color: t.sub, fontSize: 13, cursor: 'pointer' }}>Entrar como Invitado</button>
       </div>
     </div>
   );

@@ -51,6 +51,23 @@ const TURNO_DEF = {
 };
 const EXTRA_VISUALS = { SC: { color: "#34D399", bg: "#34D39925" }, CA: { color: "#475569", bg: "transparent" } };
 
+// --- COMPONENTES UI AUXILIARES ---
+const EyeIcon = ({ visible, color }) => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    {visible ? (
+      <><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></>
+    ) : (
+      <><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></>
+    )}
+  </svg>
+);
+
+const Av = ({ name, color, size = 24 }) => (
+  <div style={{ width: size, height: size, borderRadius: 8, background: color || '#ccc', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: size * 0.4, color: '#000', fontWeight: 'bold', flexShrink: 0 }}>
+    {name?.substring(0, 2).toUpperCase() || "??"}
+  </div>
+);
+
 // --- UTILS LÓGICOS ---
 const dim = (y, m) => new Date(y, m + 1, 0).getDate();
 const dow = (y, m, d) => { const r = new Date(y, m, d).getDay(); return r === 0 ? 6 : r - 1; };
@@ -107,12 +124,6 @@ function computeStats(ops, year, asgn, off) {
   });
 }
 
-const Av = ({ name, color, size = 24 }) => (
-  <div style={{ width: size, height: size, borderRadius: 8, background: color || '#ccc', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: size * 0.4, color: '#000', fontWeight: 'bold', flexShrink: 0 }}>
-    {name?.substring(0, 2).toUpperCase() || "??"}
-  </div>
-);
-
 // --- COMPONENTE PRINCIPAL ---
 export default function App() {
   const today = new Date();
@@ -125,6 +136,7 @@ export default function App() {
   const [month, setMonth] = useState(today.getMonth());
   const [themeMode, setThemeMode] = useState('dark');
   const [manualTheme, setManualTheme] = useState(false);
+  const [showConfigPass, setShowConfigPass] = useState(false);
 
   useEffect(() => {
     onValue(ref(db, 'ops'), (s) => { if (s.val()) setOps(s.val()); });
@@ -147,7 +159,6 @@ export default function App() {
   const isSuper = session?.role === "superadmin";
   const isAdmin = session?.role === "admin" || isSuper;
   const canEdit = isAdmin || session?.role === "editor";
-  // Invitados ahora ven el editor pero no pueden guardar
   const canSeeEditor = canEdit || session?.role === "guest";
 
   const asgn = useMemo(() => autoAssign(ops, activeYear, off), [ops, activeYear, off]);
@@ -278,7 +289,12 @@ export default function App() {
                 <h3 style={{ color: t.accent }}>🔐 GESTIÓN DE ACCESOS</h3>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
                   <input id="newU" placeholder="Usuario" style={{ padding: 10, borderRadius: 8, border: `1px solid ${t.border}`, background: t.bg, color: t.text }} />
-                  <input id="newP" type="password" placeholder="Contraseña" style={{ padding: 10, borderRadius: 8, border: `1px solid ${t.border}`, background: t.bg, color: t.text }} />
+                  <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                    <input id="newP" type={showConfigPass ? "text" : "password"} placeholder="Contraseña" style={{ flex: 1, padding: 10, paddingRight: 40, borderRadius: 8, border: `1px solid ${t.border}`, background: t.bg, color: t.text }} />
+                    <button onClick={() => setShowConfigPass(!showConfigPass)} style={{ position: 'absolute', right: 10, background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex' }}>
+                      <EyeIcon visible={showConfigPass} color={t.sub} />
+                    </button>
+                  </div>
                   <select id="newR" style={{ padding: 10, borderRadius: 8, border: `1px solid ${t.border}`, background: t.bg, color: t.text }}>
                     <option value="admin">Administrador</option>
                     <option value="editor">Editor</option>
@@ -310,7 +326,7 @@ function EditorComponent({ ops, saveOps, activeYear, theme: t, off, canEdit }) {
   const [selOp, setSelOp] = useState(ops[0]?.id);
   const [selAb, setSelAb] = useState("VA");
   const toggleAbsence = (dateKey) => {
-    if (!canEdit) return; // Si no tiene permisos, no hace nada
+    if (!canEdit) return;
     const newOps = ops.map(o => {
       if (o.id !== selOp) return o;
       const newCal = { ...(o.calendar || {}) };
@@ -351,14 +367,19 @@ function EditorComponent({ ops, saveOps, activeYear, theme: t, off, canEdit }) {
 }
 
 function LoginScreen({ admins, onLogin, theme: t }) {
-  const [user, setUser] = useState(""), [pass, setPass] = useState("");
+  const [user, setUser] = useState(""), [pass, setPass] = useState(""), [showPass, setShowPass] = useState(false);
   return (
     <div style={{ minHeight: "100vh", background: t.bg, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
       <div style={{ background: t.card, padding: 40, borderRadius: 24, width: "100%", maxWidth: 380, border: `1px solid ${t.border}` }}>
         <h2 style={{ textAlign: 'center', color: t.accent, marginBottom: 30 }}>SALA DE CONTROL</h2>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 15 }}>
           <input value={user} onChange={e => setUser(e.target.value)} placeholder="Usuario" style={{ padding: 14, borderRadius: 12, border: `1px solid ${t.border}`, background: t.bg, color: t.text }} />
-          <input type="password" value={pass} onChange={e => setPass(e.target.value)} placeholder="Contraseña" style={{ padding: 14, borderRadius: 12, border: `1px solid ${t.border}`, background: t.bg, color: t.text }} />
+          <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+            <input type={showPass ? "text" : "password"} value={pass} onChange={e => setPass(e.target.value)} placeholder="Contraseña" style={{ flex: 1, padding: 14, paddingRight: 45, borderRadius: 12, border: `1px solid ${t.border}`, background: t.bg, color: t.text }} />
+            <button onClick={() => setShowPass(!showPass)} style={{ position: 'absolute', right: 12, background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex' }}>
+              <EyeIcon visible={showPass} color={t.sub} />
+            </button>
+          </div>
           <button onClick={() => { const f = admins.find(a => a.user === user && a.passHash === simpleHash(pass)); if(f) onLogin(f); else alert("Acceso denegado"); }} style={{ padding: 16, background: t.accent, borderRadius: 12, border: 'none', fontWeight: 'bold', cursor: 'pointer' }}>ENTRAR</button>
           <button onClick={() => onLogin({ role: "guest", user: "Invitado" })} style={{ background: 'none', border: 'none', color: t.sub, textDecoration: 'underline', cursor: 'pointer', fontSize: 13 }}>Acceso modo lectura</button>
         </div>

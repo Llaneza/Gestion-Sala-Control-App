@@ -22,9 +22,7 @@ function simpleHash(str) {
   return h.toString(16);
 }
 
-const DEFAULT_ADMINS = [
-  { user: "admin", passHash: simpleHash("admin1234"), role: "superadmin" }
-];
+const DEFAULT_ADMINS = [{ user: "admin", passHash: simpleHash("admin1234"), role: "superadmin" }];
 
 const THEMES = {
   dark: { bg: "#080F1E", card: "#0D1526", text: "#CBD5E1", title: "#FFFFFF", border: "#1E2D45", sub: "#475569", accent: "#34D399" },
@@ -38,10 +36,7 @@ const CYCLE = [
   ["D", "D", "N", "N", "D", "D", "D"],
 ];
 const CYCLE_LEN = 28;
-const ABSENCE = {
-  VA: { label: "Vacaciones", icon: "🌴", color: "#10B981" },
-  EN: { label: "Entrenamiento", icon: "📖", color: "#A78BFA" },
-};
+const ABSENCE = { VA: { label: "Vacaciones", icon: "🌴", color: "#10B981" }, EN: { label: "Entrenamiento", icon: "📖", color: "#A78BFA" } };
 const MONTHS = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
 const DOW_S = ["L", "M", "X", "J", "V", "S", "D"];
 const TURNO_DEF = {
@@ -51,14 +46,10 @@ const TURNO_DEF = {
 };
 const EXTRA_VISUALS = { SC: { color: "#34D399", bg: "#34D39925" }, CA: { color: "#475569", bg: "transparent" } };
 
-// --- COMPONENTES UI AUXILIARES ---
+// --- ICONOS Y AVATARES ---
 const EyeIcon = ({ visible, color }) => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    {visible ? (
-      <><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></>
-    ) : (
-      <><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></>
-    )}
+    {visible ? (<><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></>) : (<><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></>)}
   </svg>
 );
 
@@ -79,34 +70,63 @@ function cshift(y, m, d, off = 0) {
   return CYCLE[Math.floor(pos / 7)][pos % 7];
 }
 
+// ALGORITMO DE EQUIDAD POR BLOQUES DE 4 DÍAS
 function autoAssign(ops, targetYear, off) {
   const hSC = {}, nSC = {}, pairs = {};
   ops.forEach(o => { hSC[o.id] = 0; nSC[o.id] = 0; pairs[o.id] = {}; ops.forEach(other => { if(o.id !== other.id) pairs[o.id][other.id] = 0; }); });
+
+  let currentBlockPair = [];
+  let daysInCurrentBlock = 0;
   const allAssigns = {};
-  for (let year = 2021; year <= targetYear; year++) {
+
+  for (let year = 2024; year <= targetYear; year++) {
     allAssigns[year] = {};
     for (let mo = 0; mo < 12; mo++) {
       for (let d = 1; d <= dim(year, mo); d++) {
         const k = mk(year, mo + 1, d), turno = cshift(year, mo, d, off);
         allAssigns[year][k] = {};
-        if (turno === "D") { ops.forEach(op => { allAssigns[year][k][op.id] = "D"; }); continue; }
-        const avail = ops.filter(op => !op.calendar?.[k]), busy = ops.filter(op => op.calendar?.[k]);
-        busy.forEach(op => { allAssigns[year][k][op.id] = op.calendar[k]; });
-        let bestPair = [], minScore = Infinity;
-        for (let i = 0; i < avail.length; i++) {
-          for (let j = i + 1; j < avail.length; j++) {
-            const p1 = avail[i], p2 = avail[j];
-            let score = (hSC[p1.id] + hSC[p2.id]);
-            if (turno === "N") score += (nSC[p1.id] + nSC[p2.id]) * 50;
-            score += (pairs[p1.id][p2.id] || 0) * 100;
-            if (score < minScore) { minScore = score; bestPair = [p1.id, p2.id]; }
-          }
+
+        if (turno === "D") {
+          ops.forEach(op => { allAssigns[year][k][op.id] = "D"; });
+          continue;
         }
+
+        // Cada 4 días de trabajo real (o si no hay pareja), recalculamos para equidad
+        if (daysInCurrentBlock >= 4 || currentBlockPair.length === 0) {
+          const avail = ops.filter(op => !op.calendar?.[k]);
+          let bestPair = [], minScore = Infinity;
+
+          for (let i = 0; i < avail.length; i++) {
+            for (let j = i + 1; j < avail.length; j++) {
+              const p1 = avail[i], p2 = avail[j];
+              let score = (hSC[p1.id] + hSC[p2.id]);
+              if (turno === "N") score += (nSC[p1.id] + nSC[p2.id]) * 150; // Prioridad extra a noches equitativas
+              score += (pairs[p1.id][p2.id] || 0) * 80;
+              if (score < minScore) { minScore = score; bestPair = [p1.id, p2.id]; }
+            }
+          }
+          currentBlockPair = bestPair;
+          daysInCurrentBlock = 0;
+        }
+
+        const busy = ops.filter(op => op.calendar?.[k]);
+        busy.forEach(op => { allAssigns[year][k][op.id] = op.calendar[k]; });
+
         ops.forEach(op => {
-          if (bestPair.includes(op.id)) { allAssigns[year][k][op.id] = "SC"; hSC[op.id] += 12; if (turno === "N") nSC[op.id] += 1; }
-          else if (!allAssigns[year][k][op.id]) { allAssigns[year][k][op.id] = "CA"; }
+          if (currentBlockPair.includes(op.id) && !allAssigns[year][k][op.id]) {
+            allAssigns[year][k][op.id] = "SC";
+            hSC[op.id] += 12;
+            if (turno === "N") nSC[op.id] += 1;
+          } else if (!allAssigns[year][k][op.id]) {
+            allAssigns[year][k][op.id] = "CA";
+          }
         });
-        if (bestPair.length === 2) { pairs[bestPair[0]][bestPair[1]]++; pairs[bestPair[1]][bestPair[0]]++; }
+
+        if (currentBlockPair.length === 2) {
+          pairs[currentBlockPair[0]][currentBlockPair[1]]++;
+          pairs[currentBlockPair[1]][currentBlockPair[0]]++;
+        }
+        daysInCurrentBlock++;
       }
     }
   }
@@ -124,7 +144,7 @@ function computeStats(ops, year, asgn, off) {
   });
 }
 
-// --- COMPONENTE PRINCIPAL ---
+// --- APP COMPONENT ---
 export default function App() {
   const today = new Date();
   const [session, setSession] = useState(null);
@@ -291,21 +311,13 @@ export default function App() {
                   <input id="newU" placeholder="Usuario" style={{ padding: 10, borderRadius: 8, border: `1px solid ${t.border}`, background: t.bg, color: t.text }} />
                   <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
                     <input id="newP" type={showConfigPass ? "text" : "password"} placeholder="Contraseña" style={{ flex: 1, padding: 10, paddingRight: 40, borderRadius: 8, border: `1px solid ${t.border}`, background: t.bg, color: t.text }} />
-                    <button onClick={() => setShowConfigPass(!showConfigPass)} style={{ position: 'absolute', right: 10, background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex' }}>
-                      <EyeIcon visible={showConfigPass} color={t.sub} />
-                    </button>
+                    <button onClick={() => setShowConfigPass(!showConfigPass)} style={{ position: 'absolute', right: 10, background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex' }}><EyeIcon visible={showConfigPass} color={t.sub} /></button>
                   </div>
-                  <select id="newR" style={{ padding: 10, borderRadius: 8, border: `1px solid ${t.border}`, background: t.bg, color: t.text }}>
-                    <option value="admin">Administrador</option>
-                    <option value="editor">Editor</option>
-                  </select>
+                  <select id="newR" style={{ padding: 10, borderRadius: 8, border: `1px solid ${t.border}`, background: t.bg, color: t.text }}><option value="admin">Administrador</option><option value="editor">Editor</option></select>
                   <button onClick={() => {
                     const u = document.getElementById('newU').value, p = document.getElementById('newP').value, r = document.getElementById('newR').value;
-                    if(u && p) {
-                      saveAdmins([...admins, { user: u, passHash: simpleHash(p), role: r }]);
-                      document.getElementById('newU').value = ''; document.getElementById('newP').value = '';
-                    }
-                  }} style={{ padding: 12, background: t.accent, borderRadius: 8, fontWeight: 'bold', cursor: 'pointer' }}>CREAR USUARIO</button>
+                    if(u && p) { saveAdmins([...admins, { user: u, passHash: simpleHash(p), role: r }]); document.getElementById('newU').value = ''; document.getElementById('newP').value = ''; }
+                  }} style={{ padding: 12, background: t.accent, borderRadius: 8, fontWeight: 'bold', cursor: 'pointer' }}>CREAR</button>
                 </div>
                 {admins.map(a => (
                   <div key={a.user} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderTop: `1px solid ${t.border}`, fontSize: 12 }}>
@@ -338,25 +350,23 @@ function EditorComponent({ ops, saveOps, activeYear, theme: t, off, canEdit }) {
 
   return (
     <div style={{ background: t.card, padding: 25, borderRadius: 16, border: `1px solid ${t.border}` }}>
-      {!canEdit && <p style={{ color: '#EF4444', fontSize: 12, marginBottom: 15, fontWeight: 'bold' }}>⚠️ MODO LECTURA: No puedes modificar las ausencias.</p>}
+      {!canEdit && <p style={{ color: '#EF4444', fontSize: 12, marginBottom: 15, fontWeight: 'bold' }}>⚠️ MODO LECTURA</p>}
       <select value={selOp} onChange={e => setSelOp(Number(e.target.value))} style={{ padding: 12, width: '100%', background: t.bg, color: t.text, border: `1px solid ${t.border}`, borderRadius: 8, marginBottom: 20 }}>
         {ops.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
       </select>
       <div style={{ display: 'flex', gap: 10, marginBottom: 20 }}>
         {Object.keys(ABSENCE).map(k => (
-          <button key={k} onClick={() => setSelAb(k)} style={{ background: selAb === k ? ABSENCE[k].color : 'transparent', border: `2px solid ${ABSENCE[k].color}`, color: selAb === k ? '#000' : ABSENCE[k].color, padding: '10px', borderRadius: 8, cursor: 'pointer', fontWeight: 'bold', opacity: !canEdit && selAb !== k ? 0.5 : 1 }}>{ABSENCE[k].icon} {ABSENCE[k].label}</button>
+          <button key={k} onClick={() => setSelAb(k)} style={{ background: selAb === k ? ABSENCE[k].color : 'transparent', border: `2px solid ${ABSENCE[k].color}`, color: selAb === k ? '#000' : ABSENCE[k].color, padding: '10px', borderRadius: 8, cursor: 'pointer', fontWeight: 'bold' }}>{ABSENCE[k].icon} {ABSENCE[k].label}</button>
         ))}
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 15 }}>
         {MONTHS.map((m, mi) => (
           <div key={m} style={{ background: t.bg, padding: 12, borderRadius: 10, border: `1px solid ${t.border}` }}>
-            <div style={{ fontSize: 12, fontWeight: 'bold', marginBottom: 10, textAlign: 'center' }}>{m.toUpperCase()}</div>
+            <div style={{ fontSize: 11, fontWeight: 'bold', marginBottom: 10, textAlign: 'center' }}>{m.toUpperCase()}</div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4 }}>
               {Array.from({ length: dim(activeYear, mi) }).map((_, di) => {
                 const k = mk(activeYear, mi + 1, di + 1), status = ops.find(o => o.id === selOp)?.calendar?.[k], rot = cshift(activeYear, mi, di + 1, off);
-                return (
-                  <div key={di} onClick={() => toggleAbsence(k)} style={{ height: 32, background: status ? ABSENCE[status].color : t.card, borderBottom: `3px solid ${TURNO_DEF[rot]?.color || 'transparent'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, cursor: canEdit ? 'pointer' : 'default', borderRadius: 4, color: status ? '#000' : t.text }}>{di + 1}</div>
-                );
+                return <div key={di} onClick={() => toggleAbsence(k)} style={{ height: 32, background: status ? ABSENCE[status].color : t.card, borderBottom: `3px solid ${TURNO_DEF[rot]?.color || 'transparent'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, cursor: canEdit ? 'pointer' : 'default', borderRadius: 4, color: status ? '#000' : t.text }}>{di+1}</div>;
               })}
             </div>
           </div>
@@ -376,12 +386,10 @@ function LoginScreen({ admins, onLogin, theme: t }) {
           <input value={user} onChange={e => setUser(e.target.value)} placeholder="Usuario" style={{ padding: 14, borderRadius: 12, border: `1px solid ${t.border}`, background: t.bg, color: t.text }} />
           <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
             <input type={showPass ? "text" : "password"} value={pass} onChange={e => setPass(e.target.value)} placeholder="Contraseña" style={{ flex: 1, padding: 14, paddingRight: 45, borderRadius: 12, border: `1px solid ${t.border}`, background: t.bg, color: t.text }} />
-            <button onClick={() => setShowPass(!showPass)} style={{ position: 'absolute', right: 12, background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex' }}>
-              <EyeIcon visible={showPass} color={t.sub} />
-            </button>
+            <button onClick={() => setShowPass(!showPass)} style={{ position: 'absolute', right: 12, background: 'none', border: 'none', cursor: 'pointer', display: 'flex' }}><EyeIcon visible={showPass} color={t.sub} /></button>
           </div>
           <button onClick={() => { const f = admins.find(a => a.user === user && a.passHash === simpleHash(pass)); if(f) onLogin(f); else alert("Acceso denegado"); }} style={{ padding: 16, background: t.accent, borderRadius: 12, border: 'none', fontWeight: 'bold', cursor: 'pointer' }}>ENTRAR</button>
-          <button onClick={() => onLogin({ role: "guest", user: "Invitado" })} style={{ background: 'none', border: 'none', color: t.sub, textDecoration: 'underline', cursor: 'pointer', fontSize: 13 }}>Acceso modo lectura</button>
+          <button onClick={() => onLogin({ role: "guest", user: "Invitado" })} style={{ background: 'none', border: 'none', color: t.sub, textDecoration: 'underline', cursor: 'pointer', fontSize: 13 }}>Modo lectura</button>
         </div>
       </div>
     </div>

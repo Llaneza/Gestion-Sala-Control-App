@@ -23,8 +23,7 @@ function simpleHash(str) {
 }
 
 const DEFAULT_ADMINS = [
-  { user: "admin", passHash: simpleHash("admin1234"), role: "superadmin" },
-  { user: "editor1", passHash: simpleHash("editor1234"), role: "editor" }
+  { user: "admin", passHash: simpleHash("admin1234"), role: "superadmin" }
 ];
 
 const THEMES = {
@@ -65,7 +64,6 @@ function cshift(y, m, d, off = 0) {
   return CYCLE[Math.floor(pos / 7)][pos % 7];
 }
 
-// --- ALGORITMO DE ASIGNACIÓN SC/CA ---
 function autoAssign(ops, targetYear, off) {
   const hSC = {}, nSC = {}, pairs = {};
   ops.forEach(o => { hSC[o.id] = 0; nSC[o.id] = 0; pairs[o.id] = {}; ops.forEach(other => { if(o.id !== other.id) pairs[o.id][other.id] = 0; }); });
@@ -196,19 +194,19 @@ export default function App() {
         @media print { 
           .no-print { display: none !important; } 
           .print-only { display: block !important; background: white; }
-          body { background: white !important; color: black !important; }
-          .print-month { page-break-after: always; padding: 20px; }
+          body { background: white !important; color: black !important; padding: 0; margin: 0; }
+          .print-month { page-break-after: always; padding: 40px; }
           .sticky-col { position: relative !important; border-right: 1px solid #ccc !important; }
         }
         .sticky-col { position: sticky; left: 0; z-index: 20; border-right: 2px solid ${t.border}; }
       `}</style>
       
-      {/* VISTA PARA PDF ANUAL */}
+      {/* PDF ANUAL */}
       <div className="print-only">
         <h1 style={{textAlign:'center'}}>CUADRANTE ANUAL {activeYear}</h1>
         {MONTHS.map((m, mi) => (
           <div key={mi} className="print-month">
-            <h2 style={{ textAlign: 'center', marginBottom: 10 }}>{m.toUpperCase()}</h2>
+            <h2 style={{ textAlign: 'center', marginBottom: 15 }}>{m.toUpperCase()}</h2>
             <CalendarGrid ops={ops} year={activeYear} month={mi} off={off} asgn={asgn} t={THEMES.light} />
           </div>
         ))}
@@ -219,7 +217,7 @@ export default function App() {
           <span style={{ fontWeight: 900, color: t.accent, fontSize: 18 }}>SALA CONTROL ☁️</span>
           <button onClick={() => setThemeMode(m => m === 'dark' ? 'light' : 'dark')} style={{ background: t.bg, border: `1px solid ${t.border}`, borderRadius: 8, padding: '5px 10px', cursor: 'pointer' }}>{themeMode === 'dark' ? '🌙' : '☀️'}</button>
           <select value={activeYear} onChange={e => setAY(Number(e.target.value))} style={{ background: t.bg, color: t.text, border: `1px solid ${t.border}`, padding: '5px' }}>
-            {[2025, 2026, 2027].map(y => <option key={y} value={y}>{y}</option>)}
+            {[2025, 2026, 2027, 2028].map(y => <option key={y} value={y}>{y}</option>)}
           </select>
           <button onClick={() => window.print()} style={{ background: t.accent, color: '#000', border: 'none', padding: '8px 15px', borderRadius: 8, fontWeight: 'bold', cursor: 'pointer' }}>📄 EXPORTAR PDF ANUAL</button>
         </div>
@@ -254,7 +252,6 @@ export default function App() {
                 </div>
                 <div style={{ fontSize: 36, fontWeight: 900, marginBottom: 5 }}>{s.sc} SC</div>
                 <div style={{ color: t.sub }}>{s.hSC} Horas Totales</div>
-                <div style={{ color: t.sub }}>{s.nSC} Turnos de Noche</div>
               </div>
             ))}
           </div>
@@ -264,18 +261,44 @@ export default function App() {
 
         {view === "config" && isAdmin && (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: 30 }}>
+            {/* GESTIÓN DE EQUIPO */}
             <div style={{ background: t.card, padding: 25, borderRadius: 16, border: `1px solid ${t.border}` }}>
               <h3 style={{ color: t.accent }}>⚙️ GESTIÓN DE EQUIPO</h3>
               <div style={{ display: 'flex', gap: 10, marginBottom: 20 }}>
                 <input id="newOpN" placeholder="Nombre..." style={{ flex: 1, padding: 12, borderRadius: 8, background: t.bg, color: t.text, border: `1px solid ${t.border}` }} />
-                <button onClick={() => { const n = document.getElementById('newOpN').value; if(n) { saveOps([...ops, { id: Date.now(), name: n, color: '#'+Math.random().toString(16).slice(2,8), calendar: {} }]); document.getElementById('newOpN').value=''; } }} style={{ background: t.accent, border: 'none', padding: '10px 20px', borderRadius: 8, fontWeight: 'bold' }}>AÑADIR</button>
+                <button onClick={() => { const n = document.getElementById('newOpN').value; if(n) { saveOps([...ops, { id: Date.now(), name: n, color: '#'+Math.random().toString(16).slice(2,8), calendar: {} }]); document.getElementById('newOpN').value=''; } }} style={{ background: t.accent, border: 'none', padding: '10px 20px', borderRadius: 8, fontWeight: 'bold', cursor: 'pointer' }}>AÑADIR</button>
               </div>
               {ops.map(o => <div key={o.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderTop: `1px solid ${t.border}` }}><span>{o.name}</span><button onClick={() => saveOps(ops.filter(x=>x.id!==o.id))} style={{color:'#EF4444', border:'none', background:'none', cursor:'pointer'}}>Eliminar</button></div>)}
             </div>
+
+            {/* GESTIÓN DE ACCESOS (ADMINS Y EDITORES) */}
+            <div style={{ background: t.card, padding: 25, borderRadius: 16, border: `1px solid ${t.border}` }}>
+              <h3 style={{ color: t.accent }}>🔐 GESTIÓN DE ACCESOS</h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
+                <input id="adU" placeholder="Usuario" style={{ padding: 12, borderRadius: 8, background: t.bg, color: t.text, border: `1px solid ${t.border}` }} />
+                <input id="adP" type="password" placeholder="Contraseña" style={{ padding: 12, borderRadius: 8, background: t.bg, color: t.text, border: `1px solid ${t.border}` }} />
+                <select id="adR" style={{ padding: 12, borderRadius: 8, background: t.bg, color: t.text, border: `1px solid ${t.border}` }}>
+                  <option value="admin">Administrador</option>
+                  <option value="editor">Editor</option>
+                </select>
+                <button onClick={() => {
+                  const u = document.getElementById('adU').value, p = document.getElementById('adP').value, r = document.getElementById('adR').value;
+                  if(u && p) { saveAdmins([...admins, { user: u, passHash: simpleHash(p), role: r }]); document.getElementById('adU').value=''; document.getElementById('adP').value=''; }
+                }} style={{ background: t.accent, border: 'none', padding: '12px', borderRadius: 8, fontWeight: 'bold', cursor: 'pointer' }}>CREAR USUARIO</button>
+              </div>
+              {admins.map(a => (
+                <div key={a.user} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderTop: `1px solid ${t.border}`, alignItems:'center' }}>
+                  <span>{a.user} <small style={{color:t.sub}}>({a.role})</small></span>
+                  {a.role !== 'superadmin' && <button onClick={() => saveAdmins(admins.filter(x=>x.user!==a.user))} style={{color:'#EF4444', border:'none', background:'none', cursor:'pointer'}}>×</button>}
+                </div>
+              ))}
+            </div>
+
+            {/* OFFSET */}
             <div style={{ background: t.card, padding: 25, borderRadius: 16, border: `1px solid ${t.border}` }}>
               <h3 style={{ color: t.accent }}>🔄 AJUSTE DE CICLO (OFFSET)</h3>
               <input type="number" value={off} onChange={e => saveOff(Number(e.target.value))} style={{ width: '100%', padding: 15, background: t.bg, color: t.text, border: `1px solid ${t.border}`, borderRadius: 8, fontSize: 18 }} />
-              <p style={{fontSize:12, color:t.sub, marginTop:15}}>Ajusta este valor si el ciclo rotativo (M-M-D-D-N-N-N) no coincide con el día real.</p>
+              <p style={{fontSize:12, color:t.sub, marginTop:15}}>Ajusta este valor si el ciclo rotativo no coincide con el día real.</p>
             </div>
           </div>
         )}
@@ -315,7 +338,7 @@ function EditorComponent({ ops, saveOps, activeYear, theme: t, off, isReadOnly }
           )}
         </div>
         <div style={{ background: t.bg, padding: 20, borderRadius: 12, border: `1px solid ${t.border}`, minWidth: 220 }}>
-          <div style={{ fontSize: 11, fontWeight: 'bold', marginBottom: 10, color: t.accent }}>LEYENDA DE TURNOS</div>
+          <div style={{ fontSize: 11, fontWeight: 'bold', marginBottom: 10, color: t.accent }}>LEYENDA</div>
           {Object.entries(TURNO_DEF).map(([k, v]) => (
             <div key={k} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, marginBottom: 5 }}>
               <div style={{ width: 12, height: 12, background: v.color, borderRadius: 3 }}></div> {v.label}
@@ -351,16 +374,15 @@ function LoginScreen({ admins, onLogin, theme: t }) {
   const [user, setUser] = useState(""), [pass, setPass] = useState("");
   return (
     <div style={{ height: "100vh", background: t.bg, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
-      <div style={{ background: t.card, padding: 50, borderRadius: 30, border: `1px solid ${t.border}`, width: '100%', maxWidth: 400, textAlign: 'center', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.3)' }}>
+      <div style={{ background: t.card, padding: 50, borderRadius: 30, border: `1px solid ${t.border}`, width: '100%', maxWidth: 400, textAlign: 'center' }}>
         <h1 style={{ color: t.accent, marginBottom: 10, fontSize: 28 }}>SALA CONTROL</h1>
-        <p style={{ color: t.sub, marginBottom: 30 }}>Introduce tus credenciales de acceso</p>
         <input value={user} onChange={e => setUser(e.target.value)} placeholder="Usuario" style={{ display: 'block', width: '100%', padding: 15, margin: '10px 0', borderRadius: 12, background: t.bg, color: t.text, border: `1px solid ${t.border}` }} />
         <input type="password" value={pass} onChange={e => setPass(e.target.value)} placeholder="Contraseña" style={{ display: 'block', width: '100%', padding: 15, margin: '10px 0', borderRadius: 12, background: t.bg, color: t.text, border: `1px solid ${t.border}` }} />
         <button onClick={() => {
           const f = admins.find(a => a.user === user && a.passHash === simpleHash(pass));
-          if(f) onLogin(f); else alert("Usuario o contraseña incorrectos");
-        }} style={{ background: t.accent, color: '#000', padding: 15, width: '100%', border: 'none', borderRadius: 12, fontWeight: 'bold', fontSize: 16, cursor: 'pointer', marginTop: 10 }}>INICIAR SESIÓN</button>
-        <button onClick={() => onLogin({ role: "guest", user: "Invitado" })} style={{ marginTop: 20, background: 'none', border: 'none', color: t.sub, cursor: 'pointer', textDecoration: 'underline' }}>Continuar como Invitado (Lectura)</button>
+          if(f) onLogin(f); else alert("Acceso incorrecto");
+        }} style={{ background: t.accent, color: '#000', padding: 15, width: '100%', border: 'none', borderRadius: 12, fontWeight: 'bold', fontSize: 16, cursor: 'pointer', marginTop: 10 }}>ENTRAR</button>
+        <button onClick={() => onLogin({ role: "guest", user: "Invitado" })} style={{ marginTop: 20, background: 'none', border: 'none', color: t.sub, cursor: 'pointer', textDecoration: 'underline' }}>Acceso Invitado (Lectura)</button>
       </div>
     </div>
   );

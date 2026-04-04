@@ -15,7 +15,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
-// --- CONFIGURACIÓN FIJA ---
+// --- UTILS SEGURIDAD ---
 function simpleHash(str) {
   let h = 0x811c9dc5;
   for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = (h * 0x01000193) >>> 0; }
@@ -23,8 +23,7 @@ function simpleHash(str) {
 }
 
 const DEFAULT_ADMINS = [
-  { user: "admin", passHash: simpleHash("admin1234"), role: "superadmin" },
-  { user: "editor1", passHash: simpleHash("editor1234"), role: "editor" }
+  { user: "admin", passHash: simpleHash("admin1234"), role: "superadmin" }
 ];
 
 const THEMES = {
@@ -39,12 +38,10 @@ const CYCLE = [
   ["D", "D", "N", "N", "D", "D", "D"],
 ];
 const CYCLE_LEN = 28;
-
 const ABSENCE = {
   VA: { label: "Vacaciones", icon: "🌴", color: "#10B981" },
   EN: { label: "Entrenamiento", icon: "📖", color: "#A78BFA" },
 };
-
 const MONTHS = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
 const DOW_S = ["L", "M", "X", "J", "V", "S", "D"];
 const TURNO_DEF = {
@@ -52,13 +49,9 @@ const TURNO_DEF = {
   N: { color: "#818CF8", label: "Noche", bg: "#818CF815" },
   D: { color: "#64748B", label: "Descanso", bg: "transparent" }
 };
+const EXTRA_VISUALS = { SC: { color: "#34D399", bg: "#34D39925" }, CA: { color: "#475569", bg: "transparent" } };
 
-const EXTRA_VISUALS = {
-  SC: { color: "#34D399", bg: "#34D39925" },
-  CA: { color: "#475569", bg: "transparent" }
-};
-
-// --- UTILS ---
+// --- UTILS LÓGICOS ---
 const dim = (y, m) => new Date(y, m + 1, 0).getDate();
 const dow = (y, m, d) => { const r = new Date(y, m, d).getDay(); return r === 0 ? 6 : r - 1; };
 const dse = (y, m, d) => Math.round((new Date(y, m, d) - new Date(1970, 0, 1)) / 86400000);
@@ -69,7 +62,6 @@ function cshift(y, m, d, off = 0) {
   return CYCLE[Math.floor(pos / 7)][pos % 7];
 }
 
-// --- ALGORITMO ---
 function autoAssign(ops, targetYear, off) {
   const hSC = {}, nSC = {}, pairs = {};
   ops.forEach(o => { hSC[o.id] = 0; nSC[o.id] = 0; pairs[o.id] = {}; ops.forEach(other => { if(o.id !== other.id) pairs[o.id][other.id] = 0; }); });
@@ -121,6 +113,7 @@ const Av = ({ name, color, size = 24 }) => (
   </div>
 );
 
+// --- COMPONENTE PRINCIPAL ---
 export default function App() {
   const today = new Date();
   const [session, setSession] = useState(null);
@@ -151,7 +144,8 @@ export default function App() {
   }, [manualTheme]);
 
   const t = THEMES[themeMode];
-  const isAdmin = session?.role === "admin" || session?.role === "superadmin";
+  const isSuper = session?.role === "superadmin";
+  const isAdmin = session?.role === "admin" || isSuper;
   const canEdit = isAdmin || session?.role === "editor";
   const asgn = useMemo(() => autoAssign(ops, activeYear, off), [ops, activeYear, off]);
   const stats = useMemo(() => computeStats(ops, activeYear, asgn, off), [ops, activeYear, asgn, off]);
@@ -164,8 +158,8 @@ export default function App() {
   return (
     <div style={{ minHeight: "100vh", background: t.bg, color: t.text, fontFamily: 'monospace', transition: 'background 0.3s' }}>
       <style>{`
-        @media print { .no-print { display: none !important; } .print-break { page-break-after: always; } body { background: white !important; color: black !important; } }
-        .calendar-container { background: ${t.card}; border-radius: 12px; padding: 0; overflow-x: auto; border: 1px solid ${t.border}; margin-bottom: 40px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); }
+        @media print { .no-print { display: none !important; } body { background: white !important; color: black !important; } }
+        .calendar-container { background: ${t.card}; border-radius: 12px; overflow-x: auto; border: 1px solid ${t.border}; margin-bottom: 40px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); }
         .calendar-grid { display: grid; grid-template-columns: 160px repeat(${dim(activeYear, month)}, 1fr); gap: 0px; min-width: 100%; }
         .sticky-col { position: sticky; left: 0; background: ${t.card} !important; z-index: 10; border-right: 2px solid ${t.border} !important; }
         .cell-day { height: 38px; display: flex; align-items: center; justify-content: center; border-top: 1px solid ${t.border}; border-right: 1px solid ${t.border}; }
@@ -184,7 +178,10 @@ export default function App() {
             {[2024, 2025, 2026, 2027, 2028, 2029, 2030].map(y => <option key={y} value={y}>{y}</option>)}
           </select>
         </div>
-        <button onClick={() => setSession(null)} style={{ background: '#EF444422', color: '#EF4444', border: 'none', padding: '6px 12px', borderRadius: 4, fontSize: 11, fontWeight: 'bold', cursor: 'pointer' }}>SALIR</button>
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+          <span style={{ fontSize: 10, opacity: 0.7 }}>{session.user} ({session.role})</span>
+          <button onClick={() => setSession(null)} style={{ background: '#EF444422', color: '#EF4444', border: 'none', padding: '6px 12px', borderRadius: 4, fontSize: 11, fontWeight: 'bold', cursor: 'pointer' }}>SALIR</button>
+        </div>
       </header>
 
       <nav className="no-print" style={{ display: 'flex', background: t.card, borderBottom: `1px solid ${t.border}`, position: 'sticky', top: 48, zIndex: 190, justifyContent: 'center' }}>
@@ -267,10 +264,38 @@ export default function App() {
               </div>
               {ops.map(o => <div key={o.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderTop: `1px solid ${t.border}` }}><span>{o.name}</span><button onClick={() => saveOps(ops.filter(x => x.id !== o.id))} style={{ color: '#EF4444', border: 'none', background: 'none', cursor: 'pointer' }}>×</button></div>)}
             </div>
+
             <div style={{ background: t.card, padding: 25, borderRadius: 16, border: `1px solid ${t.border}` }}>
               <h3 style={{ color: t.accent }}>🔄 OFFSET: {off}</h3>
               <input type="number" value={off} onChange={e => saveOff(Number(e.target.value))} style={{ padding: 12, width: '100%', borderRadius: 8, border: `1px solid ${t.border}`, background: t.bg, color: t.text }} />
             </div>
+
+            {isSuper && (
+              <div style={{ background: t.card, padding: 25, borderRadius: 16, border: `1px solid ${t.border}` }}>
+                <h3 style={{ color: t.accent }}>🔐 GESTIÓN DE ACCESOS</h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
+                  <input id="newU" placeholder="Usuario" style={{ padding: 10, borderRadius: 8, border: `1px solid ${t.border}`, background: t.bg, color: t.text }} />
+                  <input id="newP" type="password" placeholder="Contraseña" style={{ padding: 10, borderRadius: 8, border: `1px solid ${t.border}`, background: t.bg, color: t.text }} />
+                  <select id="newR" style={{ padding: 10, borderRadius: 8, border: `1px solid ${t.border}`, background: t.bg, color: t.text }}>
+                    <option value="admin">Administrador</option>
+                    <option value="editor">Editor</option>
+                  </select>
+                  <button onClick={() => {
+                    const u = document.getElementById('newU').value, p = document.getElementById('newP').value, r = document.getElementById('newR').value;
+                    if(u && p) {
+                      saveAdmins([...admins, { user: u, passHash: simpleHash(p), role: r }]);
+                      document.getElementById('newU').value = ''; document.getElementById('newP').value = '';
+                    }
+                  }} style={{ padding: 12, background: t.accent, borderRadius: 8, fontWeight: 'bold', cursor: 'pointer' }}>CREAR USUARIO</button>
+                </div>
+                {admins.map(a => (
+                  <div key={a.user} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderTop: `1px solid ${t.border}`, fontSize: 12 }}>
+                    <span>{a.user} <strong style={{ color: t.accent }}>({a.role})</strong></span>
+                    {a.role !== 'superadmin' && <button onClick={() => saveAdmins(admins.filter(x => x.user !== a.user))} style={{ color: '#EF4444', border: 'none', background: 'none', cursor: 'pointer' }}>×</button>}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </main>

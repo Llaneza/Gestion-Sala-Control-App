@@ -158,12 +158,10 @@ export default function App() {
   const [activeYear, setAY] = useState(today.getFullYear());
   const [month, setMonth] = useState(today.getMonth());
   
-  // --- LÓGICA TEMA AUTOMÁTICO ---
   const getSystemTheme = () => (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
   const [themeMode, setThemeMode] = useState(getSystemTheme());
 
   useEffect(() => {
-    // Sincronizar el color de fondo del body con el tema seleccionado
     document.body.style.backgroundColor = THEMES[themeMode].bg;
   }, [themeMode]);
 
@@ -176,6 +174,25 @@ export default function App() {
   const saveOps = (n) => set(ref(db, 'ops'), n);
   const saveAdmins = (n) => set(ref(db, 'admins'), n);
   const saveOff = (n) => set(ref(db, 'offset'), n);
+
+  // --- LÓGICA DE NAVEGACIÓN DE MESES Y AÑOS ---
+  const handleNextMonth = () => {
+    if (month === 11) {
+      setMonth(0);
+      setAY(prev => prev + 1);
+    } else {
+      setMonth(prev => prev + 1);
+    }
+  };
+
+  const handlePrevMonth = () => {
+    if (month === 0) {
+      setMonth(11);
+      setAY(prev => prev - 1);
+    } else {
+      setMonth(prev => prev - 1);
+    }
+  };
 
   const t = THEMES[themeMode];
   const isAdmin = session?.role === "admin" || session?.role === "superadmin";
@@ -207,7 +224,7 @@ export default function App() {
         <h1 style={{textAlign:'center'}}>CUADRANTE ANUAL {activeYear}</h1>
         {MONTHS.map((m, mi) => (
           <div key={mi} className="print-month">
-            <h2 style={{ textAlign: 'center' }}>{m.toUpperCase()}</h2>
+            <h2 style={{ textAlign: 'center' }}>{m.toUpperCase()} {activeYear}</h2>
             <CalendarGrid ops={ops} year={activeYear} month={mi} off={off} asgn={asgn} t={THEMES.light} />
           </div>
         ))}
@@ -218,7 +235,7 @@ export default function App() {
           <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
             <span style={{ fontWeight: 900, color: t.accent, fontSize: 16 }}>SALA CONTROL</span>
             <select value={activeYear} onChange={e => setAY(Number(e.target.value))} style={{ background: t.bg, color: t.text, border: `1px solid ${t.border}`, padding: '4px' }}>
-              {[2025, 2026, 2027].map(y => <option key={y} value={y}>{y}</option>)}
+              {[2025, 2026, 2027, 2028].map(y => <option key={y} value={y}>{y}</option>)}
             </select>
             <button onClick={() => window.print()} style={{ background: t.accent, color: '#000', border: 'none', padding: '6px 12px', borderRadius: 6, fontWeight: 'bold', fontSize: 12 }}>PDF</button>
           </div>
@@ -239,9 +256,9 @@ export default function App() {
         {view === "calendar" && (
           <div>
             <div style={{ display: 'flex', justifyContent: 'center', gap: 10, marginBottom: 20, alignItems: 'center' }}>
-              <button style={{padding:'8px 12px'}} onClick={() => setMonth(m => m === 0 ? 11 : m - 1)}>←</button>
-              <h2 style={{ margin: 0, fontSize: 18 }}>{MONTHS[month].toUpperCase()}</h2>
-              <button style={{padding:'8px 12px'}} onClick={() => setMonth(m => m === 11 ? 0 : m + 1)}>→</button>
+              <button style={{padding:'8px 12px', cursor:'pointer', fontWeight:'bold'}} onClick={handlePrevMonth}>←</button>
+              <h2 style={{ margin: 0, fontSize: 18, minWidth: 160, textAlign: 'center' }}>{MONTHS[month].toUpperCase()} {activeYear}</h2>
+              <button style={{padding:'8px 12px', cursor:'pointer', fontWeight:'bold'}} onClick={handleNextMonth}>→</button>
             </div>
             <CalendarGrid ops={ops} year={activeYear} month={month} off={off} asgn={asgn} t={t} />
           </div>
@@ -328,7 +345,7 @@ function EditorComponent({ ops, saveOps, activeYear, theme: t, off, isReadOnly }
       <div className="editor-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 15 }}>
         {MONTHS.map((m, mi) => (
           <div key={mi} style={{ background: t.bg, padding: 10, borderRadius: 10 }}>
-            <div style={{ textAlign: 'center', fontWeight: 'bold', fontSize: 12, marginBottom: 8 }}>{m.toUpperCase()}</div>
+            <div style={{ textAlign: 'center', fontWeight: 'bold', fontSize: 12, marginBottom: 8 }}>{m.toUpperCase()} {activeYear}</div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 3 }}>
               {Array.from({ length: dim(activeYear, mi) }).map((_, di) => {
                 const k = mk(activeYear, mi+1, di+1), rot = cshift(activeYear, mi, di+1, off), abs = ops.find(o=>o.id===selOp)?.calendar?.[k];

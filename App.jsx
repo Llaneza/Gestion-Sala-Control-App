@@ -174,11 +174,6 @@ setThemeMode(hour >= 8 && hour < 20 ? 'light' : 'dark');
 }
 }, [manualTheme]);
 
-const toggleTheme = () => {
-setManualTheme(true);
-setThemeMode(themeMode === 'dark' ? 'light' : 'dark');
-};
-
 const t = THEMES[themeMode];
 const isSuper = session?.role === "superadmin";
 const isAdmin = session?.role === "admin" || isSuper;
@@ -191,7 +186,13 @@ const stats = useMemo(() => computeStats(ops, activeYear, asgn, off), [ops, acti
 const handlePrevMonth = () => { if (month === 0) { setMonth(11); setAY(v => v - 1); } else setMonth(month - 1); };
 const handleNextMonth = () => { if (month === 11) { setMonth(0); setAY(v => v + 1); } else setMonth(month + 1); };
 
-if (!session) return <LoginScreen admins={admins} onLogin={setSession} theme={t} themeMode={themeMode} toggleTheme={toggleTheme} />;
+// Función compartida para cambiar el tema
+const handleToggleTheme = () => {
+setManualTheme(true);
+setThemeMode(prev => prev === 'dark' ? 'light' : 'dark');
+};
+
+if (!session) return <LoginScreen admins={admins} onLogin={setSession} theme={t} themeMode={themeMode} toggleTheme={handleToggleTheme} />;
 
 return (
 <div style={{ minHeight: "100vh", background: t.bg, color: t.text, fontFamily: 'monospace', transition: 'background 0.3s' }}>
@@ -211,7 +212,7 @@ return (
 <header className="no-print" style={{ background: t.card, padding: "10px 20px", display: 'flex', justifyContent: 'space-between', borderBottom: `1px solid ${t.border}`, alignItems: 'center', position: 'sticky', top: 0, zIndex: 200 }}>
 <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
 <span style={{ fontWeight: 800, color: t.accent, fontSize: 16 }}>SALA DE CONTROL ☁️</span>
-<button onClick={toggleTheme} style={{ background: t.bg, border: `1px solid ${t.border}`, borderRadius: 8, padding: '4px 8px', cursor: 'pointer' }}>{themeMode === 'dark' ? '🌙' : '☀️'}</button>
+<button onClick={handleToggleTheme} style={{ background: t.bg, border: `1px solid ${t.border}`, borderRadius: 8, padding: '4px 8px', cursor: 'pointer' }}>{themeMode === 'dark' ? '🌙' : '☀️'}</button>
 <select value={activeYear} onChange={e => setAY(Number(e.target.value))} style={{ background: t.bg, color: t.text, border: `1px solid ${t.border}`, borderRadius: 4, padding: '4px 8px' }}>
 {[2024, 2025, 2026, 2027, 2028, 2029, 2030].map(y => <option key={y} value={y}>{y}</option>)}
 </select>
@@ -385,22 +386,21 @@ const [user, setUser] = useState(""), [pass, setPass] = useState(""), [showPass,
 return (
 <div style={{ minHeight: "100vh", background: t.bg, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 20, transition: 'background 0.3s' }}>
 
-{/* BOTÓN DE TEMA ENCIMA DE LA TARJETA */}
+{/* Botón de tema justo encima de la tarjeta */}
 <button
 onClick={toggleTheme}
 style={{
 background: t.card,
 border: `1px solid ${t.border}`,
 borderRadius: 12,
-padding: '8px 16px',
+padding: '10px 20px',
 cursor: 'pointer',
 marginBottom: 15,
 color: t.text,
 fontWeight: 'bold',
 display: 'flex',
 alignItems: 'center',
-gap: 8,
-fontSize: 14,
+gap: 10,
 boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)'
 }}
 >

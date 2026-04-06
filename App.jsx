@@ -65,7 +65,6 @@ const Av = ({ name, color, size = 24 }) => (
 </div>
 );
 
-// --- LÓGICA DE CALENDARIO ---
 const dim = (y, m) => new Date(y, m + 1, 0).getDate();
 const dow = (y, m, d) => { const r = new Date(y, m, d).getDay(); return r === 0 ? 6 : r - 1; };
 const dse = (y, m, d) => Math.round((new Date(y, m, d) - new Date(1970, 0, 1)) / 86400000);
@@ -76,11 +75,11 @@ const pos = ((dse(y, m, d) + off) % CYCLE_LEN + CYCLE_LEN) % CYCLE_LEN;
 return CYCLE[Math.floor(pos / 7)][pos % 7];
 }
 
-// --- ALGORITMO CON EQUIDAD POR BAJA Y LÍMITE DE 4 DÍAS SC ---
+// --- MOTOR DE ASIGNACIÓN CON 6 PRIORIDADES ---
 function autoAssign(ops, targetYear, off) {
-const hSC = {}, nSC = {}, pairs = {};
+const hSC_Calc = {}, nSC_Calc = {}, pairs = {};
 ops.forEach(o => {
-hSC[o.id] = 0; nSC[o.id] = 0; pairs[o.id] = {};
+hSC_Calc[o.id] = 0; nSC_Calc[o.id] = 0; pairs[o.id] = {};
 ops.forEach(other => { if(o.id !== other.id) pairs[o.id][other.id] = 0; });
 });
 
@@ -100,36 +99,38 @@ ops.forEach(op => { allAssigns[year][k][op.id] = "D"; });
 continue;
 }
 
-// Función para verificar si un operador lleva 4 días seguidos en SC
 const isExhausted = (opId) => {
 let count = 0;
 for (let i = 1; i <= 4; i++) {
 const prevDate = new Date(year, mo, d - i);
 const pk = mk(prevDate.getFullYear(), prevDate.getMonth() + 1, prevDate.getDate());
-// Verificamos en el año actual o el anterior
-const prevAssign = allAssigns[prevDate.getFullYear()]?.[pk]?.[opId];
-if (prevAssign === "SC") count++;
-else break;
+if (allAssigns[prevDate.getFullYear()]?.[pk]?.[opId] === "SC") count++; else break;
 }
 return count >= 4;
 };
 
-// Selección de pareja por equidad + restricción de 4 días
-if (daysInCurrentBlock >= 4 || currentBlockPair.length === 0) {
-// Disponibles son los que no tienen ausencia Y no han superado el límite de 4 días SC
-const avail = ops.filter(op => !op.calendar?.[k] && !isExhausted(op.id));
+const currentPairHasAbsence = currentBlockPair.some(id => ops.find(o => o.id === id)?.calendar?.[k]);
+const currentPairHasExhausted = currentBlockPair.some(id => isExhausted(id));
 
-// Fallback: Si por ausencias/restricciones no hay 2 disponibles, relajamos la regla de agotamiento para evitar huecos
-const candidates = avail.length >= 2 ? avail : ops.filter(op => !op.calendar?.[k]);
+if (daysInCurrentBlock >= 4 || currentBlockPair.length < 2 || currentPairHasAbsence || currentPairHasExhausted) {
+// FILTRO: Prioridad 2 (Disponibilidad) + Prioridad 3 (Fatiga)
+let candidates = ops.filter(op => !op.calendar?.[k] && !isExhausted(op.id));
+
+// FALLBACK: Prioridad 1 (Siempre 2 en SC) -> Si no hay candidatos, ignoramos fatiga
+if (candidates.length < 2) candidates = ops.filter(op => !op.calendar?.[k]);
+if (candidates.length < 2) candidates = [...ops].sort((a,b) => (a.calendar?.[k] ? 1 : -1));
 
 let bestPair = [], minScore = Infinity;
-
 for (let i = 0; i < candidates.length; i++) {
 for (let j = i + 1; j < candidates.length; j++) {
 const p1 = candidates[i], p2 = candidates[j];
-let score = (hSC[p1.id] + hSC[p2.id]);
-if (turno === "N") score += (nSC[p1.id] + nSC[p2.id]) * 150;
-score += (pairs[p1.id][p2.id] || 0) * 80;
+if(!p1 || !p2) continue;
+
+// Prioridad 4 (Equidad Noches) + Prioridad 5 (Equidad Horas/Parejas)
+let score = (hSC_Calc[p1.id] + hSC_Calc[p2.id]);
+score += (nSC_Calc[p1.id] + nSC_Calc[p2.id]) * 100; // Peso extra para noches
+score += (pairs[p1.id][p2.id] || 0) * 50;
+
 if (score < minScore) { minScore = score; bestPair = [p1.id, p2.id]; }
 }
 }
@@ -137,16 +138,19 @@ currentBlockPair = bestPair;
 daysInCurrentBlock = 0;
 }
 
-// Procesar asignaciones del día
 ops.forEach(op => {
 const abs = op.calendar?.[k];
 if (abs) {
 allAssigns[year][k][op.id] = abs;
-if (abs === "BA") hSC[op.id] += 12; // Horas virtuales por baja
+// Prioridad 6: La baja suma virtualmente para no penalizar equidad
+if (abs === "BA") {
+hSC_Calc[op.id] += 12;
+if (turno === "N") nSC_Calc[op.id] += 1;
+}
 } else if (currentBlockPair.includes(op.id)) {
 allAssigns[year][k][op.id] = "SC";
-hSC[op.id] += 12;
-if (turno === "N") nSC[op.id] += 1;
+hSC_Calc[op.id] += 12;
+if (turno === "N") nSC_Calc[op.id] += 1;
 } else {
 allAssigns[year][k][op.id] = "CA";
 }
@@ -174,7 +178,7 @@ return { ...op, sc, nSC, hSC: sc * 12 };
 });
 }
 
-// --- COMPONENTE PRINCIPAL (Mantiene toda la UI anterior) ---
+// --- COMPONENTE PRINCIPAL (Mantiene toda la UI base) ---
 export default function App() {
 const today = new Date();
 const [session, setSession] = useState(null);
@@ -421,3 +425,4 @@ return (
 </div>
 );
 }
+

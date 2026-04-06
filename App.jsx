@@ -174,6 +174,11 @@ setThemeMode(hour >= 8 && hour < 20 ? 'light' : 'dark');
 }
 }, [manualTheme]);
 
+const toggleTheme = () => {
+setManualTheme(true);
+setThemeMode(themeMode === 'dark' ? 'light' : 'dark');
+};
+
 const t = THEMES[themeMode];
 const isSuper = session?.role === "superadmin";
 const isAdmin = session?.role === "admin" || isSuper;
@@ -186,13 +191,7 @@ const stats = useMemo(() => computeStats(ops, activeYear, asgn, off), [ops, acti
 const handlePrevMonth = () => { if (month === 0) { setMonth(11); setAY(v => v - 1); } else setMonth(month - 1); };
 const handleNextMonth = () => { if (month === 11) { setMonth(0); setAY(v => v + 1); } else setMonth(month + 1); };
 
-// Función compartida para cambiar el tema
-const handleToggleTheme = () => {
-setManualTheme(true);
-setThemeMode(prev => prev === 'dark' ? 'light' : 'dark');
-};
-
-if (!session) return <LoginScreen admins={admins} onLogin={setSession} theme={t} themeMode={themeMode} toggleTheme={handleToggleTheme} />;
+if (!session) return <LoginScreen admins={admins} onLogin={setSession} theme={t} themeMode={themeMode} toggleTheme={toggleTheme} />;
 
 return (
 <div style={{ minHeight: "100vh", background: t.bg, color: t.text, fontFamily: 'monospace', transition: 'background 0.3s' }}>
@@ -212,7 +211,7 @@ return (
 <header className="no-print" style={{ background: t.card, padding: "10px 20px", display: 'flex', justifyContent: 'space-between', borderBottom: `1px solid ${t.border}`, alignItems: 'center', position: 'sticky', top: 0, zIndex: 200 }}>
 <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
 <span style={{ fontWeight: 800, color: t.accent, fontSize: 16 }}>SALA DE CONTROL ☁️</span>
-<button onClick={handleToggleTheme} style={{ background: t.bg, border: `1px solid ${t.border}`, borderRadius: 8, padding: '4px 8px', cursor: 'pointer' }}>{themeMode === 'dark' ? '🌙' : '☀️'}</button>
+<button onClick={toggleTheme} style={{ background: t.bg, border: `1px solid ${t.border}`, borderRadius: 8, padding: '4px 8px', cursor: 'pointer' }}>{themeMode === 'dark' ? '🌙' : '☀️'}</button>
 <select value={activeYear} onChange={e => setAY(Number(e.target.value))} style={{ background: t.bg, color: t.text, border: `1px solid ${t.border}`, borderRadius: 4, padding: '4px 8px' }}>
 {[2024, 2025, 2026, 2027, 2028, 2029, 2030].map(y => <option key={y} value={y}>{y}</option>)}
 </select>
@@ -384,31 +383,25 @@ return <div key={di} onClick={() => toggleAbsence(k)} style={{ height: 32, backg
 function LoginScreen({ admins, onLogin, theme: t, themeMode, toggleTheme }) {
 const [user, setUser] = useState(""), [pass, setPass] = useState(""), [showPass, setShowPass] = useState(false);
 return (
-<div style={{ minHeight: "100vh", background: t.bg, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 20, transition: 'background 0.3s' }}>
-
-{/* Botón de tema justo encima de la tarjeta */}
+<div style={{ minHeight: "100vh", background: t.bg, display: "flex", alignItems: "center", justifyContent: "center", padding: 20, transition: 'background 0.3s' }}>
+<div style={{ background: t.card, padding: 40, borderRadius: 24, width: "100%", maxWidth: 380, border: `1px solid ${t.border}` }}>
+<div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 30 }}>
+<h2 style={{ margin: 0, color: t.accent, fontSize: 18 }}>SALA DE CONTROL</h2>
 <button
 onClick={toggleTheme}
 style={{
-background: t.card,
+background: t.bg,
 border: `1px solid ${t.border}`,
-borderRadius: 12,
-padding: '10px 20px',
+borderRadius: 8,
+padding: '6px 10px',
 cursor: 'pointer',
-marginBottom: 15,
-color: t.text,
-fontWeight: 'bold',
-display: 'flex',
-alignItems: 'center',
-gap: 10,
-boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)'
+fontSize: 14,
+color: t.text
 }}
 >
-{themeMode === 'dark' ? '🌙 Modo Noche' : '☀️ Modo Día'}
+{themeMode === 'dark' ? '🌙' : '☀️'}
 </button>
-
-<div style={{ background: t.card, padding: 40, borderRadius: 24, width: "100%", maxWidth: 380, border: `1px solid ${t.border}`, boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}>
-<h2 style={{ textAlign: 'center', color: t.accent, marginBottom: 30 }}>SALA DE CONTROL</h2>
+</div>
 <div style={{ display: 'flex', flexDirection: 'column', gap: 15 }}>
 <input value={user} onChange={e => setUser(e.target.value)} placeholder="Usuario" style={{ padding: 14, borderRadius: 12, border: `1px solid ${t.border}`, background: t.bg, color: t.text }} />
 <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>

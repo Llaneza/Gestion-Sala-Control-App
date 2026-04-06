@@ -1,15 +1,15 @@
-Import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { initializeApp } from "firebase/app";
 import { getDatabase, ref, onValue, set } from "firebase/database";
 
 // --- CONFIGURACIÓN DE FIREBASE ---
 const firebaseConfig = {
-apiKey: "AIzaSyAAW-KbrhHIzDyRTgmVjlzPa7TK8o9FeI4",
-authDomain: "app-sala-control.firebaseapp.com",
-projectId: "app-sala-control-beta",
-storageBucket: "app-sala-control.firebasestorage.app",
-messagingSenderId: "622611612673",
-appId: "1:622611612673:web:4200dcddc50292908c2c00"
+  apiKey: "AIzaSyAAW-KbrhHIzDyRTgmVjlzPa7TK8o9FeI4",
+  authDomain: "app-sala-control.firebaseapp.com",
+  projectId: "app-sala-control",
+  storageBucket: "app-sala-control.firebasestorage.app",
+  messagingSenderId: "622611612673",
+  appId: "1:622611612673:web:4200dcddc50292908c2c00"
 };
 
 const app = initializeApp(firebaseConfig);
@@ -17,46 +17,46 @@ const db = getDatabase(app);
 
 // --- UTILS SEGURIDAD ---
 function simpleHash(str) {
-let h = 0x811c9dc5;
-for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = (h * 0x01000193) >>> 0; }
-return h.toString(16);
+  let h = 0x811c9dc5;
+  for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = (h * 0x01000193) >>> 0; }
+  return h.toString(16);
 }
 
 const DEFAULT_ADMINS = [{ user: "admin", passHash: simpleHash("admin1234"), role: "superadmin" }];
 
 const THEMES = {
-dark: { bg: "#080F1E", card: "#0D1526", text: "#CBD5E1", title: "#FFFFFF", border: "#1E2D45", sub: "#475569", accent: "#34D399" },
-light: { bg: "#F1F5F9", card: "#FFFFFF", text: "#334155", title: "#0F172A", border: "#CBD5E1", sub: "#64748B", accent: "#059669" }
+  dark: { bg: "#080F1E", card: "#0D1526", text: "#CBD5E1", title: "#FFFFFF", border: "#1E2D45", sub: "#475569", accent: "#34D399" },
+  light: { bg: "#F1F5F9", card: "#FFFFFF", text: "#334155", title: "#0F172A", border: "#CBD5E1", sub: "#64748B", accent: "#059669" }
 };
 
 const CYCLE = [
-["M", "M", "D", "D", "N", "N", "N"],
-["D", "D", "M", "M", "D", "D", "D"],
-["N", "N", "D", "D", "M", "M", "M"],
-["D", "D", "N", "N", "D", "D", "D"],
+  ["M", "M", "D", "D", "N", "N", "N"],
+  ["D", "D", "M", "M", "D", "D", "D"],
+  ["N", "N", "D", "D", "M", "M", "M"],
+  ["D", "D", "N", "N", "D", "D", "D"],
 ];
 const CYCLE_LEN = 28;
 const ABSENCE = { VA: { label: "Vacaciones", icon: "🌴", color: "#10B981" }, EN: { label: "Entrenamiento", icon: "📖", color: "#A78BFA" } };
 const MONTHS = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
 const DOW_S = ["L", "M", "X", "J", "V", "S", "D"];
 const TURNO_DEF = {
-M: { color: "#F59E0B", label: "Mañana", bg: "#F59E0B15" },
-N: { color: "#818CF8", label: "Noche", bg: "#818CF815" },
-D: { color: "#64748B", label: "Descanso", bg: "transparent" }
+  M: { color: "#F59E0B", label: "Mañana", bg: "#F59E0B15" },
+  N: { color: "#818CF8", label: "Noche", bg: "#818CF815" },
+  D: { color: "#64748B", label: "Descanso", bg: "transparent" }
 };
 const EXTRA_VISUALS = { SC: { color: "#34D399", bg: "#34D39925" }, CA: { color: "#475569", bg: "transparent" } };
 
 // --- ICONOS Y AVATARES ---
 const EyeIcon = ({ visible, color }) => (
-<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-{visible ? (<><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></>) : (<><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></>)}
-</svg>
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    {visible ? (<><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></>) : (<><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></>)}
+  </svg>
 );
 
 const Av = ({ name, color, size = 24 }) => (
-<div style={{ width: size, height: size, borderRadius: 8, background: color || '#ccc', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: size * 0.4, color: '#000', fontWeight: 'bold', flexShrink: 0 }}>
-{name?.substring(0, 2).toUpperCase() || "??"}
-</div>
+  <div style={{ width: size, height: size, borderRadius: 8, background: color || '#ccc', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: size * 0.4, color: '#000', fontWeight: 'bold', flexShrink: 0 }}>
+    {name?.substring(0, 2).toUpperCase() || "??"}
+  </div>
 );
 
 // --- UTILS LÓGICOS ---
@@ -66,266 +66,332 @@ const dse = (y, m, d) => Math.round((new Date(y, m, d) - new Date(1970, 0, 1)) /
 const mk = (y, m, d) => `${y}-${m}-${d}`;
 
 function cshift(y, m, d, off = 0) {
-const pos = ((dse(y, m, d) + off) % CYCLE_LEN + CYCLE_LEN) % CYCLE_LEN;
-return CYCLE[Math.floor(pos / 7)][pos % 7];
+  const pos = ((dse(y, m, d) + off) % CYCLE_LEN + CYCLE_LEN) % CYCLE_LEN;
+  return CYCLE[Math.floor(pos / 7)][pos % 7];
 }
 
+// ALGORITMO DE EQUIDAD POR BLOQUES DE 4 DÍAS
 function autoAssign(ops, targetYear, off) {
-const hSC = {}, nSC = {}, pairs = {};
-ops.forEach(o => { hSC[o.id] = 0; nSC[o.id] = 0; pairs[o.id] = {}; ops.forEach(other => { if(o.id !== other.id) pairs[o.id][other.id] = 0; }); });
+  const hSC = {}, nSC = {}, pairs = {};
+  ops.forEach(o => { hSC[o.id] = 0; nSC[o.id] = 0; pairs[o.id] = {}; ops.forEach(other => { if(o.id !== other.id) pairs[o.id][other.id] = 0; }); });
 
-let currentBlockPair = [];
-let daysInCurrentBlock = 0;
-const allAssigns = {};
+  let currentBlockPair = [];
+  let daysInCurrentBlock = 0;
+  const allAssigns = {};
 
-for (let year = 2024; year <= targetYear; year++) {
-allAssigns[year] = {};
-for (let mo = 0; mo < 12; mo++) {
-for (let d = 1; d <= dim(year, mo); d++) {
-const k = mk(year, mo + 1, d), turno = cshift(year, mo, d, off);
-allAssigns[year][k] = {};
+  for (let year = 2024; year <= targetYear; year++) {
+    allAssigns[year] = {};
+    for (let mo = 0; mo < 12; mo++) {
+      for (let d = 1; d <= dim(year, mo); d++) {
+        const k = mk(year, mo + 1, d), turno = cshift(year, mo, d, off);
+        allAssigns[year][k] = {};
 
-if (turno === "D") {
-ops.forEach(op => { allAssigns[year][k][op.id] = "D"; });
-continue;
-}
+        if (turno === "D") {
+          ops.forEach(op => { allAssigns[year][k][op.id] = "D"; });
+          continue;
+        }
 
-if (daysInCurrentBlock >= 4 || currentBlockPair.length === 0) {
-const avail = ops.filter(op => !op.calendar?.[k]);
-let bestPair = [], minScore = Infinity;
+        // Cada 4 días de trabajo real (o si no hay pareja), recalculamos para equidad
+        if (daysInCurrentBlock >= 4 || currentBlockPair.length === 0) {
+          const avail = ops.filter(op => !op.calendar?.[k]);
+          let bestPair = [], minScore = Infinity;
 
-for (let i = 0; i < avail.length; i++) {
-for (let j = i + 1; j < avail.length; j++) {
-const p1 = avail[i], p2 = avail[j];
-let score = (hSC[p1.id] + hSC[p2.id]);
-if (turno === "N") score += (nSC[p1.id] + nSC[p2.id]) * 150;
-score += (pairs[p1.id][p2.id] || 0) * 80;
-if (score < minScore) { minScore = score; bestPair = [p1.id, p2.id]; }
-}
-}
-currentBlockPair = bestPair;
-daysInCurrentBlock = 0;
-}
+          for (let i = 0; i < avail.length; i++) {
+            for (let j = i + 1; j < avail.length; j++) {
+              const p1 = avail[i], p2 = avail[j];
+              let score = (hSC[p1.id] + hSC[p2.id]);
+              if (turno === "N") score += (nSC[p1.id] + nSC[p2.id]) * 150; // Prioridad extra a noches equitativas
+              score += (pairs[p1.id][p2.id] || 0) * 80;
+              if (score < minScore) { minScore = score; bestPair = [p1.id, p2.id]; }
+            }
+          }
+          currentBlockPair = bestPair;
+          daysInCurrentBlock = 0;
+        }
 
-const busy = ops.filter(op => op.calendar?.[k]);
-busy.forEach(op => { allAssigns[year][k][op.id] = op.calendar[k]; });
+        const busy = ops.filter(op => op.calendar?.[k]);
+        busy.forEach(op => { allAssigns[year][k][op.id] = op.calendar[k]; });
 
-ops.forEach(op => {
-if (currentBlockPair.includes(op.id) && !allAssigns[year][k][op.id]) {
-allAssigns[year][k][op.id] = "SC";
-hSC[op.id] += 12;
-if (turno === "N") nSC[op.id] += 1;
-} else if (!allAssigns[year][k][op.id]) {
-allAssigns[year][k][op.id] = "CA";
-}
-});
+        ops.forEach(op => {
+          if (currentBlockPair.includes(op.id) && !allAssigns[year][k][op.id]) {
+            allAssigns[year][k][op.id] = "SC";
+            hSC[op.id] += 12;
+            if (turno === "N") nSC[op.id] += 1;
+          } else if (!allAssigns[year][k][op.id]) {
+            allAssigns[year][k][op.id] = "CA";
+          }
+        });
 
-if (currentBlockPair.length === 2) {
-pairs[currentBlockPair[0]][currentBlockPair[1]]++;
-pairs[currentBlockPair[1]][currentBlockPair[0]]++;
-}
-daysInCurrentBlock++;
-}
-}
-}
-return allAssigns[targetYear] || {};
+        if (currentBlockPair.length === 2) {
+          pairs[currentBlockPair[0]][currentBlockPair[1]]++;
+          pairs[currentBlockPair[1]][currentBlockPair[0]]++;
+        }
+        daysInCurrentBlock++;
+      }
+    }
+  }
+  return allAssigns[targetYear] || {};
 }
 
 function computeStats(ops, year, asgn, off) {
-return ops.map(op => {
-let sc = 0, nSC = 0;
-for (let mo = 0; mo < 12; mo++) for (let d = 1; d <= dim(year, mo); d++) {
-const k = mk(year, mo + 1, d), t = cshift(year, mo, d, off), a = asgn[k]?.[op.id];
-if (t !== "D" && a === "SC") { sc++; if (t === "N") nSC++; }
-}
-return { ...op, sc, nSC, hSC: sc * 12 };
-});
+  return ops.map(op => {
+    let sc = 0, nSC = 0;
+    for (let mo = 0; mo < 12; mo++) for (let d = 1; d <= dim(year, mo); d++) {
+      const k = mk(year, mo + 1, d), t = cshift(year, mo, d, off), a = asgn[k]?.[op.id];
+      if (t !== "D" && a === "SC") { sc++; if (t === "N") nSC++; }
+    }
+    return { ...op, sc, nSC, hSC: sc * 12 };
+  });
 }
 
 // --- APP COMPONENT ---
 export default function App() {
-const today = new Date();
-const [session, setSession] = useState(null);
-const [admins, setAdmins] = useState(DEFAULT_ADMINS);
-const [ops, setOps] = useState([]);
-const [off, setOff] = useState(-11);
-const [view, setView] = useState("calendar");
-const [activeYear, setAY] = useState(today.getFullYear());
-const [month, setMonth] = useState(today.getMonth());
-const [themeMode, setThemeMode] = useState('dark');
-const [manualTheme, setManualTheme] = useState(false);
-const [showConfigPass, setShowConfigPass] = useState(false);
+  const today = new Date();
+  const [session, setSession] = useState(null);
+  const [admins, setAdmins] = useState(DEFAULT_ADMINS);
+  const [ops, setOps] = useState([]);
+  const [off, setOff] = useState(-11);
+  const [view, setView] = useState("calendar");
+  const [activeYear, setAY] = useState(today.getFullYear());
+  const [month, setMonth] = useState(today.getMonth());
+  const [themeMode, setThemeMode] = useState('dark');
+  const [manualTheme, setManualTheme] = useState(false);
+  const [showConfigPass, setShowConfigPass] = useState(false);
 
-useEffect(() => {
-onValue(ref(db, 'ops'), (s) => { if (s.val()) setOps(s.val()); });
-onValue(ref(db, 'admins'), (s) => { if (s.val()) setAdmins(s.val()); });
-onValue(ref(db, 'offset'), (s) => { if (s.val() !== null) setOff(s.val()); });
-}, []);
+  useEffect(() => {
+    onValue(ref(db, 'ops'), (s) => { if (s.val()) setOps(s.val()); });
+    onValue(ref(db, 'admins'), (s) => { if (s.val()) setAdmins(s.val()); });
+    onValue(ref(db, 'offset'), (s) => { if (s.val() !== null) setOff(s.val()); });
+  }, []);
 
-const saveOps = (n) => set(ref(db, 'ops'), n);
-const saveAdmins = (n) => set(ref(db, 'admins'), n);
-const saveOff = (n) => set(ref(db, 'offset'), n);
+  const saveOps = (n) => set(ref(db, 'ops'), n);
+  const saveAdmins = (n) => set(ref(db, 'admins'), n);
+  const saveOff = (n) => set(ref(db, 'offset'), n);
 
-useEffect(() => {
-if (!manualTheme) {
-const hour = new Date().getHours();
-setThemeMode(hour >= 8 && hour < 20 ? 'light' : 'dark');
+  useEffect(() => {
+    if (!manualTheme) {
+      const hour = new Date().getHours();
+      setThemeMode(hour >= 8 && hour < 20 ? 'light' : 'dark');
+    }
+  }, [manualTheme]);
+
+  const t = THEMES[themeMode];
+  const isSuper = session?.role === "superadmin";
+  const isAdmin = session?.role === "admin" || isSuper;
+  const canEdit = isAdmin || session?.role === "editor";
+  const canSeeEditor = canEdit || session?.role === "guest";
+
+  const asgn = useMemo(() => autoAssign(ops, activeYear, off), [ops, activeYear, off]);
+  const stats = useMemo(() => computeStats(ops, activeYear, asgn, off), [ops, activeYear, asgn, off]);
+
+  const handlePrevMonth = () => { if (month === 0) { setMonth(11); setAY(v => v - 1); } else setMonth(month - 1); };
+  const handleNextMonth = () => { if (month === 11) { setMonth(0); setAY(v => v + 1); } else setMonth(month + 1); };
+
+  if (!session) return <LoginScreen admins={admins} onLogin={setSession} theme={t} />;
+
+  return (
+    <div style={{ minHeight: "100vh", background: t.bg, color: t.text, fontFamily: 'monospace', transition: 'background 0.3s' }}>
+      <style>{`
+        @media print { .no-print { display: none !important; } body { background: white !important; color: black !important; } }
+        .calendar-container { background: ${t.card}; border-radius: 12px; overflow-x: auto; border: 1px solid ${t.border}; margin-bottom: 40px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); }
+        .calendar-grid { display: grid; grid-template-columns: 160px repeat(${dim(activeYear, month)}, 1fr); gap: 0px; min-width: 100%; }
+        .sticky-col { position: sticky; left: 0; background: ${t.card} !important; z-index: 10; border-right: 2px solid ${t.border} !important; }
+        .cell-day { height: 38px; display: flex; align-items: center; justify-content: center; border-top: 1px solid ${t.border}; border-right: 1px solid ${t.border}; }
+        .header-day { height: 55px !important; flex-direction: column; gap: 2px; }
+        @media (max-width: 1024px) { 
+          .calendar-grid { grid-template-columns: 100px repeat(${dim(activeYear, month)}, 42px) !important; min-width: max-content; } 
+          .cell-day { height: 48px !important; font-size: 11px !important; }
+        }
+      `}</style>
+      
+      <header className="no-print" style={{ background: t.card, padding: "10px 20px", display: 'flex', justifyContent: 'space-between', borderBottom: `1px solid ${t.border}`, alignItems: 'center', position: 'sticky', top: 0, zIndex: 200 }}>
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+          <span style={{ fontWeight: 800, color: t.accent, fontSize: 16 }}>SALA DE CONTROL ☁️</span>
+          <button onClick={() => { setManualTheme(true); setThemeMode(themeMode === 'dark' ? 'light' : 'dark'); }} style={{ background: t.bg, border: `1px solid ${t.border}`, borderRadius: 8, padding: '4px 8px', cursor: 'pointer' }}>{themeMode === 'dark' ? '🌙' : '☀️'}</button>
+          <select value={activeYear} onChange={e => setAY(Number(e.target.value))} style={{ background: t.bg, color: t.text, border: `1px solid ${t.border}`, borderRadius: 4, padding: '4px 8px' }}>
+            {[2024, 2025, 2026, 2027, 2028, 2029, 2030].map(y => <option key={y} value={y}>{y}</option>)}
+          </select>
+        </div>
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+          <span style={{ fontSize: 10, opacity: 0.7 }}>{session.user} ({session.role})</span>
+          <button onClick={() => setSession(null)} style={{ background: '#EF444422', color: '#EF4444', border: 'none', padding: '6px 12px', borderRadius: 4, fontSize: 11, fontWeight: 'bold', cursor: 'pointer' }}>SALIR</button>
+        </div>
+      </header>
+
+      <nav className="no-print" style={{ display: 'flex', background: t.card, borderBottom: `1px solid ${t.border}`, position: 'sticky', top: 48, zIndex: 190, justifyContent: 'center' }}>
+        <div style={{ display: 'flex', width: '100%', maxWidth: 800 }}>
+          {["calendar", "stats", canSeeEditor && "editor", isAdmin && "config"].filter(Boolean).map(v => (
+            <button key={v} onClick={() => setView(v)} style={{ flex: 1, padding: '15px 10px', color: view === v ? t.accent : t.sub, background: 'none', border: 'none', cursor: 'pointer', fontWeight: 'bold', borderBottom: view === v ? `3px solid ${t.accent}` : 'none' }}>{v.toUpperCase()}</button>
+          ))}
+        </div>
+      </nav>
+
+      <main style={{ padding: "20px 10px", maxWidth: 1400, margin: '0 auto' }}>
+        {view === "calendar" && (
+          <div>
+            <div className="no-print" style={{ display: 'flex', justifyContent: 'center', gap: 8, marginBottom: 25, alignItems: 'center' }}>
+              <button style={{ padding: '10px 15px', borderRadius: 8, border: `1px solid ${t.border}`, background: t.card, color: t.text, cursor: 'pointer' }} onClick={handlePrevMonth}>Ant.</button>
+              <h2 style={{ margin: 0, minWidth: 140, textAlign: 'center', fontSize: 18, color: t.title }}>{MONTHS[month]} {activeYear}</h2>
+              <button style={{ padding: '10px 15px', borderRadius: 8, border: `1px solid ${t.border}`, background: t.card, color: t.text, cursor: 'pointer' }} onClick={handleNextMonth}>Sig.</button>
+            </div>
+            
+            <div className="calendar-container">
+              <div className="calendar-grid">
+                <div className="sticky-col" style={{ height: 55, borderBottom: `1px solid ${t.border}` }} />
+                {Array.from({ length: dim(activeYear, month) }).map((_, i) => {
+                  const rotHeader = cshift(activeYear, month, i+1, off);
+                  return (
+                    <div key={i} className="cell-day header-day" style={{ background: t.bg }}>
+                      <span style={{ color: dow(activeYear, month, i+1) >= 5 ? '#EF4444' : t.sub, fontSize: 9 }}>{DOW_S[dow(activeYear, month, i+1)]}</span>
+                      <span style={{ fontWeight: 'bold', fontSize: 12 }}>{i+1}</span>
+                      <span style={{ fontSize: 10, fontWeight: '800', color: TURNO_DEF[rotHeader]?.color }}>{rotHeader === 'D' ? '' : rotHeader}</span>
+                    </div>
+                  );
+                })}
+                {ops.map(op => (
+                  <div key={op.id} style={{ display: 'contents' }}>
+                    <div className="sticky-col" style={{ padding: '10px 12px', fontSize: 13, borderTop: `1px solid ${t.border}`, display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <Av name={op.name} color={op.color} size={20} /> 
+                      <span style={{ fontWeight: 'bold' }}>{op.name}</span>
+                    </div>
+                    {Array.from({ length: dim(activeYear, month) }).map((_, i) => {
+                      const dk = mk(activeYear, month+1, i+1), abs = op.calendar?.[dk], rot = cshift(activeYear, month, i+1, off), calcAsgn = asgn[dk]?.[op.id];
+                      const finalCode = abs || calcAsgn || rot;
+                      let cellBg = "transparent", cellColor = t.text;
+                      if (abs) { cellBg = ABSENCE[abs].color; cellColor = "#000"; }
+                      else if (calcAsgn === "SC") { cellBg = EXTRA_VISUALS.SC.bg; cellColor = EXTRA_VISUALS.SC.color; }
+                      else if (TURNO_DEF[rot]) { cellBg = TURNO_DEF[rot].bg; cellColor = TURNO_DEF[rot].color; }
+                      return (
+                        <div key={i} className="cell-day" style={{ borderTop: `1px solid ${t.border}`, background: cellBg, color: cellColor, fontWeight: rot !== 'D' || abs || calcAsgn === 'SC' ? 'bold' : 'normal' }}>
+                          {finalCode}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {view === "stats" && (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 20 }}>
+            {stats.map(s => (
+              <div key={s.id} style={{ background: t.card, padding: 25, borderRadius: 16, border: `1px solid ${t.border}` }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 15 }}><Av name={s.name} color={s.color} size={32} /><div style={{ fontWeight: 'bold', color: t.accent, fontSize: 18 }}>{s.name}</div></div>
+                <div style={{ fontSize: 32, fontWeight: 800 }}>{s.sc} SC</div>
+                <div style={{ fontSize: 14, color: t.sub }}>{s.hSC} Horas / {s.nSC} Noches</div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {view === "editor" && <EditorComponent ops={ops} saveOps={saveOps} activeYear={activeYear} theme={t} off={off} canEdit={canEdit} />}
+
+        {view === "config" && isAdmin && (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: 30 }}>
+            <div style={{ background: t.card, padding: 25, borderRadius: 16, border: `1px solid ${t.border}` }}>
+              <h3 style={{ color: t.accent }}>⚙️ OPERADORES</h3>
+              <div style={{ display: 'flex', gap: 10, marginBottom: 20 }}>
+                <input id="newOpN" placeholder="Nombre..." style={{ flex: 1, padding: 12, borderRadius: 8, border: `1px solid ${t.border}`, background: t.bg, color: t.text }} />
+                <button onClick={() => { const n = document.getElementById('newOpN').value; if(n) { saveOps([...ops, { id: Date.now(), name: n, color: '#'+Math.random().toString(16).slice(2,8), calendar: {} }]); document.getElementById('newOpN').value = ''; } }} style={{ padding: '0 20px', background: t.accent, borderRadius: 8, fontWeight: 'bold', cursor: 'pointer' }}>AÑADIR</button>
+              </div>
+              {ops.map(o => <div key={o.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderTop: `1px solid ${t.border}` }}><span>{o.name}</span><button onClick={() => saveOps(ops.filter(x => x.id !== o.id))} style={{ color: '#EF4444', border: 'none', background: 'none', cursor: 'pointer' }}>×</button></div>)}
+            </div>
+
+            <div style={{ background: t.card, padding: 25, borderRadius: 16, border: `1px solid ${t.border}` }}>
+              <h3 style={{ color: t.accent }}>🔄 OFFSET: {off}</h3>
+              <input type="number" value={off} onChange={e => saveOff(Number(e.target.value))} style={{ padding: 12, width: '100%', borderRadius: 8, border: `1px solid ${t.border}`, background: t.bg, color: t.text }} />
+            </div>
+
+            {isSuper && (
+              <div style={{ background: t.card, padding: 25, borderRadius: 16, border: `1px solid ${t.border}` }}>
+                <h3 style={{ color: t.accent }}>🔐 GESTIÓN DE ACCESOS</h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
+                  <input id="newU" placeholder="Usuario" style={{ padding: 10, borderRadius: 8, border: `1px solid ${t.border}`, background: t.bg, color: t.text }} />
+                  <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                    <input id="newP" type={showConfigPass ? "text" : "password"} placeholder="Contraseña" style={{ flex: 1, padding: 10, paddingRight: 40, borderRadius: 8, border: `1px solid ${t.border}`, background: t.bg, color: t.text }} />
+                    <button onClick={() => setShowConfigPass(!showConfigPass)} style={{ position: 'absolute', right: 10, background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex' }}><EyeIcon visible={showConfigPass} color={t.sub} /></button>
+                  </div>
+                  <select id="newR" style={{ padding: 10, borderRadius: 8, border: `1px solid ${t.border}`, background: t.bg, color: t.text }}><option value="admin">Administrador</option><option value="editor">Editor</option></select>
+                  <button onClick={() => {
+                    const u = document.getElementById('newU').value, p = document.getElementById('newP').value, r = document.getElementById('newR').value;
+                    if(u && p) { saveAdmins([...admins, { user: u, passHash: simpleHash(p), role: r }]); document.getElementById('newU').value = ''; document.getElementById('newP').value = ''; }
+                  }} style={{ padding: 12, background: t.accent, borderRadius: 8, fontWeight: 'bold', cursor: 'pointer' }}>CREAR</button>
+                </div>
+                {admins.map(a => (
+                  <div key={a.user} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderTop: `1px solid ${t.border}`, fontSize: 12 }}>
+                    <span>{a.user} <strong style={{ color: t.accent }}>({a.role})</strong></span>
+                    {a.role !== 'superadmin' && <button onClick={() => saveAdmins(admins.filter(x => x.user !== a.user))} style={{ color: '#EF4444', border: 'none', background: 'none', cursor: 'pointer' }}>×</button>}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </main>
+    </div>
+  );
 }
-}, [manualTheme]);
 
-const t = THEMES[themeMode];
+function EditorComponent({ ops, saveOps, activeYear, theme: t, off, canEdit }) {
+  const [selOp, setSelOp] = useState(ops[0]?.id);
+  const [selAb, setSelAb] = useState("VA");
+  const toggleAbsence = (dateKey) => {
+    if (!canEdit) return;
+    const newOps = ops.map(o => {
+      if (o.id !== selOp) return o;
+      const newCal = { ...(o.calendar || {}) };
+      newCal[dateKey] === selAb ? delete newCal[dateKey] : newCal[dateKey] = selAb;
+      return { ...o, calendar: newCal };
+    });
+    saveOps(newOps);
+  };
 
-const handleThemeToggle = () => {
-setManualTheme(true);
-setThemeMode(themeMode === 'dark' ? 'light' : 'dark');
-};
-
-const isSuper = session?.role === "superadmin";
-const isAdmin = session?.role === "admin" || isSuper;
-const canEdit = isAdmin || session?.role === "editor";
-const canSeeEditor = canEdit || session?.role === "guest";
-
-const asgn = useMemo(() => autoAssign(ops, activeYear, off), [ops, activeYear, off]);
-const stats = useMemo(() => computeStats(ops, activeYear, asgn, off), [ops, activeYear, asgn, off]);
-
-const handlePrevMonth = () => { if (month === 0) { setMonth(11); setAY(v => v - 1); } else setMonth(month - 1); };
-const handleNextMonth = () => { if (month === 11) { setMonth(0); setAY(v => v + 1); } else setMonth(month + 1); };
-
-if (!session) return (
-<LoginScreen
-admins={admins}
-onLogin={setSession}
-theme={t}
-onThemeToggle={handleThemeToggle}
-themeMode={themeMode}
-/>
-);
-
-return (
-<div style={{ minHeight: "100vh", background: t.bg, color: t.text, fontFamily: 'monospace', transition: 'background 0.3s' }}>
-<style>{`
-@media print { .no-print { display: none !important; } body { background: white !important; color: black !important; } }
-.calendar-container { background: ${t.card}; border-radius: 12px; overflow-x: auto; border: 1px solid ${t.border}; margin-bottom: 40px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); }
-.calendar-grid { display: grid; grid-template-columns: 160px repeat(${dim(activeYear, month)}, 1fr); gap: 0px; min-width: 100%; }
-.sticky-col { position: sticky; left: 0; background: ${t.card} !important; z-index: 10; border-right: 2px solid ${t.border} !important; }
-.cell-day { height: 38px; display: flex; align-items: center; justify-content: center; border-top: 1px solid ${t.border}; border-right: 1px solid ${t.border}; }
-.header-day { height: 55px !important; flex-direction: column; gap: 2px; }
-@media (max-width: 1024px) {
-.calendar-grid { grid-template-columns: 100px repeat(${dim(activeYear, month)}, 42px) !important; min-width: max-content; }
-.cell-day { height: 48px !important; font-size: 11px !important; }
-}
-`}</style>
-
-{/* ... resto del código de la app (header, nav, main, etc.) permanece igual ... */}
-
-<header className="no-print" style={{ background: t.card, padding: "10px 20px", display: 'flex', justifyContent: 'space-between', borderBottom: `1px solid ${t.border}`, alignItems: 'center', position: 'sticky', top: 0, zIndex: 200 }}>
-<div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-<span style={{ fontWeight: 800, color: t.accent, fontSize: 16 }}>SALA DE CONTROL ☁️</span>
-<button onClick={handleThemeToggle} style={{ background: t.bg, border: `1px solid ${t.border}`, borderRadius: 8, padding: '4px 8px', cursor: 'pointer' }}>
-{themeMode === 'dark' ? '☀️' : '🌙'}
-</button>
-<select value={activeYear} onChange={e => setAY(Number(e.target.value))} style={{ background: t.bg, color: t.text, border: `1px solid ${t.border}`, borderRadius: 4, padding: '4px 8px' }}>
-{[2024, 2025, 2026, 2027, 2028, 2029, 2030].map(y => <option key={y} value={y}>{y}</option>)}
-</select>
-</div>
-<div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-<span style={{ fontSize: 10, opacity: 0.7 }}>{session.user} ({session.role})</span>
-<button onClick={() => setSession(null)} style={{ background: '#EF444422', color: '#EF4444', border: 'none', padding: '6px 12px', borderRadius: 4, fontSize: 11, fontWeight: 'bold', cursor: 'pointer' }}>SALIR</button>
-</div>
-</header>
-
-{/* El resto del código (nav, main, EditorComponent, etc.) se mantiene igual que antes */}
-{/* ... (para no hacer el mensaje demasiado largo, solo cambio lo importante) ... */}
-
-</div>
-);
+  return (
+    <div style={{ background: t.card, padding: 25, borderRadius: 16, border: `1px solid ${t.border}` }}>
+      {!canEdit && <p style={{ color: '#EF4444', fontSize: 12, marginBottom: 15, fontWeight: 'bold' }}>⚠️ MODO LECTURA</p>}
+      <select value={selOp} onChange={e => setSelOp(Number(e.target.value))} style={{ padding: 12, width: '100%', background: t.bg, color: t.text, border: `1px solid ${t.border}`, borderRadius: 8, marginBottom: 20 }}>
+        {ops.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
+      </select>
+      <div style={{ display: 'flex', gap: 10, marginBottom: 20 }}>
+        {Object.keys(ABSENCE).map(k => (
+          <button key={k} onClick={() => setSelAb(k)} style={{ background: selAb === k ? ABSENCE[k].color : 'transparent', border: `2px solid ${ABSENCE[k].color}`, color: selAb === k ? '#000' : ABSENCE[k].color, padding: '10px', borderRadius: 8, cursor: 'pointer', fontWeight: 'bold' }}>{ABSENCE[k].icon} {ABSENCE[k].label}</button>
+        ))}
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 15 }}>
+        {MONTHS.map((m, mi) => (
+          <div key={m} style={{ background: t.bg, padding: 12, borderRadius: 10, border: `1px solid ${t.border}` }}>
+            <div style={{ fontSize: 11, fontWeight: 'bold', marginBottom: 10, textAlign: 'center' }}>{m.toUpperCase()}</div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4 }}>
+              {Array.from({ length: dim(activeYear, mi) }).map((_, di) => {
+                const k = mk(activeYear, mi + 1, di + 1), status = ops.find(o => o.id === selOp)?.calendar?.[k], rot = cshift(activeYear, mi, di + 1, off);
+                return <div key={di} onClick={() => toggleAbsence(k)} style={{ height: 32, background: status ? ABSENCE[status].color : t.card, borderBottom: `3px solid ${TURNO_DEF[rot]?.color || 'transparent'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, cursor: canEdit ? 'pointer' : 'default', borderRadius: 4, color: status ? '#000' : t.text }}>{di+1}</div>;
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }
 
-// ==================== LOGIN SCREEN MODIFICADA ====================
-
-function LoginScreen({ admins, onLogin, theme: t, onThemeToggle, themeMode }) {
-const [user, setUser] = useState(""), [pass, setPass] = useState(""), [showPass, setShowPass] = useState(false);
-
-return (
-<div style={{
-minHeight: "100vh",
-background: t.bg,
-display: "flex",
-alignItems: "center",
-justifyContent: "center",
-padding: 20
-}}>
-<div style={{
-background: t.card,
-padding: 40,
-borderRadius: 24,
-width: "100%",
-maxWidth: 380,
-border: `1px solid ${t.border}`,
-position: 'relative'
-}}>
-
-{/* Botón de cambio de tema en la esquina superior derecha */}
-<button
-onClick={onThemeToggle}
-style={{
-position: 'absolute',
-top: 20,
-right: 20,
-background: t.bg,
-border: `1px solid ${t.border}`,
-borderRadius: 8,
-padding: '6px 10px',
-cursor: 'pointer',
-fontSize: 18,
-zIndex: 10
-}}
->
-{themeMode === 'dark' ? '☀️' : '🌙'}
-</button>
-
-<h2 style={{ textAlign: 'center', color: t.accent, marginBottom: 30 }}>SALA DE CONTROL</h2>
-
-<div style={{ display: 'flex', flexDirection: 'column', gap: 15 }}>
-<input
-value={user}
-onChange={e => setUser(e.target.value)}
-placeholder="Usuario"
-style={{ padding: 14, borderRadius: 12, border: `1px solid ${t.border}`, background: t.bg, color: t.text }}
-/>
-<div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-<input
-type={showPass ? "text" : "password"}
-value={pass}
-onChange={e => setPass(e.target.value)}
-placeholder="Contraseña"
-style={{ flex: 1, padding: 14, paddingRight: 45, borderRadius: 12, border: `1px solid ${t.border}`, background: t.bg, color: t.text }}
-/>
-<button
-onClick={() => setShowPass(!showPass)}
-style={{ position: 'absolute', right: 12, background: 'none', border: 'none', cursor: 'pointer', display: 'flex' }}
->
-<EyeIcon visible={showPass} color={t.sub} />
-</button>
-</div>
-<button
-onClick={() => {
-const f = admins.find(a => a.user === user && a.passHash === simpleHash(pass));
-if(f) onLogin(f);
-else alert("Acceso denegado");
-}}
-style={{ padding: 16, background: t.accent, borderRadius: 12, border: 'none', fontWeight: 'bold', cursor: 'pointer' }}
->
-ENTRAR
-</button>
-<button
-onClick={() => onLogin({ role: "guest", user: "Invitado" })}
-style={{ background: 'none', border: 'none', color: t.sub, textDecoration: 'underline', cursor: 'pointer', fontSize: 13 }}
->
-Modo lectura
-</button>
-</div>
-</div>
-</div>
-);
+function LoginScreen({ admins, onLogin, theme: t }) {
+  const [user, setUser] = useState(""), [pass, setPass] = useState(""), [showPass, setShowPass] = useState(false);
+  return (
+    <div style={{ minHeight: "100vh", background: t.bg, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+      <div style={{ background: t.card, padding: 40, borderRadius: 24, width: "100%", maxWidth: 380, border: `1px solid ${t.border}` }}>
+        <h2 style={{ textAlign: 'center', color: t.accent, marginBottom: 30 }}>SALA DE CONTROL</h2>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 15 }}>
+          <input value={user} onChange={e => setUser(e.target.value)} placeholder="Usuario" style={{ padding: 14, borderRadius: 12, border: `1px solid ${t.border}`, background: t.bg, color: t.text }} />
+          <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+            <input type={showPass ? "text" : "password"} value={pass} onChange={e => setPass(e.target.value)} placeholder="Contraseña" style={{ flex: 1, padding: 14, paddingRight: 45, borderRadius: 12, border: `1px solid ${t.border}`, background: t.bg, color: t.text }} />
+            <button onClick={() => setShowPass(!showPass)} style={{ position: 'absolute', right: 12, background: 'none', border: 'none', cursor: 'pointer', display: 'flex' }}><EyeIcon visible={showPass} color={t.sub} /></button>
+          </div>
+          <button onClick={() => { const f = admins.find(a => a.user === user && a.passHash === simpleHash(pass)); if(f) onLogin(f); else alert("Acceso denegado"); }} style={{ padding: 16, background: t.accent, borderRadius: 12, border: 'none', fontWeight: 'bold', cursor: 'pointer' }}>ENTRAR</button>
+          <button onClick={() => onLogin({ role: "guest", user: "Invitado" })} style={{ background: 'none', border: 'none', color: t.sub, textDecoration: 'underline', cursor: 'pointer', fontSize: 13 }}>Modo lectura</button>
+        </div>
+      </div>
+    </div>
+  );
 }

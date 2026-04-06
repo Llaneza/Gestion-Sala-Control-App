@@ -75,7 +75,7 @@ const pos = ((dse(y, m, d) + off) % CYCLE_LEN + CYCLE_LEN) % CYCLE_LEN;
 return CYCLE[Math.floor(pos / 7)][pos % 7];
 }
 
-// --- MOTOR DE ASIGNACIÓN CON 6 PRIORIDADES ---
+// --- MOTOR DE ASIGNACIÓN: LIMITACIÓN ESTRICTA DE RACHAS ---
 function autoAssign(ops, targetYear, off) {
 const hSC_Calc = {}, nSC_Calc = {}, pairs = {};
 ops.forEach(o => {
@@ -99,36 +99,52 @@ ops.forEach(op => { allAssigns[year][k][op.id] = "D"; });
 continue;
 }
 
-const isExhausted = (opId) => {
+// Verifica días seguidos y obliga a un descanso de al menos 1 día tras SC
+const getConsecutiveSC = (opId) => {
 let count = 0;
-for (let i = 1; i <= 4; i++) {
+for (let i = 1; i <= 15; i++) {
 const prevDate = new Date(year, mo, d - i);
 const pk = mk(prevDate.getFullYear(), prevDate.getMonth() + 1, prevDate.getDate());
 if (allAssigns[prevDate.getFullYear()]?.[pk]?.[opId] === "SC") count++; else break;
 }
-return count >= 4;
+return count;
+};
+
+const wasSCYesterday = (opId) => {
+const prevDate = new Date(year, mo, d - 1);
+const pk = mk(prevDate.getFullYear(), prevDate.getMonth() + 1, prevDate.getDate());
+return allAssigns[prevDate.getFullYear()]?.[pk]?.[opId] === "SC";
 };
 
 const currentPairHasAbsence = currentBlockPair.some(id => ops.find(o => o.id === id)?.calendar?.[k]);
-const currentPairHasExhausted = currentBlockPair.some(id => isExhausted(id));
+const currentPairHasReachedLimit = currentBlockPair.some(id => getConsecutiveSC(id) >= 4);
 
-if (daysInCurrentBlock >= 4 || currentBlockPair.length < 2 || currentPairHasAbsence || currentPairHasExhausted) {
-// FILTRO: Prioridad 2 (Disponibilidad) + Prioridad 3 (Fatiga)
-let candidates = ops.filter(op => !op.calendar?.[k] && !isExhausted(op.id));
+// Forzamos cambio si el bloque cumple 4 días o alguien llegó a su límite personal
+if (daysInCurrentBlock >= 4 || currentBlockPair.length < 2 || currentPairHasAbsence || currentPairHasReachedLimit) {
 
-// FALLBACK: Prioridad 1 (Siempre 2 en SC) -> Si no hay candidatos, ignoramos fatiga
-if (candidates.length < 2) candidates = ops.filter(op => !op.calendar?.[k]);
-if (candidates.length < 2) candidates = [...ops].sort((a,b) => (a.calendar?.[k] ? 1 : -1));
+// Candidatos: No tienen ausencia Y no han llegado a 4 días Y no vienen de ser SC ayer (si el bloque cambia, forzamos rotación)
+let candidates = ops.filter(op =>
+!op.calendar?.[k] &&
+getConsecutiveSC(op.id) < 4 &&
+!wasSCYesterday(op.id) // Regla de enfriamiento: si cambiamos bloque, el que estaba descansa
+);
+
+// Si por ser muy estrictos no hay 2, relajamos la regla de "ayer" pero mantenemos el límite de 4
+if (candidates.length < 2) {
+candidates = ops.filter(op => !op.calendar?.[k] && getConsecutiveSC(op.id) < 4);
+}
+
+// Último recurso: Prioridad operativa (Siempre 2)
+if (candidates.length < 2) {
+candidates = ops.filter(op => !op.calendar?.[k]);
+}
 
 let bestPair = [], minScore = Infinity;
 for (let i = 0; i < candidates.length; i++) {
 for (let j = i + 1; j < candidates.length; j++) {
 const p1 = candidates[i], p2 = candidates[j];
-if(!p1 || !p2) continue;
-
-// Prioridad 4 (Equidad Noches) + Prioridad 5 (Equidad Horas/Parejas)
 let score = (hSC_Calc[p1.id] + hSC_Calc[p2.id]);
-score += (nSC_Calc[p1.id] + nSC_Calc[p2.id]) * 100; // Peso extra para noches
+score += (nSC_Calc[p1.id] + nSC_Calc[p2.id]) * 100;
 score += (pairs[p1.id][p2.id] || 0) * 50;
 
 if (score < minScore) { minScore = score; bestPair = [p1.id, p2.id]; }
@@ -142,11 +158,7 @@ ops.forEach(op => {
 const abs = op.calendar?.[k];
 if (abs) {
 allAssigns[year][k][op.id] = abs;
-// Prioridad 6: La baja suma virtualmente para no penalizar equidad
-if (abs === "BA") {
-hSC_Calc[op.id] += 12;
-if (turno === "N") nSC_Calc[op.id] += 1;
-}
+if (abs === "BA") { hSC_Calc[op.id] += 12; if (turno === "N") nSC_Calc[op.id] += 1; }
 } else if (currentBlockPair.includes(op.id)) {
 allAssigns[year][k][op.id] = "SC";
 hSC_Calc[op.id] += 12;
@@ -178,7 +190,7 @@ return { ...op, sc, nSC, hSC: sc * 12 };
 });
 }
 
-// --- COMPONENTE PRINCIPAL (Mantiene toda la UI base) ---
+// --- RESTO DEL CÓDIGO (UI) SE MANTIENE IGUAL ---
 export default function App() {
 const today = new Date();
 const [session, setSession] = useState(null);

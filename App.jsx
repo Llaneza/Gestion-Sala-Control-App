@@ -37,7 +37,6 @@ const CYCLE = [
 ];
 const CYCLE_LEN = 28;
 
-// --- ACTUALIZACIÓN: Se añade BA (Baja) ---
 const ABSENCE = {
 VA: { label: "Vacaciones", icon: "🌴", color: "#10B981" },
 EN: { label: "Entrenamiento", icon: "📖", color: "#A78BFA" },
@@ -53,7 +52,7 @@ D: { color: "#64748B", label: "Descanso", bg: "transparent" }
 };
 const EXTRA_VISUALS = { SC: { color: "#34D399", bg: "#34D39925" }, CA: { color: "#475569", bg: "transparent" } };
 
-// --- ICONOS Y AVATARES ---
+// --- COMPONENTES AUXILIARES ---
 const EyeIcon = ({ visible, color }) => (
 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
 {visible ? (<><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></>) : (<><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></>)}
@@ -66,7 +65,7 @@ const Av = ({ name, color, size = 24 }) => (
 </div>
 );
 
-// --- UTILS LÓGICOS ---
+// --- LÓGICA DE CALENDARIO ---
 const dim = (y, m) => new Date(y, m + 1, 0).getDate();
 const dow = (y, m, d) => { const r = new Date(y, m, d).getDay(); return r === 0 ? 6 : r - 1; };
 const dse = (y, m, d) => Math.round((new Date(y, m, d) - new Date(1970, 0, 1)) / 86400000);
@@ -77,6 +76,7 @@ const pos = ((dse(y, m, d) + off) % CYCLE_LEN + CYCLE_LEN) % CYCLE_LEN;
 return CYCLE[Math.floor(pos / 7)][pos % 7];
 }
 
+// --- ALGORITMO CON EQUIDAD POR BAJA ---
 function autoAssign(ops, targetYear, off) {
 const hSC = {}, nSC = {}, pairs = {};
 ops.forEach(o => { hSC[o.id] = 0; nSC[o.id] = 0; pairs[o.id] = {}; ops.forEach(other => { if(o.id !== other.id) pairs[o.id][other.id] = 0; }); });
@@ -97,6 +97,7 @@ ops.forEach(op => { allAssigns[year][k][op.id] = "D"; });
 continue;
 }
 
+// Selección de pareja por equidad
 if (daysInCurrentBlock >= 4 || currentBlockPair.length === 0) {
 const avail = ops.filter(op => !op.calendar?.[k]);
 let bestPair = [], minScore = Infinity;
@@ -114,15 +115,18 @@ currentBlockPair = bestPair;
 daysInCurrentBlock = 0;
 }
 
-const busy = ops.filter(op => op.calendar?.[k]);
-busy.forEach(op => { allAssigns[year][k][op.id] = op.calendar[k]; });
-
+// Procesar asignaciones del día
 ops.forEach(op => {
-if (currentBlockPair.includes(op.id) && !allAssigns[year][k][op.id]) {
+const abs = op.calendar?.[k];
+if (abs) {
+allAssigns[year][k][op.id] = abs;
+// SI ESTÁ DE BAJA: Sumamos horas virtuales para que no baje en la lista de equidad
+if (abs === "BA") hSC[op.id] += 12;
+} else if (currentBlockPair.includes(op.id)) {
 allAssigns[year][k][op.id] = "SC";
-hSC[op.id] += 12;
+hSC[op.id] += 12; // Horas reales de trabajo
 if (turno === "N") nSC[op.id] += 1;
-} else if (!allAssigns[year][k][op.id]) {
+} else {
 allAssigns[year][k][op.id] = "CA";
 }
 });
@@ -149,6 +153,7 @@ return { ...op, sc, nSC, hSC: sc * 12 };
 });
 }
 
+// --- COMPONENTE PRINCIPAL ---
 export default function App() {
 const today = new Date();
 const [session, setSession] = useState(null);
@@ -395,4 +400,3 @@ return (
 </div>
 );
 }
-

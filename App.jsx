@@ -76,10 +76,13 @@ const pos = ((dse(y, m, d) + off) % CYCLE_LEN + CYCLE_LEN) % CYCLE_LEN;
 return CYCLE[Math.floor(pos / 7)][pos % 7];
 }
 
-// --- ALGORITMO CON EQUIDAD POR BAJA ---
+// --- ALGORITMO CON EQUIDAD POR BAJA Y LÍMITE DE 4 DÍAS SC ---
 function autoAssign(ops, targetYear, off) {
 const hSC = {}, nSC = {}, pairs = {};
-ops.forEach(o => { hSC[o.id] = 0; nSC[o.id] = 0; pairs[o.id] = {}; ops.forEach(other => { if(o.id !== other.id) pairs[o.id][other.id] = 0; }); });
+ops.forEach(o => {
+hSC[o.id] = 0; nSC[o.id] = 0; pairs[o.id] = {};
+ops.forEach(other => { if(o.id !== other.id) pairs[o.id][other.id] = 0; });
+});
 
 let currentBlockPair = [];
 let daysInCurrentBlock = 0;
@@ -97,14 +100,33 @@ ops.forEach(op => { allAssigns[year][k][op.id] = "D"; });
 continue;
 }
 
-// Selección de pareja por equidad
+// Función para verificar si un operador lleva 4 días seguidos en SC
+const isExhausted = (opId) => {
+let count = 0;
+for (let i = 1; i <= 4; i++) {
+const prevDate = new Date(year, mo, d - i);
+const pk = mk(prevDate.getFullYear(), prevDate.getMonth() + 1, prevDate.getDate());
+// Verificamos en el año actual o el anterior
+const prevAssign = allAssigns[prevDate.getFullYear()]?.[pk]?.[opId];
+if (prevAssign === "SC") count++;
+else break;
+}
+return count >= 4;
+};
+
+// Selección de pareja por equidad + restricción de 4 días
 if (daysInCurrentBlock >= 4 || currentBlockPair.length === 0) {
-const avail = ops.filter(op => !op.calendar?.[k]);
+// Disponibles son los que no tienen ausencia Y no han superado el límite de 4 días SC
+const avail = ops.filter(op => !op.calendar?.[k] && !isExhausted(op.id));
+
+// Fallback: Si por ausencias/restricciones no hay 2 disponibles, relajamos la regla de agotamiento para evitar huecos
+const candidates = avail.length >= 2 ? avail : ops.filter(op => !op.calendar?.[k]);
+
 let bestPair = [], minScore = Infinity;
 
-for (let i = 0; i < avail.length; i++) {
-for (let j = i + 1; j < avail.length; j++) {
-const p1 = avail[i], p2 = avail[j];
+for (let i = 0; i < candidates.length; i++) {
+for (let j = i + 1; j < candidates.length; j++) {
+const p1 = candidates[i], p2 = candidates[j];
 let score = (hSC[p1.id] + hSC[p2.id]);
 if (turno === "N") score += (nSC[p1.id] + nSC[p2.id]) * 150;
 score += (pairs[p1.id][p2.id] || 0) * 80;
@@ -120,11 +142,10 @@ ops.forEach(op => {
 const abs = op.calendar?.[k];
 if (abs) {
 allAssigns[year][k][op.id] = abs;
-// SI ESTÁ DE BAJA: Sumamos horas virtuales para que no baje en la lista de equidad
-if (abs === "BA") hSC[op.id] += 12;
+if (abs === "BA") hSC[op.id] += 12; // Horas virtuales por baja
 } else if (currentBlockPair.includes(op.id)) {
 allAssigns[year][k][op.id] = "SC";
-hSC[op.id] += 12; // Horas reales de trabajo
+hSC[op.id] += 12;
 if (turno === "N") nSC[op.id] += 1;
 } else {
 allAssigns[year][k][op.id] = "CA";
@@ -153,7 +174,7 @@ return { ...op, sc, nSC, hSC: sc * 12 };
 });
 }
 
-// --- COMPONENTE PRINCIPAL ---
+// --- COMPONENTE PRINCIPAL (Mantiene toda la UI anterior) ---
 export default function App() {
 const today = new Date();
 const [session, setSession] = useState(null);

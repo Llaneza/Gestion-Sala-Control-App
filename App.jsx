@@ -63,16 +63,16 @@ function cshift(y, m, d, off = 0) {
   return CYCLE[Math.floor(pos / 7)][pos % 7];
 }
 
-// --- MOTOR AJUSTABLE (PAUTA 2 DINÁMICA: 3 o 5 días) ---
+// --- MOTOR DE ASIGNACIÓN (PAUTAS 1-4 + PRUEBA 5 DÍAS) ---
 function autoAssign(ops, targetYear, off) {
-  const DAYS_PER_BLOCK = 3; // <--- MODIFICA AQUÍ: Cambia a 3 o 5 para probar la equidad
-  
+  const DAYS_PER_BLOCK = 5; // Pauta 2: Bloques de 5 días laborales
   const hSC = {}, hCompensada = {}, currentDaysInSC = {};
   ops.forEach(o => { hSC[o.id] = 0; hCompensada[o.id] = 0; currentDaysInSC[o.id] = 0; });
 
   let activeSC = []; 
   const allAssigns = {};
 
+  // Cálculo histórico para equidad real
   for (let year = 2024; year <= targetYear; year++) {
     allAssigns[year] = {};
     for (let mo = 0; mo < 12; mo++) {
@@ -86,10 +86,10 @@ function autoAssign(ops, targetYear, off) {
           continue;
         }
 
-        // 1. Finalizar bloques según el límite configurado (PAUTA 2 MODIFICADA)
+        // 1. Finalizar bloques (Pauta 2: 5 días laborales)
         activeSC = activeSC.filter(id => currentDaysInSC[id] < DAYS_PER_BLOCK);
 
-        // 2. Gestionar Bajas (PAUTA 4)
+        // 2. Gestionar Bajas (Pauta 4: No penaliza, suma horas teóricas)
         ops.forEach(op => {
           if (op.calendar?.[k] === "BA") {
             hCompensada[op.id] += 12; 
@@ -97,7 +97,7 @@ function autoAssign(ops, targetYear, off) {
           }
         });
 
-        // 3. Rellenar hasta 2 personas (PAUTA 1) usando Equidad (PAUTA 3)
+        // 3. Rellenar hasta 2 personas (Pauta 1) usando Equidad (Pauta 3)
         while (activeSC.length < 2) {
           const candidates = ops.filter(op => 
             !op.calendar?.[k] && !activeSC.includes(op.id)
@@ -110,7 +110,7 @@ function autoAssign(ops, targetYear, off) {
           } else break; 
         }
 
-        // 4. Asignación final del día
+        // 4. Asignación final
         ops.forEach(op => {
           const manual = op.calendar?.[k];
           if (manual) {
@@ -129,7 +129,7 @@ function autoAssign(ops, targetYear, off) {
   return allAssigns[targetYear] || {};
 }
 
-// --- COMPONENTES UI (ESTRUCTURA ORIGINAL) ---
+// --- ICONOS Y AVATARES ---
 const EyeIcon = ({ visible, color }) => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     {visible ? (<><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></>) : (<><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></>)}
@@ -153,6 +153,7 @@ function computeStats(ops, year, asgn, off) {
   });
 }
 
+// --- APP PRINCIPAL ---
 export default function App() {
   const today = new Date();
   const [session, setSession] = useState(null);

@@ -1,4 +1,4 @@
-mport { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { initializeApp } from "firebase/app";
 import { getDatabase, ref, onValue, set } from "firebase/database";
 
@@ -37,6 +37,7 @@ const CYCLE = [
 ];
 const CYCLE_LEN = 28;
 
+// --- ACTUALIZACIÓN: Se añade BA (Baja) ---
 const ABSENCE = {
 VA: { label: "Vacaciones", icon: "🌴", color: "#10B981" },
 EN: { label: "Entrenamiento", icon: "📖", color: "#A78BFA" },
@@ -76,19 +77,14 @@ const pos = ((dse(y, m, d) + off) % CYCLE_LEN + CYCLE_LEN) % CYCLE_LEN;
 return CYCLE[Math.floor(pos / 7)][pos % 7];
 }
 
-// --- MOTOR DE EQUIDAD (LAS 6 REGLAS) ---
 function autoAssign(ops, targetYear, off) {
 const hSC = {}, nSC = {}, pairs = {};
-ops.forEach(o => {
-hSC[o.id] = 0; nSC[o.id] = 0; pairs[o.id] = {};
-ops.forEach(other => { if(o.id !== other.id) pairs[o.id][other.id] = 0; });
-});
+ops.forEach(o => { hSC[o.id] = 0; nSC[o.id] = 0; pairs[o.id] = {}; ops.forEach(other => { if(o.id !== other.id) pairs[o.id][other.id] = 0; }); });
 
 let currentBlockPair = [];
-let daysInBlock = 0;
+let daysInCurrentBlock = 0;
 const allAssigns = {};
 
-// Calculamos desde 2024 para arrastrar historial de equidad
 for (let year = 2024; year <= targetYear; year++) {
 allAssigns[year] = {};
 for (let mo = 0; mo < 12; mo++) {
@@ -101,44 +97,32 @@ ops.forEach(op => { allAssigns[year][k][op.id] = "D"; });
 continue;
 }
 
-const getRacha = (id) => {
-let r = 0;
-for (let i = 1; i <= 4; i++) {
-const prev = new Date(year, mo, d - i);
-const pk = mk(prev.getFullYear(), prev.getMonth() + 1, prev.getDate());
-if (allAssigns[prev.getFullYear()]?.[pk]?.[id] === "SC") r++; else break;
-}
-return r;
-};
-
-const pairInvalid = currentBlockPair.some(id => ops.find(o => o.id === id)?.calendar?.[k] || getRacha(id) >= 4);
-
-if (daysInBlock >= 4 || currentBlockPair.length === 0 || pairInvalid) {
-const avail = ops.filter(op => !op.calendar?.[k] && getRacha(op.id) < 4);
+if (daysInCurrentBlock >= 4 || currentBlockPair.length === 0) {
+const avail = ops.filter(op => !op.calendar?.[k]);
 let bestPair = [], minScore = Infinity;
 
 for (let i = 0; i < avail.length; i++) {
 for (let j = i + 1; j < avail.length; j++) {
 const p1 = avail[i], p2 = avail[j];
 let score = (hSC[p1.id] + hSC[p2.id]);
-score += (nSC[p1.id] + nSC[p2.id]) * 120;
-score += (pairs[p1.id][p2.id] || 0) * 70;
+if (turno === "N") score += (nSC[p1.id] + nSC[p2.id]) * 150;
+score += (pairs[p1.id][p2.id] || 0) * 80;
 if (score < minScore) { minScore = score; bestPair = [p1.id, p2.id]; }
 }
 }
 currentBlockPair = bestPair;
-daysInBlock = 0;
+daysInCurrentBlock = 0;
 }
 
+const busy = ops.filter(op => op.calendar?.[k]);
+busy.forEach(op => { allAssigns[year][k][op.id] = op.calendar[k]; });
+
 ops.forEach(op => {
-const abs = op.calendar?.[k];
-if (abs) {
-allAssigns[year][k][op.id] = abs;
-if (abs === "BA") { hSC[op.id] += 12; if (turno === "N") nSC[op.id]++; }
-} else if (currentBlockPair.includes(op.id)) {
+if (currentBlockPair.includes(op.id) && !allAssigns[year][k][op.id]) {
 allAssigns[year][k][op.id] = "SC";
-hSC[op.id] += 12; if (turno === "N") nSC[op.id]++;
-} else {
+hSC[op.id] += 12;
+if (turno === "N") nSC[op.id] += 1;
+} else if (!allAssigns[year][k][op.id]) {
 allAssigns[year][k][op.id] = "CA";
 }
 });
@@ -147,7 +131,7 @@ if (currentBlockPair.length === 2) {
 pairs[currentBlockPair[0]][currentBlockPair[1]]++;
 pairs[currentBlockPair[1]][currentBlockPair[0]]++;
 }
-daysInBlock++;
+daysInCurrentBlock++;
 }
 }
 }
@@ -213,11 +197,11 @@ return (
 <div style={{ minHeight: "100vh", background: t.bg, color: t.text, fontFamily: 'monospace', transition: 'background 0.3s' }}>
 <style>{`
 @media print { .no-print { display: none !important; } body { background: white !important; color: black !important; } }
-.calendar-container { background: ${t.card}; border-radius: 12px; overflow-x: auto; border: 1px solid ${t.border}; margin-bottom: 40px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); position: relative; }
-.calendar-grid { display: grid; grid-template-columns: 140px repeat(${dim(activeYear, month)}, 45px); gap: 0px; min-width: 100%; }
-.sticky-col { position: sticky; left: 0; background: ${t.card} !important; z-index: 10; border-right: 2px solid ${t.border} !important; box-shadow: 2px 0 5px rgba(0,0,0,0.1); }
-.cell-day { height: 48px; display: flex; align-items: center; justify-content: center; border-top: 1px solid ${t.border}; border-right: 1px solid ${t.border}; font-size: 13px; }
-.header-day { height: 65px !important; flex-direction: column; gap: 2px; position: sticky; top: 0; z-index: 5; }
+.calendar-container { background: ${t.card}; border-radius: 12px; overflow-x: auto; border: 1px solid ${t.border}; margin-bottom: 40px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); }
+.calendar-grid { display: grid; grid-template-columns: 160px repeat(${dim(activeYear, month)}, 1fr); gap: 0px; min-width: 100%; }
+.sticky-col { position: sticky; left: 0; background: ${t.card} !important; z-index: 10; border-right: 2px solid ${t.border} !important; }
+.cell-day { height: 38px; display: flex; align-items: center; justify-content: center; border-top: 1px solid ${t.border}; border-right: 1px solid ${t.border}; }
+.header-day { height: 55px !important; flex-direction: column; gap: 2px; }
 `}</style>
 
 <header className="no-print" style={{ background: t.card, padding: "10px 20px", display: 'flex', justifyContent: 'space-between', borderBottom: `1px solid ${t.border}`, alignItems: 'center', position: 'sticky', top: 0, zIndex: 200 }}>
@@ -253,22 +237,22 @@ return (
 
 <div className="calendar-container">
 <div className="calendar-grid">
-<div className="sticky-col" style={{ height: 65, borderBottom: `1px solid ${t.border}` }} />
+<div className="sticky-col" style={{ height: 55, borderBottom: `1px solid ${t.border}` }} />
 {Array.from({ length: dim(activeYear, month) }).map((_, i) => {
 const rotHeader = cshift(activeYear, month, i+1, off);
 return (
 <div key={i} className="cell-day header-day" style={{ background: t.bg }}>
-<span style={{ color: dow(activeYear, month, i+1) >= 5 ? '#EF4444' : t.sub, fontSize: 10 }}>{DOW_S[dow(activeYear, month, i+1)]}</span>
-<span style={{ fontWeight: 'bold', fontSize: 13 }}>{i+1}</span>
-<span style={{ fontSize: 11, fontWeight: '800', color: TURNO_DEF[rotHeader]?.color }}>{rotHeader === 'D' ? '' : rotHeader}</span>
+<span style={{ color: dow(activeYear, month, i+1) >= 5 ? '#EF4444' : t.sub, fontSize: 9 }}>{DOW_S[dow(activeYear, month, i+1)]}</span>
+<span style={{ fontWeight: 'bold', fontSize: 12 }}>{i+1}</span>
+<span style={{ fontSize: 10, fontWeight: '800', color: TURNO_DEF[rotHeader]?.color }}>{rotHeader === 'D' ? '' : rotHeader}</span>
 </div>
 );
 })}
 {ops.map(op => (
 <div key={op.id} style={{ display: 'contents' }}>
-<div className="sticky-col" style={{ padding: '10px 12px', fontSize: 13, borderTop: `1px solid ${t.border}`, display: 'flex', alignItems: 'center', gap: 8, height: 48 }}>
+<div className="sticky-col" style={{ padding: '10px 12px', fontSize: 13, borderTop: `1px solid ${t.border}`, display: 'flex', alignItems: 'center', gap: 8 }}>
 <Av name={op.name} color={op.color} size={20} />
-<span style={{ fontWeight: 'bold', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{op.name}</span>
+<span style={{ fontWeight: 'bold' }}>{op.name}</span>
 </div>
 {Array.from({ length: dim(activeYear, month) }).map((_, i) => {
 const dk = mk(activeYear, month+1, i+1), abs = op.calendar?.[dk], rot = cshift(activeYear, month, i+1, off), calcAsgn = asgn[dk]?.[op.id];

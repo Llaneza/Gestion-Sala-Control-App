@@ -52,7 +52,6 @@ const TURNO_DEF = {
 };
 const EXTRA_VISUALS = { SC: { color: "#34D399", bg: "#34D39925" }, CA: { color: "#475569", bg: "transparent" } };
 
-// --- UTILS LÓGICOS ---
 const dim = (y, m) => new Date(y, m + 1, 0).getDate();
 const dow = (y, m, d) => { const r = new Date(y, m, d).getDay(); return r === 0 ? 6 : r - 1; };
 const dse = (y, m, d) => Math.round((new Date(y, m, d) - new Date(1970, 0, 1)) / 86400000);
@@ -63,14 +62,10 @@ function cshift(y, m, d, off = 0) {
   return CYCLE[Math.floor(pos / 7)][pos % 7];
 }
 
-// --- MOTOR DE ASIGNACIÓN (PAUTAS 1, 3, 4, 5 - SIN BLOQUES FIJOS) ---
+// --- MOTOR DE ASIGNACIÓN: FOCO EN EQUIDAD DE NOCHES ---
 function autoAssign(ops, targetYear, off) {
   const hSC = {}, hCompensada = {}, nSC = {};
-  ops.forEach(o => { 
-    hSC[o.id] = 0; 
-    hCompensada[o.id] = 0; 
-    nSC[o.id] = 0; 
-  });
+  ops.forEach(o => { hSC[o.id] = 0; hCompensada[o.id] = 0; nSC[o.id] = 0; });
 
   const allAssigns = {};
 
@@ -89,21 +84,20 @@ function autoAssign(ops, targetYear, off) {
 
         let activeSC = [];
 
-        // Pauta 4: Gestión de Bajas (Compensación de horas)
         ops.forEach(op => {
-          if (op.calendar?.[k] === "BA") {
-            hCompensada[op.id] += 12; 
-          }
+          if (op.calendar?.[k] === "BA") { hCompensada[op.id] += 12; }
         });
 
-        // Pauta 1, 3 y 5: Selección diaria por equidad de Horas y Noches
         while (activeSC.length < 2) {
           const candidates = ops.filter(op => 
             !op.calendar?.[k] && !activeSC.includes(op.id)
           ).sort((a, b) => {
-            const diffH = (hSC[a.id] + hCompensada[a.id]) - (hSC[b.id] + hCompensada[b.id]);
-            if (diffH !== 0) return diffH;
-            return nSC[a.id] - nSC[b.id]; // Desempate por noches
+            // PRIORIDAD 1: EQUIDAD DE NOCHES (nSC)
+            const diffN = nSC[a.id] - nSC[b.id];
+            if (diffN !== 0) return diffN;
+            
+            // PRIORIDAD 2: HORAS TOTALES (hSC)
+            return (hSC[a.id] + hCompensada[a.id]) - (hSC[b.id] + hCompensada[b.id]);
           });
 
           if (candidates.length > 0) {
@@ -111,7 +105,6 @@ function autoAssign(ops, targetYear, off) {
           } else break; 
         }
 
-        // Asignación y actualización de históricos
         ops.forEach(op => {
           const manual = op.calendar?.[k];
           if (manual) {
@@ -119,7 +112,7 @@ function autoAssign(ops, targetYear, off) {
           } else if (activeSC.includes(op.id)) {
             allAssigns[year][k][op.id] = "SC";
             hSC[op.id] += 12;
-            if (shiftType === "N") nSC[op.id]++;
+            if (shiftType === "N") nSC[op.id]++; // Registro estricto de noche
           } else {
             allAssigns[year][k][op.id] = "CA";
           }
@@ -203,60 +196,12 @@ export default function App() {
     <div style={{ minHeight: "100vh", background: t.bg, color: t.text, fontFamily: 'monospace', transition: 'background 0.3s' }}>
       <style>{`
         @media print { .no-print { display: none !important; } body { background: white !important; color: black !important; } }
-        
-        .calendar-container { 
-          background: ${t.card}; 
-          border-radius: 12px; 
-          overflow-x: auto; 
-          border: 1px solid ${t.border}; 
-          margin-bottom: 40px; 
-          box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); 
-          position: relative;
-          -webkit-overflow-scrolling: touch;
-        }
-
-        .calendar-grid { 
-          display: grid; 
-          grid-template-columns: 140px repeat(${dim(activeYear, month)}, minmax(46px, 1fr)); 
-          gap: 0px; 
-          width: max-content; 
-          min-width: 100%;
-        }
-
-        @media (min-width: 1024px) {
-          .calendar-grid {
-            width: 100%;
-            grid-template-columns: 150px repeat(${dim(activeYear, month)}, 1fr);
-          }
-          .cell-day { min-width: 0 !important; }
-        }
-
-        .sticky-col { 
-          position: sticky; 
-          left: 0; 
-          background: ${t.card} !important; 
-          z-index: 50; 
-          border-right: 2px solid ${t.border} !important; 
-          box-sizing: border-box; 
-        }
-
-        .cell-day { 
-          height: 40px; 
-          display: flex; 
-          align-items: center; 
-          justify-content: center; 
-          border-top: 1px solid ${t.border}; 
-          border-right: 1px solid ${t.border}; 
-          font-size: 11px; 
-          box-sizing: border-box; 
-        }
-
-        .header-day { 
-          height: 55px !important; 
-          flex-direction: column; 
-          gap: 2px; 
-          background: ${t.bg} !important;
-        }
+        .calendar-container { background: ${t.card}; border-radius: 12px; overflow-x: auto; border: 1px solid ${t.border}; margin-bottom: 40px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); position: relative; -webkit-overflow-scrolling: touch; }
+        .calendar-grid { display: grid; grid-template-columns: 140px repeat(${dim(activeYear, month)}, minmax(46px, 1fr)); gap: 0px; width: max-content; min-width: 100%; }
+        @media (min-width: 1024px) { .calendar-grid { width: 100%; grid-template-columns: 150px repeat(${dim(activeYear, month)}, 1fr); } .cell-day { min-width: 0 !important; } }
+        .sticky-col { position: sticky; left: 0; background: ${t.card} !important; z-index: 50; border-right: 2px solid ${t.border} !important; box-sizing: border-box; }
+        .cell-day { height: 40px; display: flex; align-items: center; justify-content: center; border-top: 1px solid ${t.border}; border-right: 1px solid ${t.border}; font-size: 11px; box-sizing: border-box; }
+        .header-day { height: 55px !important; flex-direction: column; gap: 2px; background: ${t.bg} !important; }
       `}</style>
 
       <header className="no-print" style={{ background: t.card, padding: "10px 20px", display: 'flex', justifyContent: 'space-between', borderBottom: `1px solid ${t.border}`, alignItems: 'center', position: 'sticky', top: 0, zIndex: 200 }}>
@@ -331,11 +276,11 @@ export default function App() {
 
         {view === "stats" && (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 20 }}>
-            {stats.sort((a,b) => b.hSC - a.hSC || b.nSC - a.nSC).map(s => (
+            {stats.sort((a,b) => b.nSC - a.nSC || b.hSC - a.hSC).map(s => (
               <div key={s.id} style={{ background: t.card, padding: 25, borderRadius: 16, border: `1px solid ${t.border}` }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 15 }}><Av name={s.name} color={s.color} size={32} /><div style={{ fontWeight: 'bold', color: t.accent, fontSize: 18 }}>{s.name}</div></div>
                 <div style={{ fontSize: 32, fontWeight: 800 }}>{s.sc} SC</div>
-                <div style={{ fontSize: 14, color: t.sub }}>{s.hSC} Horas / <span style={{ color: t.accent }}>{s.nSC} Noches</span></div>
+                <div style={{ fontSize: 14, color: t.sub }}>{s.hSC} Horas / <strong style={{ color: t.accent }}>{s.nSC} Noches</strong></div>
               </div>
             ))}
           </div>

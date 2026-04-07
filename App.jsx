@@ -63,18 +63,15 @@ function cshift(y, m, d, off = 0) {
   return CYCLE[Math.floor(pos / 7)][pos % 7];
 }
 
-// --- MOTOR DE ASIGNACIÓN (PAUTA 1-5) ---
+// --- MOTOR DE ASIGNACIÓN (PAUTAS 1, 3, 4, 5 - SIN BLOQUES FIJOS) ---
 function autoAssign(ops, targetYear, off) {
-  const DAYS_PER_BLOCK = 5; 
-  const hSC = {}, hCompensada = {}, nSC = {}, currentDaysInSC = {};
+  const hSC = {}, hCompensada = {}, nSC = {};
   ops.forEach(o => { 
     hSC[o.id] = 0; 
     hCompensada[o.id] = 0; 
-    nSC[o.id] = 0; // Contador de Noches acumuladas
-    currentDaysInSC[o.id] = 0; 
+    nSC[o.id] = 0; 
   });
 
-  let activeSC = []; 
   const allAssigns = {};
 
   for (let year = 2024; year <= targetYear; year++) {
@@ -90,37 +87,31 @@ function autoAssign(ops, targetYear, off) {
           continue;
         }
 
-        // Pauta 2: Finalizar bloques
-        activeSC = activeSC.filter(id => currentDaysInSC[id] < DAYS_PER_BLOCK);
+        let activeSC = [];
 
-        // Pauta 4: Gestión de Bajas
+        // Pauta 4: Gestión de Bajas (Compensación de horas)
         ops.forEach(op => {
           if (op.calendar?.[k] === "BA") {
             hCompensada[op.id] += 12; 
-            if (activeSC.includes(op.id)) activeSC = activeSC.filter(id => id !== op.id);
           }
         });
 
-        // Pauta 1, 3 y 5: Selección con Equidad de Horas y Noches
+        // Pauta 1, 3 y 5: Selección diaria por equidad de Horas y Noches
         while (activeSC.length < 2) {
           const candidates = ops.filter(op => 
             !op.calendar?.[k] && !activeSC.includes(op.id)
           ).sort((a, b) => {
-            // Primero comparamos horas totales
             const diffH = (hSC[a.id] + hCompensada[a.id]) - (hSC[b.id] + hCompensada[b.id]);
             if (diffH !== 0) return diffH;
-            // Si hay empate en horas, desempatamos por quien tiene menos NOCHES (Pauta 5)
-            return nSC[a.id] - nSC[b.id];
+            return nSC[a.id] - nSC[b.id]; // Desempate por noches
           });
 
           if (candidates.length > 0) {
-            const nextOp = candidates[0];
-            activeSC.push(nextOp.id);
-            currentDaysInSC[nextOp.id] = 0; 
+            activeSC.push(candidates[0].id);
           } else break; 
         }
 
-        // Asignación final y actualización de contadores
+        // Asignación y actualización de históricos
         ops.forEach(op => {
           const manual = op.calendar?.[k];
           if (manual) {
@@ -128,8 +119,7 @@ function autoAssign(ops, targetYear, off) {
           } else if (activeSC.includes(op.id)) {
             allAssigns[year][k][op.id] = "SC";
             hSC[op.id] += 12;
-            if (shiftType === "N") nSC[op.id]++; // Sumamos noche si aplica
-            currentDaysInSC[op.id]++; 
+            if (shiftType === "N") nSC[op.id]++;
           } else {
             allAssigns[year][k][op.id] = "CA";
           }

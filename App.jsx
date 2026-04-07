@@ -37,7 +37,6 @@ const CYCLE = [
 ];
 const CYCLE_LEN = 28;
 
-// --- ACTUALIZACIÓN: Se añade BA (Baja) ---
 const ABSENCE = {
   VA: { label: "Vacaciones", icon: "🌴", color: "#10B981" },
   EN: { label: "Entrenamiento", icon: "📖", color: "#A78BFA" },
@@ -78,8 +77,15 @@ function cshift(y, m, d, off = 0) {
 }
 
 function autoAssign(ops, targetYear, off) {
-  const hSC = {}, nSC = {}, pairs = {};
-  ops.forEach(o => { hSC[o.id] = 0; nSC[o.id] = 0; pairs[o.id] = {}; ops.forEach(other => { if(o.id !== other.id) pairs[o.id][other.id] = 0; }); });
+  const hSC = {}, nSC = {}, pairs = {}, consecutiveSC = {};
+  
+  ops.forEach(o => { 
+    hSC[o.id] = 0; 
+    nSC[o.id] = 0; 
+    consecutiveSC[o.id] = 0; // NUEVO: Contador de días consecutivos
+    pairs[o.id] = {}; 
+    ops.forEach(other => { if(o.id !== other.id) pairs[o.id][other.id] = 0; }); 
+  });
 
   let currentBlockPair = [];
   let daysInCurrentBlock = 0;
@@ -92,21 +98,30 @@ function autoAssign(ops, targetYear, off) {
         const k = mk(year, mo + 1, d), turno = cshift(year, mo, d, off);
         allAssigns[year][k] = {};
 
+        // Si es Descanso General, reseteamos contadores de fatiga
         if (turno === "D") {
-          ops.forEach(op => { allAssigns[year][k][op.id] = "D"; });
+          ops.forEach(op => { 
+            allAssigns[year][k][op.id] = "D"; 
+            consecutiveSC[op.id] = 0; 
+          });
           continue;
         }
 
+        // --- SELECCIÓN DE BLOQUE DE 4 DÍAS ---
         if (daysInCurrentBlock >= 4 || currentBlockPair.length === 0) {
           const avail = ops.filter(op => !op.calendar?.[k]);
           let bestPair = [], minScore = Infinity;
-
           for (let i = 0; i < avail.length; i++) {
             for (let j = i + 1; j < avail.length; j++) {
               const p1 = avail[i], p2 = avail[j];
-              let score = (hSC[p1.id] + hSC[p2.id]);
+              let score = (hSC[p1.id] + hSC[p2.id]) + (pairs[p1.id][p2.id] || 0) * 25;
               if (turno === "N") score += (nSC[p1.id] + nSC[p2.id]) * 150;
-              score += (pairs[p1.id][p2.id] || 0) * 80;
+              
+              // PREVENCIÓN DE FATIGA: Si ya llevan 3 o más días, penalizamos enormemente
+              // para no meterlos en un bloque nuevo de 4 días y que superen los 6.
+              if (consecutiveSC[p1.id] >= 3) score += Math.pow(consecutiveSC[p1.id], 3) * 100;
+              if (consecutiveSC[p2.id] >= 3) score += Math.pow(consecutiveSC[p2.id], 3) * 100;
+
               if (score < minScore) { minScore = score; bestPair = [p1.id, p2.id]; }
             }
           }
@@ -114,23 +129,58 @@ function autoAssign(ops, targetYear, off) {
           daysInCurrentBlock = 0;
         }
 
-        const busy = ops.filter(op => op.calendar?.[k]);
-        busy.forEach(op => { allAssigns[year][k][op.id] = op.calendar[k]; });
-
-        ops.forEach(op => {
-          if (currentBlockPair.includes(op.id) && !allAssigns[year][k][op.id]) {
-            allAssigns[year][k][op.id] = "SC";
-            hSC[op.id] += 12;
-            if (turno === "N") nSC[op.id] += 1;
-          } else if (!allAssigns[year][k][op.id]) {
-            allAssigns[year][k][op.id] = "CA";
+        // --- ASIGNACIÓN DIARIA Y SUPLENCIAS ---
+        const scToday = [];
+        
+        // 1. Añadir a los del bloque si están presentes y NO han llegado al límite de 6
+        currentBlockPair.forEach(id => {
+          const op = ops.find(o => o.id === id);
+          if (op && !op.calendar?.[k] && consecutiveSC[id] < 6) {
+            scToday.push(id);
           }
         });
 
-        if (currentBlockPair.length === 2) {
-          pairs[currentBlockPair[0]][currentBlockPair[1]]++;
-          pairs[currentBlockPair[1]][currentBlockPair[0]]++;
+        // 2. Buscar refuerzos si faltan (Plan B)
+        if (scToday.length < 2) {
+          const substitutes = ops
+            .filter(op => !op.calendar?.[k] && !scToday.includes(op.id))
+            .sort((a, b) => {
+              // Si ya llevan 6 días, la barrera es de 10.000 puntos para que sean los últimos elegidos.
+              // Si llevan menos, se penaliza gradualmente para preferir a gente fresca.
+              let scoreA = hSC[a.id] + (consecutiveSC[a.id] >= 6 ? 10000 : Math.pow(consecutiveSC[a.id], 2) * 50);
+              let scoreB = hSC[b.id] + (consecutiveSC[b.id] >= 6 ? 10000 : Math.pow(consecutiveSC[b.id], 2) * 50);
+              if (turno === "N") { scoreA += nSC[a.id] * 150; scoreB += nSC[b.id] * 150; }
+              return scoreA - scoreB;
+            });
+          
+          while (scToday.length < 2 && substitutes.length > 0) {
+            scToday.push(substitutes.shift().id);
+          }
         }
+
+        // 3. Escribir roles y actualizar contadores de fatiga
+        ops.forEach(op => {
+          if (op.calendar?.[k]) {
+            allAssigns[year][k][op.id] = op.calendar[k];
+            consecutiveSC[op.id] = 0; // La ausencia rompe la fatiga
+          } else if (scToday.includes(op.id)) {
+            allAssigns[year][k][op.id] = "SC";
+            hSC[op.id] += 12;
+            if (turno === "N") nSC[op.id] += 1;
+            consecutiveSC[op.id]++; // Suma un día seguido
+          } else {
+            allAssigns[year][k][op.id] = "CA";
+            consecutiveSC[op.id] = 0; // Estar en Carga rompe la fatiga
+          }
+        });
+
+        if (scToday.length === 2) {
+          pairs[scToday[0]] = pairs[scToday[0]] || {};
+          pairs[scToday[1]] = pairs[scToday[1]] || {};
+          pairs[scToday[0]][scToday[1]] = (pairs[scToday[0]][scToday[1]] || 0) + 1;
+          pairs[scToday[1]][scToday[0]] = (pairs[scToday[1]][scToday[0]] || 0) + 1;
+        }
+        
         daysInCurrentBlock++;
       }
     }
@@ -198,41 +248,14 @@ export default function App() {
       <style>{`
 @media print { .no-print { display: none !important; } body { background: white !important; color: black !important; } }
 .calendar-container { background: ${t.card}; border-radius: 12px; overflow-x: auto; border: 1px solid ${t.border}; margin-bottom: 40px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); position: relative; }
-
-/* PC: Vista completa sin scroll */
 .calendar-grid { display: grid; grid-template-columns: 140px repeat(${dim(activeYear, month)}, 1fr); gap: 0px; width: 100%; }
-
-.sticky-col { 
-  position: sticky; 
-  left: 0; 
-  background: ${t.card} !important; 
-  z-index: 50; 
-  border-right: 2px solid ${t.border} !important; 
-  box-sizing: border-box;
-}
-
-.cell-day { 
-  height: 38px; 
-  display: flex; 
-  align-items: center; 
-  justify-content: center; 
-  border-top: 1px solid ${t.border}; 
-  border-right: 1px solid ${t.border}; 
-  font-size: 11px; 
-  box-sizing: border-box;
-}
-
+.sticky-col { position: sticky; left: 0; background: ${t.card} !important; z-index: 50; border-right: 2px solid ${t.border} !important; box-sizing: border-box; }
+.cell-day { height: 38px; display: flex; align-items: center; justify-content: center; border-top: 1px solid ${t.border}; border-right: 1px solid ${t.border}; font-size: 11px; box-sizing: border-box; }
 .header-day { height: 55px !important; flex-direction: column; gap: 2px; }
 
-/* MÓVIL: Celdas anchas con scroll horizontal y nombres fijos */
 @media (max-width: 600px) {
-  .calendar-grid { 
-    grid-template-columns: 110px repeat(${dim(activeYear, month)}, 50px); 
-    width: max-content; 
-  }
+  .calendar-grid { grid-template-columns: 110px repeat(${dim(activeYear, month)}, 50px); width: max-content; }
   .sticky-col { width: 110px; font-size: 11px !important; padding: 10px 8px !important; }
-  header { padding: 8px 12px !important; }
-  nav button { padding: 12px 5px !important; font-size: 10px; }
 }
 `}</style>
 

@@ -197,20 +197,17 @@ export default function App() {
     <div style={{ minHeight: "100vh", background: t.bg, color: t.text, fontFamily: 'monospace', transition: 'background 0.3s' }}>
       <style>{`
 @media print { .no-print { display: none !important; } body { background: white !important; color: black !important; } }
-.calendar-container { background: ${t.card}; border-radius: 12px; overflow-x: auto; border: 1px solid ${t.border}; margin-bottom: 40px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); }
-.calendar-grid { display: grid; grid-template-columns: 140px repeat(${dim(activeYear, month)}, minmax(35px, 1fr)); gap: 0px; min-width: max-content; }
-.sticky-col { position: sticky; left: 0; background: ${t.card} !important; z-index: 10; border-right: 2px solid ${t.border} !important; }
+.calendar-container { background: ${t.card}; border-radius: 12px; overflow-x: auto; border: 1px solid ${t.border}; margin-bottom: 40px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); position: relative; }
+.calendar-grid { display: grid; grid-template-columns: 140px repeat(${dim(activeYear, month)}, 55px); gap: 0px; width: max-content; }
+.sticky-col { position: sticky; left: 0; background: ${t.card} !important; z-index: 50; border-right: 2px solid ${t.border} !important; }
 .cell-day { height: 38px; display: flex; align-items: center; justify-content: center; border-top: 1px solid ${t.border}; border-right: 1px solid ${t.border}; font-size: 11px; }
 .header-day { height: 55px !important; flex-direction: column; gap: 2px; }
 
 @media (max-width: 600px) {
-  .calendar-grid { grid-template-columns: 100px repeat(${dim(activeYear, month)}, 35px); }
-  .sticky-col { width: 100px; font-size: 11px !important; padding: 10px 8px !important; }
-  .header-day { height: 45px !important; }
+  .calendar-grid { grid-template-columns: 110px repeat(${dim(activeYear, month)}, 55px); }
+  .sticky-col { width: 110px; font-size: 11px !important; padding: 10px 8px !important; }
   header { padding: 8px 12px !important; }
-  header span:first-child { font-size: 13px !important; }
   nav button { padding: 12px 5px !important; font-size: 10px; }
-  main { padding: 10px 5px !important; }
 }
 `}</style>
 

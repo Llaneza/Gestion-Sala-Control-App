@@ -63,15 +63,16 @@ function cshift(y, m, d, off = 0) {
   return CYCLE[Math.floor(pos / 7)][pos % 7];
 }
 
-// --- NUEVO MOTOR RECONSTRUIDO (PAUTAS 1-4) ---
+// --- MOTOR AJUSTABLE (PAUTA 2 DINÁMICA: 3 o 5 días) ---
 function autoAssign(ops, targetYear, off) {
+  const DAYS_PER_BLOCK = 3; // <--- MODIFICA AQUÍ: Cambia a 3 o 5 para probar la equidad
+  
   const hSC = {}, hCompensada = {}, currentDaysInSC = {};
   ops.forEach(o => { hSC[o.id] = 0; hCompensada[o.id] = 0; currentDaysInSC[o.id] = 0; });
 
   let activeSC = []; 
   const allAssigns = {};
 
-  // Iteramos desde el inicio de 2024 para tener histórico de horas acumuladas
   for (let year = 2024; year <= targetYear; year++) {
     allAssigns[year] = {};
     for (let mo = 0; mo < 12; mo++) {
@@ -81,16 +82,14 @@ function autoAssign(ops, targetYear, off) {
         allAssigns[year][k] = {};
 
         if (shiftType === "D") {
-          ops.forEach(op => { 
-            allAssigns[year][k][op.id] = "D"; 
-          });
+          ops.forEach(op => { allAssigns[year][k][op.id] = "D"; });
           continue;
         }
 
-        // 1. Finalizar bloques de 4 días LABORALES (PAUTA 2)
-        activeSC = activeSC.filter(id => currentDaysInSC[id] < 4);
+        // 1. Finalizar bloques según el límite configurado (PAUTA 2 MODIFICADA)
+        activeSC = activeSC.filter(id => currentDaysInSC[id] < DAYS_PER_BLOCK);
 
-        // 2. Gestionar Bajas (PAUTA 4: No penaliza, suma horas teóricas)
+        // 2. Gestionar Bajas (PAUTA 4)
         ops.forEach(op => {
           if (op.calendar?.[k] === "BA") {
             hCompensada[op.id] += 12; 
@@ -130,7 +129,7 @@ function autoAssign(ops, targetYear, off) {
   return allAssigns[targetYear] || {};
 }
 
-// --- RESTO DE LA APP (IDÉNTICA AL CÓDIGO BASE) ---
+// --- COMPONENTES UI (ESTRUCTURA ORIGINAL) ---
 const EyeIcon = ({ visible, color }) => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     {visible ? (<><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></>) : (<><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></>)}

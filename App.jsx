@@ -104,9 +104,11 @@ function autoAssign(ops, targetYear, off) {
           for (let i = 0; i < avail.length; i++) {
             for (let j = i + 1; j < avail.length; j++) {
               const p1 = avail[i], p2 = avail[j];
+              // --- AJUSTE: Se reduce el peso de las parejas de 80 a 25 para priorizar equidad de horas y noches ---
               let score = (hSC[p1.id] + hSC[p2.id]);
               if (turno === "N") score += (nSC[p1.id] + nSC[p2.id]) * 150;
-              score += (pairs[p1.id][p2.id] || 0) * 80;
+              score += (pairs[p1.id][p2.id] || 0) * 25; 
+              
               if (score < minScore) { minScore = score; bestPair = [p1.id, p2.id]; }
             }
           }
@@ -198,38 +200,13 @@ export default function App() {
       <style>{`
 @media print { .no-print { display: none !important; } body { background: white !important; color: black !important; } }
 .calendar-container { background: ${t.card}; border-radius: 12px; overflow-x: auto; border: 1px solid ${t.border}; margin-bottom: 40px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); position: relative; }
-
-/* PC: Vista completa sin scroll */
 .calendar-grid { display: grid; grid-template-columns: 140px repeat(${dim(activeYear, month)}, 1fr); gap: 0px; width: 100%; }
-
-.sticky-col { 
-  position: sticky; 
-  left: 0; 
-  background: ${t.card} !important; 
-  z-index: 50; 
-  border-right: 2px solid ${t.border} !important; 
-  box-sizing: border-box;
-}
-
-.cell-day { 
-  height: 38px; 
-  display: flex; 
-  align-items: center; 
-  justify-content: center; 
-  border-top: 1px solid ${t.border}; 
-  border-right: 1px solid ${t.border}; 
-  font-size: 11px; 
-  box-sizing: border-box;
-}
-
+.sticky-col { position: sticky; left: 0; background: ${t.card} !important; z-index: 50; border-right: 2px solid ${t.border} !important; box-sizing: border-box; }
+.cell-day { height: 38px; display: flex; align-items: center; justify-content: center; border-top: 1px solid ${t.border}; border-right: 1px solid ${t.border}; font-size: 11px; box-sizing: border-box; }
 .header-day { height: 55px !important; flex-direction: column; gap: 2px; }
 
-/* MÓVIL: Celdas anchas con scroll horizontal y nombres fijos */
 @media (max-width: 600px) {
-  .calendar-grid { 
-    grid-template-columns: 110px repeat(${dim(activeYear, month)}, 50px); 
-    width: max-content; 
-  }
+  .calendar-grid { grid-template-columns: 110px repeat(${dim(activeYear, month)}, 50px); width: max-content; }
   .sticky-col { width: 110px; font-size: 11px !important; padding: 10px 8px !important; }
   header { padding: 8px 12px !important; }
   nav button { padding: 12px 5px !important; font-size: 10px; }

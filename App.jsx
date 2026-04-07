@@ -37,7 +37,6 @@ const CYCLE = [
 ];
 const CYCLE_LEN = 28;
 
-// --- ACTUALIZACIÓN: Se añade BA (Baja) ---
 const ABSENCE = {
   VA: { label: "Vacaciones", icon: "🌴", color: "#10B981" },
   EN: { label: "Entrenamiento", icon: "📖", color: "#A78BFA" },
@@ -97,18 +96,15 @@ function autoAssign(ops, targetYear, off) {
           continue;
         }
 
+        // Selección de pareja base para el bloque
         if (daysInCurrentBlock >= 4 || currentBlockPair.length === 0) {
           const avail = ops.filter(op => !op.calendar?.[k]);
           let bestPair = [], minScore = Infinity;
-
           for (let i = 0; i < avail.length; i++) {
             for (let j = i + 1; j < avail.length; j++) {
               const p1 = avail[i], p2 = avail[j];
-              // --- AJUSTE: Se reduce el peso de las parejas de 80 a 25 para priorizar equidad de horas y noches ---
-              let score = (hSC[p1.id] + hSC[p2.id]);
+              let score = (hSC[p1.id] + hSC[p2.id]) + (pairs[p1.id][p2.id] || 0) * 25;
               if (turno === "N") score += (nSC[p1.id] + nSC[p2.id]) * 150;
-              score += (pairs[p1.id][p2.id] || 0) * 25; 
-              
               if (score < minScore) { minScore = score; bestPair = [p1.id, p2.id]; }
             }
           }
@@ -116,23 +112,51 @@ function autoAssign(ops, targetYear, off) {
           daysInCurrentBlock = 0;
         }
 
-        const busy = ops.filter(op => op.calendar?.[k]);
-        busy.forEach(op => { allAssigns[year][k][op.id] = op.calendar[k]; });
+        // --- NUEVA LÓGICA DE OBLIGATORIEDAD ---
+        const scToday = [];
+        // 1. Añadir a los de la pareja del bloque si están presentes
+        currentBlockPair.forEach(id => {
+          const op = ops.find(o => o.id === id);
+          if (op && !op.calendar?.[k]) scToday.push(id);
+        });
 
+        // 2. Si faltan personas para llegar a 2, buscar refuerzos entre los disponibles (CA)
+        if (scToday.length < 2) {
+          const substitutes = ops
+            .filter(op => !op.calendar?.[k] && !scToday.includes(op.id))
+            .sort((a, b) => {
+              // Priorizar por menos horas acumuladas
+              let scoreA = hSC[a.id], scoreB = hSC[b.id];
+              if (turno === "N") { scoreA += nSC[a.id] * 150; scoreB += nSC[b.id] * 150; }
+              return scoreA - scoreB;
+            });
+          
+          while (scToday.length < 2 && substitutes.length > 0) {
+            scToday.push(substitutes.shift().id);
+          }
+        }
+
+        // 3. Asignar los roles finales
         ops.forEach(op => {
-          if (currentBlockPair.includes(op.id) && !allAssigns[year][k][op.id]) {
+          if (op.calendar?.[k]) {
+            allAssigns[year][k][op.id] = op.calendar[k];
+          } else if (scToday.includes(op.id)) {
             allAssigns[year][k][op.id] = "SC";
             hSC[op.id] += 12;
             if (turno === "N") nSC[op.id] += 1;
-          } else if (!allAssigns[year][k][op.id]) {
+          } else {
             allAssigns[year][k][op.id] = "CA";
           }
         });
 
-        if (currentBlockPair.length === 2) {
-          pairs[currentBlockPair[0]][currentBlockPair[1]]++;
-          pairs[currentBlockPair[1]][currentBlockPair[0]]++;
+        // Actualizar contador de parejas solo si hay 2
+        if (scToday.length === 2) {
+          pairs[scToday[0]] = pairs[scToday[0]] || {};
+          pairs[scToday[1]] = pairs[scToday[1]] || {};
+          pairs[scToday[0]][scToday[1]] = (pairs[scToday[0]][scToday[1]] || 0) + 1;
+          pairs[scToday[1]][scToday[0]] = (pairs[scToday[1]][scToday[0]] || 0) + 1;
         }
+        
         daysInCurrentBlock++;
       }
     }
@@ -208,8 +232,6 @@ export default function App() {
 @media (max-width: 600px) {
   .calendar-grid { grid-template-columns: 110px repeat(${dim(activeYear, month)}, 50px); width: max-content; }
   .sticky-col { width: 110px; font-size: 11px !important; padding: 10px 8px !important; }
-  header { padding: 8px 12px !important; }
-  nav button { padding: 12px 5px !important; font-size: 10px; }
 }
 `}</style>
 

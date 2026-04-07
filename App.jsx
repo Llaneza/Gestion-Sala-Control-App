@@ -55,7 +55,7 @@ const EXTRA_VISUALS = { SC: { color: "#34D399", bg: "#34D39925" }, CA: { color: 
 // --- COMPONENTES AUXILIARES ---
 const EyeIcon = ({ visible, color }) => (
 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-{visible ? (<><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></>) : (<><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></>)}
+{visible ? (<><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45(0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></>) : (<><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></>)}
 </svg>
 );
 
@@ -75,12 +75,12 @@ const pos = ((dse(y, m, d) + off) % CYCLE_LEN + CYCLE_LEN) % CYCLE_LEN;
 return CYCLE[Math.floor(pos / 7)][pos % 7];
 }
 
-// --- MOTOR DE ASIGNACIÓN: LIMITACIÓN ESTRICTA DE RACHAS ---
+// --- MOTOR DE ASIGNACIÓN: EQUIDAD DINÁMICA ---
 function autoAssign(ops, targetYear, off) {
-const hSC_Calc = {}, nSC_Calc = {}, pairs = {};
+const hSC_Total = {}, nSC_Total = {}, pairs_Global = {};
 ops.forEach(o => {
-hSC_Calc[o.id] = 0; nSC_Calc[o.id] = 0; pairs[o.id] = {};
-ops.forEach(other => { if(o.id !== other.id) pairs[o.id][other.id] = 0; });
+hSC_Total[o.id] = 0; nSC_Total[o.id] = 0; pairs_Global[o.id] = {};
+ops.forEach(other => { if(o.id !== other.id) pairs_Global[o.id][other.id] = 0; });
 });
 
 let currentBlockPair = [];
@@ -99,10 +99,20 @@ ops.forEach(op => { allAssigns[year][k][op.id] = "D"; });
 continue;
 }
 
-// Verifica días seguidos y obliga a un descanso de al menos 1 día tras SC
+// Fatiga en ventana de 14 días
+const getFatigueIndex = (opId, cY, cM, cD) => {
+let count = 0;
+for (let i = 1; i <= 14; i++) {
+const checkDate = new Date(cY, cM, cD - i);
+const ck = mk(checkDate.getFullYear(), checkDate.getMonth() + 1, checkDate.getDate());
+if (allAssigns[checkDate.getFullYear()]?.[ck]?.[opId] === "SC") count++;
+}
+return count;
+};
+
 const getConsecutiveSC = (opId) => {
 let count = 0;
-for (let i = 1; i <= 15; i++) {
+for (let i = 1; i <= 5; i++) {
 const prevDate = new Date(year, mo, d - i);
 const pk = mk(prevDate.getFullYear(), prevDate.getMonth() + 1, prevDate.getDate());
 if (allAssigns[prevDate.getFullYear()]?.[pk]?.[opId] === "SC") count++; else break;
@@ -110,42 +120,29 @@ if (allAssigns[prevDate.getFullYear()]?.[pk]?.[opId] === "SC") count++; else bre
 return count;
 };
 
-const wasSCYesterday = (opId) => {
-const prevDate = new Date(year, mo, d - 1);
-const pk = mk(prevDate.getFullYear(), prevDate.getMonth() + 1, prevDate.getDate());
-return allAssigns[prevDate.getFullYear()]?.[pk]?.[opId] === "SC";
-};
-
 const currentPairHasAbsence = currentBlockPair.some(id => ops.find(o => o.id === id)?.calendar?.[k]);
-const currentPairHasReachedLimit = currentBlockPair.some(id => getConsecutiveSC(id) >= 4);
+const currentPairReachedLimit = currentBlockPair.some(id => getConsecutiveSC(id) >= 4);
 
-// Forzamos cambio si el bloque cumple 4 días o alguien llegó a su límite personal
-if (daysInCurrentBlock >= 4 || currentBlockPair.length < 2 || currentPairHasAbsence || currentPairHasReachedLimit) {
+if (daysInCurrentBlock >= 4 || currentBlockPair.length < 2 || currentPairHasAbsence || currentPairReachedLimit) {
 
-// Candidatos: No tienen ausencia Y no han llegado a 4 días Y no vienen de ser SC ayer (si el bloque cambia, forzamos rotación)
 let candidates = ops.filter(op =>
 !op.calendar?.[k] &&
 getConsecutiveSC(op.id) < 4 &&
-!wasSCYesterday(op.id) // Regla de enfriamiento: si cambiamos bloque, el que estaba descansa
+allAssigns[year]?.[mk(year, mo + 1, d - 1)]?.[op.id] !== "SC" // Forzar enfriamiento al cambiar bloque
 );
 
-// Si por ser muy estrictos no hay 2, relajamos la regla de "ayer" pero mantenemos el límite de 4
-if (candidates.length < 2) {
-candidates = ops.filter(op => !op.calendar?.[k] && getConsecutiveSC(op.id) < 4);
-}
-
-// Último recurso: Prioridad operativa (Siempre 2)
-if (candidates.length < 2) {
-candidates = ops.filter(op => !op.calendar?.[k]);
-}
+if (candidates.length < 2) candidates = ops.filter(op => !op.calendar?.[k] && getConsecutiveSC(op.id) < 4);
+if (candidates.length < 2) candidates = ops.filter(op => !op.calendar?.[k]);
 
 let bestPair = [], minScore = Infinity;
 for (let i = 0; i < candidates.length; i++) {
 for (let j = i + 1; j < candidates.length; j++) {
 const p1 = candidates[i], p2 = candidates[j];
-let score = (hSC_Calc[p1.id] + hSC_Calc[p2.id]);
-score += (nSC_Calc[p1.id] + nSC_Calc[p2.id]) * 100;
-score += (pairs[p1.id][p2.id] || 0) * 50;
+
+let score = (hSC_Total[p1.id] + hSC_Total[p2.id]);
+score += (nSC_Total[p1.id] + nSC_Total[p2.id]) * 120; // Noches pesan más (Eq. Noches)
+score += (getFatigueIndex(p1.id, year, mo, d) + getFatigueIndex(p2.id, year, mo, d)) * 200; // Fatiga reciente
+score += (pairs_Global[p1.id][p2.id] || 0) * 80; // Afinidad de pareja
 
 if (score < minScore) { minScore = score; bestPair = [p1.id, p2.id]; }
 }
@@ -158,19 +155,19 @@ ops.forEach(op => {
 const abs = op.calendar?.[k];
 if (abs) {
 allAssigns[year][k][op.id] = abs;
-if (abs === "BA") { hSC_Calc[op.id] += 12; if (turno === "N") nSC_Calc[op.id] += 1; }
+if (abs === "BA") { hSC_Total[op.id] += 12; if (turno === "N") nSC_Total[op.id] += 1; }
 } else if (currentBlockPair.includes(op.id)) {
 allAssigns[year][k][op.id] = "SC";
-hSC_Calc[op.id] += 12;
-if (turno === "N") nSC_Calc[op.id] += 1;
+hSC_Total[op.id] += 12;
+if (turno === "N") nSC_Total[op.id] += 1;
 } else {
 allAssigns[year][k][op.id] = "CA";
 }
 });
 
 if (currentBlockPair.length === 2) {
-pairs[currentBlockPair[0]][currentBlockPair[1]]++;
-pairs[currentBlockPair[1]][currentBlockPair[0]]++;
+pairs_Global[currentBlockPair[0]][currentBlockPair[1]]++;
+pairs_Global[currentBlockPair[1]][currentBlockPair[0]]++;
 }
 daysInCurrentBlock++;
 }
@@ -190,7 +187,7 @@ return { ...op, sc, nSC, hSC: sc * 12 };
 });
 }
 
-// --- RESTO DEL CÓDIGO (UI) SE MANTIENE IGUAL ---
+// --- COMPONENTE APP (Mantiene toda la UI solicitada) ---
 export default function App() {
 const today = new Date();
 const [session, setSession] = useState(null);

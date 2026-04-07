@@ -79,8 +79,8 @@ function cshift(y, m, d, off = 0) {
 function autoAssign(ops, targetYear, off) {
   const hSC = {}, nSC = {}, pairs = {}, consecutiveSC = {};
   
-  // PESO DE LA NOCHE REDUCIDO DE 150 A 24 PARA EQUILIBRAR HORAS ANUALES
   const NIGHT_PENALTY = 24;
+  const MAX_CONSECUTIVE = 6; // LÍMITE ESTRICTO
 
   ops.forEach(o => { 
     hSC[o.id] = 0; 
@@ -109,20 +109,18 @@ function autoAssign(ops, targetYear, off) {
           continue;
         }
 
+        // Selección de nueva pareja de bloque
         if (daysInCurrentBlock >= 4 || currentBlockPair.length === 0) {
-          const avail = ops.filter(op => !op.calendar?.[k]);
+          const avail = ops.filter(op => !op.calendar?.[k] && consecutiveSC[op.id] < 3); // No empezar bloque si ya lleva 3 días
           let bestPair = [], minScore = Infinity;
+          
           for (let i = 0; i < avail.length; i++) {
             for (let j = i + 1; j < avail.length; j++) {
               const p1 = avail[i], p2 = avail[j];
-              let score = (hSC[p1.id] + hSC[p2.id]) + (pairs[p1.id][p2.id] || 0) * 25;
-              
-              // Ajuste de penalización por noche
+              // El peso de hSC (horas totales) es clave aquí para rescatar al operador con menos horas
+              let score = (hSC[p1.id] + hSC[p2.id]) * 1.5 + (pairs[p1.id][p2.id] || 0) * 20;
               if (turno === "N") score += (nSC[p1.id] + nSC[p2.id]) * NIGHT_PENALTY;
               
-              if (consecutiveSC[p1.id] >= 3) score += Math.pow(consecutiveSC[p1.id], 3) * 100;
-              if (consecutiveSC[p2.id] >= 3) score += Math.pow(consecutiveSC[p2.id], 3) * 100;
-
               if (score < minScore) { minScore = score; bestPair = [p1.id, p2.id]; }
             }
           }
@@ -131,19 +129,21 @@ function autoAssign(ops, targetYear, off) {
         }
 
         const scToday = [];
+        // Intentar meter a los del bloque, SIEMPRE QUE no pasen de 6 días
         currentBlockPair.forEach(id => {
           const op = ops.find(o => o.id === id);
-          if (op && !op.calendar?.[k] && consecutiveSC[id] < 6) {
+          if (op && !op.calendar?.[k] && consecutiveSC[id] < MAX_CONSECUTIVE) {
             scToday.push(id);
           }
         });
 
+        // REFUERZO ESTRICTO: Si falta gente o alguien llegó al tope de 6 días
         if (scToday.length < 2) {
           const substitutes = ops
-            .filter(op => !op.calendar?.[k] && !scToday.includes(op.id))
+            .filter(op => !op.calendar?.[k] && !scToday.includes(op.id) && consecutiveSC[op.id] < MAX_CONSECUTIVE)
             .sort((a, b) => {
-              let scoreA = hSC[a.id] + (consecutiveSC[a.id] >= 6 ? 10000 : Math.pow(consecutiveSC[a.id], 2) * 50);
-              let scoreB = hSC[b.id] + (consecutiveSC[b.id] >= 6 ? 10000 : Math.pow(consecutiveSC[b.id], 2) * 50);
+              let scoreA = hSC[a.id];
+              let scoreB = hSC[b.id];
               if (turno === "N") { scoreA += nSC[a.id] * NIGHT_PENALTY; scoreB += nSC[b.id] * NIGHT_PENALTY; }
               return scoreA - scoreB;
             });
@@ -180,6 +180,8 @@ function autoAssign(ops, targetYear, off) {
   }
   return allAssigns[targetYear] || {};
 }
+
+// ... El resto del código (App, Stats, Editor, Login) se mantiene igual ...
 
 function computeStats(ops, year, asgn, off) {
   return ops.map(op => {
@@ -319,7 +321,7 @@ export default function App() {
 
         {view === "stats" && (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 20 }}>
-            {stats.map(s => (
+            {stats.sort((a,b) => b.hSC - a.hSC).map(s => (
               <div key={s.id} style={{ background: t.card, padding: 25, borderRadius: 16, border: `1px solid ${t.border}` }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 15 }}><Av name={s.name} color={s.color} size={32} /><div style={{ fontWeight: 'bold', color: t.accent, fontSize: 18 }}>{s.name}</div></div>
                 <div style={{ fontSize: 32, fontWeight: 800 }}>{s.sc} SC</div>

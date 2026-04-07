@@ -52,7 +52,79 @@ const TURNO_DEF = {
 };
 const EXTRA_VISUALS = { SC: { color: "#34D399", bg: "#34D39925" }, CA: { color: "#475569", bg: "transparent" } };
 
-// --- ICONOS Y AVATARES ---
+// --- UTILS LÓGICOS ---
+const dim = (y, m) => new Date(y, m + 1, 0).getDate();
+const dow = (y, m, d) => { const r = new Date(y, m, d).getDay(); return r === 0 ? 6 : r - 1; };
+const dse = (y, m, d) => Math.round((new Date(y, m, d) - new Date(1970, 0, 1)) / 86400000);
+const mk = (y, m, d) => `${y}-${m}-${d}`;
+
+function cshift(y, m, d, off = 0) {
+  const pos = ((dse(y, m, d) + off) % CYCLE_LEN + CYCLE_LEN) % CYCLE_LEN;
+  return CYCLE[Math.floor(pos / 7)][pos % 7];
+}
+
+// --- MOTOR DE ASIGNACIÓN (PAUTA 2: 5 DÍAS) ---
+function autoAssign(ops, targetYear, off) {
+  const DAYS_PER_BLOCK = 5; 
+  const hSC = {}, hCompensada = {}, currentDaysInSC = {};
+  ops.forEach(o => { hSC[o.id] = 0; hCompensada[o.id] = 0; currentDaysInSC[o.id] = 0; });
+
+  let activeSC = []; 
+  const allAssigns = {};
+
+  for (let year = 2024; year <= targetYear; year++) {
+    allAssigns[year] = {};
+    for (let mo = 0; mo < 12; mo++) {
+      for (let d = 1; d <= dim(year, mo); d++) {
+        const k = mk(year, mo + 1, d);
+        const shiftType = cshift(year, mo, d, off);
+        allAssigns[year][k] = {};
+
+        if (shiftType === "D") {
+          ops.forEach(op => { allAssigns[year][k][op.id] = "D"; });
+          continue;
+        }
+
+        activeSC = activeSC.filter(id => currentDaysInSC[id] < DAYS_PER_BLOCK);
+
+        ops.forEach(op => {
+          if (op.calendar?.[k] === "BA") {
+            hCompensada[op.id] += 12; 
+            if (activeSC.includes(op.id)) activeSC = activeSC.filter(id => id !== op.id);
+          }
+        });
+
+        while (activeSC.length < 2) {
+          const candidates = ops.filter(op => 
+            !op.calendar?.[k] && !activeSC.includes(op.id)
+          ).sort((a, b) => (hSC[a.id] + hCompensada[a.id]) - (hSC[b.id] + hCompensada[b.id]));
+
+          if (candidates.length > 0) {
+            const nextOp = candidates[0];
+            activeSC.push(nextOp.id);
+            currentDaysInSC[nextOp.id] = 0; 
+          } else break; 
+        }
+
+        ops.forEach(op => {
+          const manual = op.calendar?.[k];
+          if (manual) {
+            allAssigns[year][k][op.id] = manual;
+          } else if (activeSC.includes(op.id)) {
+            allAssigns[year][k][op.id] = "SC";
+            hSC[op.id] += 12;
+            currentDaysInSC[op.id]++; 
+          } else {
+            allAssigns[year][k][op.id] = "CA";
+          }
+        });
+      }
+    }
+  }
+  return allAssigns[targetYear] || {};
+}
+
+// --- ICONOS Y COMPONENTES VISUALES ---
 const EyeIcon = ({ visible, color }) => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     {visible ? (<><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></>) : (<><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></>)}
@@ -65,129 +137,6 @@ const Av = ({ name, color, size = 24 }) => (
   </div>
 );
 
-// --- UTILS LÓGICOS ---
-const dim = (y, m) => new Date(y, m + 1, 0).getDate();
-const dow = (y, m, d) => { const r = new Date(y, m, d).getDay(); return r === 0 ? 6 : r - 1; };
-const dse = (y, m, d) => Math.round((new Date(y, m, d) - new Date(1970, 0, 1)) / 86400000);
-const mk = (y, m, d) => `${y}-${m}-${d}`;
-
-function cshift(y, m, d, off = 0) {
-  const pos = ((dse(y, m, d) + off) % CYCLE_LEN + CYCLE_LEN) % CYCLE_LEN;
-  return CYCLE[Math.floor(pos / 7)][pos % 7];
-}
-
-function autoAssign(ops, targetYear, off) {
-  const hSC = {}, nSC = {}, pairs = {}, consecutiveSC = {};
-  
-  ops.forEach(o => { 
-    hSC[o.id] = 0; 
-    nSC[o.id] = 0; 
-    consecutiveSC[o.id] = 0; // NUEVO: Contador de días consecutivos
-    pairs[o.id] = {}; 
-    ops.forEach(other => { if(o.id !== other.id) pairs[o.id][other.id] = 0; }); 
-  });
-
-  let currentBlockPair = [];
-  let daysInCurrentBlock = 0;
-  const allAssigns = {};
-
-  for (let year = 2024; year <= targetYear; year++) {
-    allAssigns[year] = {};
-    for (let mo = 0; mo < 12; mo++) {
-      for (let d = 1; d <= dim(year, mo); d++) {
-        const k = mk(year, mo + 1, d), turno = cshift(year, mo, d, off);
-        allAssigns[year][k] = {};
-
-        // Si es Descanso General, reseteamos contadores de fatiga
-        if (turno === "D") {
-          ops.forEach(op => { 
-            allAssigns[year][k][op.id] = "D"; 
-            consecutiveSC[op.id] = 0; 
-          });
-          continue;
-        }
-
-        // --- SELECCIÓN DE BLOQUE DE 4 DÍAS ---
-        if (daysInCurrentBlock >= 4 || currentBlockPair.length === 0) {
-          const avail = ops.filter(op => !op.calendar?.[k]);
-          let bestPair = [], minScore = Infinity;
-          for (let i = 0; i < avail.length; i++) {
-            for (let j = i + 1; j < avail.length; j++) {
-              const p1 = avail[i], p2 = avail[j];
-              let score = (hSC[p1.id] + hSC[p2.id]) + (pairs[p1.id][p2.id] || 0) * 25;
-              if (turno === "N") score += (nSC[p1.id] + nSC[p2.id]) * 150;
-              
-              // PREVENCIÓN DE FATIGA: Si ya llevan 3 o más días, penalizamos enormemente
-              // para no meterlos en un bloque nuevo de 4 días y que superen los 6.
-              if (consecutiveSC[p1.id] >= 3) score += Math.pow(consecutiveSC[p1.id], 3) * 100;
-              if (consecutiveSC[p2.id] >= 3) score += Math.pow(consecutiveSC[p2.id], 3) * 100;
-
-              if (score < minScore) { minScore = score; bestPair = [p1.id, p2.id]; }
-            }
-          }
-          currentBlockPair = bestPair;
-          daysInCurrentBlock = 0;
-        }
-
-        // --- ASIGNACIÓN DIARIA Y SUPLENCIAS ---
-        const scToday = [];
-        
-        // 1. Añadir a los del bloque si están presentes y NO han llegado al límite de 6
-        currentBlockPair.forEach(id => {
-          const op = ops.find(o => o.id === id);
-          if (op && !op.calendar?.[k] && consecutiveSC[id] < 6) {
-            scToday.push(id);
-          }
-        });
-
-        // 2. Buscar refuerzos si faltan (Plan B)
-        if (scToday.length < 2) {
-          const substitutes = ops
-            .filter(op => !op.calendar?.[k] && !scToday.includes(op.id))
-            .sort((a, b) => {
-              // Si ya llevan 6 días, la barrera es de 10.000 puntos para que sean los últimos elegidos.
-              // Si llevan menos, se penaliza gradualmente para preferir a gente fresca.
-              let scoreA = hSC[a.id] + (consecutiveSC[a.id] >= 6 ? 10000 : Math.pow(consecutiveSC[a.id], 2) * 50);
-              let scoreB = hSC[b.id] + (consecutiveSC[b.id] >= 6 ? 10000 : Math.pow(consecutiveSC[b.id], 2) * 50);
-              if (turno === "N") { scoreA += nSC[a.id] * 150; scoreB += nSC[b.id] * 150; }
-              return scoreA - scoreB;
-            });
-          
-          while (scToday.length < 2 && substitutes.length > 0) {
-            scToday.push(substitutes.shift().id);
-          }
-        }
-
-        // 3. Escribir roles y actualizar contadores de fatiga
-        ops.forEach(op => {
-          if (op.calendar?.[k]) {
-            allAssigns[year][k][op.id] = op.calendar[k];
-            consecutiveSC[op.id] = 0; // La ausencia rompe la fatiga
-          } else if (scToday.includes(op.id)) {
-            allAssigns[year][k][op.id] = "SC";
-            hSC[op.id] += 12;
-            if (turno === "N") nSC[op.id] += 1;
-            consecutiveSC[op.id]++; // Suma un día seguido
-          } else {
-            allAssigns[year][k][op.id] = "CA";
-            consecutiveSC[op.id] = 0; // Estar en Carga rompe la fatiga
-          }
-        });
-
-        if (scToday.length === 2) {
-          pairs[scToday[0]] = pairs[scToday[0]] || {};
-          pairs[scToday[1]] = pairs[scToday[1]] || {};
-          pairs[scToday[0]][scToday[1]] = (pairs[scToday[0]][scToday[1]] || 0) + 1;
-          pairs[scToday[1]][scToday[0]] = (pairs[scToday[1]][scToday[0]] || 0) + 1;
-        }
-        
-        daysInCurrentBlock++;
-      }
-    }
-  }
-  return allAssigns[targetYear] || {};
-}
-
 function computeStats(ops, year, asgn, off) {
   return ops.map(op => {
     let sc = 0, nSC = 0;
@@ -199,6 +148,7 @@ function computeStats(ops, year, asgn, off) {
   });
 }
 
+// --- APP PRINCIPAL ---
 export default function App() {
   const today = new Date();
   const [session, setSession] = useState(null);
@@ -246,18 +196,65 @@ export default function App() {
   return (
     <div style={{ minHeight: "100vh", background: t.bg, color: t.text, fontFamily: 'monospace', transition: 'background 0.3s' }}>
       <style>{`
-@media print { .no-print { display: none !important; } body { background: white !important; color: black !important; } }
-.calendar-container { background: ${t.card}; border-radius: 12px; overflow-x: auto; border: 1px solid ${t.border}; margin-bottom: 40px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); position: relative; }
-.calendar-grid { display: grid; grid-template-columns: 140px repeat(${dim(activeYear, month)}, 1fr); gap: 0px; width: 100%; }
-.sticky-col { position: sticky; left: 0; background: ${t.card} !important; z-index: 50; border-right: 2px solid ${t.border} !important; box-sizing: border-box; }
-.cell-day { height: 38px; display: flex; align-items: center; justify-content: center; border-top: 1px solid ${t.border}; border-right: 1px solid ${t.border}; font-size: 11px; box-sizing: border-box; }
-.header-day { height: 55px !important; flex-direction: column; gap: 2px; }
+        @media print { .no-print { display: none !important; } body { background: white !important; color: black !important; } }
+        
+        /* Contenedor Calendario con Scroll Horizontal en Móvil */
+        .calendar-container { 
+          background: ${t.card}; 
+          border-radius: 12px; 
+          overflow-x: auto; 
+          border: 1px solid ${t.border}; 
+          margin-bottom: 40px; 
+          box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); 
+          position: relative;
+          -webkit-overflow-scrolling: touch;
+        }
 
-@media (max-width: 600px) {
-  .calendar-grid { grid-template-columns: 110px repeat(${dim(activeYear, month)}, 50px); width: max-content; }
-  .sticky-col { width: 110px; font-size: 11px !important; padding: 10px 8px !important; }
-}
-`}</style>
+        /* Grid que se expande si no cabe (Mobile First) */
+        .calendar-grid { 
+          display: grid; 
+          grid-template-columns: 140px repeat(${dim(activeYear, month)}, minmax(46px, 1fr)); 
+          gap: 0px; 
+          width: max-content; 
+          min-width: 100%;
+        }
+
+        /* Ajuste para PC: Ocupar todo el ancho y quitar scroll si hay espacio */
+        @media (min-width: 1024px) {
+          .calendar-grid {
+            width: 100%;
+            grid-template-columns: 150px repeat(${dim(activeYear, month)}, 1fr);
+          }
+          .cell-day { min-width: 0 !important; }
+        }
+
+        .sticky-col { 
+          position: sticky; 
+          left: 0; 
+          background: ${t.card} !important; 
+          z-index: 50; 
+          border-right: 2px solid ${t.border} !important; 
+          box-sizing: border-box; 
+        }
+
+        .cell-day { 
+          height: 40px; 
+          display: flex; 
+          align-items: center; 
+          justify-content: center; 
+          border-top: 1px solid ${t.border}; 
+          border-right: 1px solid ${t.border}; 
+          font-size: 11px; 
+          box-sizing: border-box; 
+        }
+
+        .header-day { 
+          height: 55px !important; 
+          flex-direction: column; 
+          gap: 2px; 
+          background: ${t.bg} !important;
+        }
+      `}</style>
 
       <header className="no-print" style={{ background: t.card, padding: "10px 20px", display: 'flex', justifyContent: 'space-between', borderBottom: `1px solid ${t.border}`, alignItems: 'center', position: 'sticky', top: 0, zIndex: 200 }}>
         <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
@@ -296,7 +293,7 @@ export default function App() {
                 {Array.from({ length: dim(activeYear, month) }).map((_, i) => {
                   const rotHeader = cshift(activeYear, month, i+1, off);
                   return (
-                    <div key={i} className="cell-day header-day" style={{ background: t.bg }}>
+                    <div key={i} className="cell-day header-day">
                       <span style={{ color: dow(activeYear, month, i+1) >= 5 ? '#EF4444' : t.sub, fontSize: 9 }}>{DOW_S[dow(activeYear, month, i+1)]}</span>
                       <span style={{ fontWeight: 'bold', fontSize: 11 }}>{i+1}</span>
                       <span style={{ fontSize: 9, fontWeight: '800', color: TURNO_DEF[rotHeader]?.color }}>{rotHeader === 'D' ? '' : rotHeader}</span>
@@ -331,7 +328,7 @@ export default function App() {
 
         {view === "stats" && (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 20 }}>
-            {stats.map(s => (
+            {stats.sort((a,b) => b.hSC - a.hSC).map(s => (
               <div key={s.id} style={{ background: t.card, padding: 25, borderRadius: 16, border: `1px solid ${t.border}` }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 15 }}><Av name={s.name} color={s.color} size={32} /><div style={{ fontWeight: 'bold', color: t.accent, fontSize: 18 }}>{s.name}</div></div>
                 <div style={{ fontSize: 32, fontWeight: 800 }}>{s.sc} SC</div>

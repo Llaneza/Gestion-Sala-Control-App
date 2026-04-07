@@ -77,8 +77,15 @@ function cshift(y, m, d, off = 0) {
 }
 
 function autoAssign(ops, targetYear, off) {
-  const hSC = {}, nSC = {}, pairs = {};
-  ops.forEach(o => { hSC[o.id] = 0; nSC[o.id] = 0; pairs[o.id] = {}; ops.forEach(other => { if(o.id !== other.id) pairs[o.id][other.id] = 0; }); });
+  const hSC = {}, nSC = {}, pairs = {}, consecutiveSC = {};
+  
+  ops.forEach(o => { 
+    hSC[o.id] = 0; 
+    nSC[o.id] = 0; 
+    consecutiveSC[o.id] = 0; // NUEVO: Contador de días consecutivos
+    pairs[o.id] = {}; 
+    ops.forEach(other => { if(o.id !== other.id) pairs[o.id][other.id] = 0; }); 
+  });
 
   let currentBlockPair = [];
   let daysInCurrentBlock = 0;
@@ -91,12 +98,16 @@ function autoAssign(ops, targetYear, off) {
         const k = mk(year, mo + 1, d), turno = cshift(year, mo, d, off);
         allAssigns[year][k] = {};
 
+        // Si es Descanso General, reseteamos contadores de fatiga
         if (turno === "D") {
-          ops.forEach(op => { allAssigns[year][k][op.id] = "D"; });
+          ops.forEach(op => { 
+            allAssigns[year][k][op.id] = "D"; 
+            consecutiveSC[op.id] = 0; 
+          });
           continue;
         }
 
-        // Selección de pareja base para el bloque
+        // --- SELECCIÓN DE BLOQUE DE 4 DÍAS ---
         if (daysInCurrentBlock >= 4 || currentBlockPair.length === 0) {
           const avail = ops.filter(op => !op.calendar?.[k]);
           let bestPair = [], minScore = Infinity;
@@ -105,6 +116,12 @@ function autoAssign(ops, targetYear, off) {
               const p1 = avail[i], p2 = avail[j];
               let score = (hSC[p1.id] + hSC[p2.id]) + (pairs[p1.id][p2.id] || 0) * 25;
               if (turno === "N") score += (nSC[p1.id] + nSC[p2.id]) * 150;
+              
+              // PREVENCIÓN DE FATIGA: Si ya llevan 3 o más días, penalizamos enormemente
+              // para no meterlos en un bloque nuevo de 4 días y que superen los 6.
+              if (consecutiveSC[p1.id] >= 3) score += Math.pow(consecutiveSC[p1.id], 3) * 100;
+              if (consecutiveSC[p2.id] >= 3) score += Math.pow(consecutiveSC[p2.id], 3) * 100;
+
               if (score < minScore) { minScore = score; bestPair = [p1.id, p2.id]; }
             }
           }
@@ -112,21 +129,26 @@ function autoAssign(ops, targetYear, off) {
           daysInCurrentBlock = 0;
         }
 
-        // --- NUEVA LÓGICA DE OBLIGATORIEDAD ---
+        // --- ASIGNACIÓN DIARIA Y SUPLENCIAS ---
         const scToday = [];
-        // 1. Añadir a los de la pareja del bloque si están presentes
+        
+        // 1. Añadir a los del bloque si están presentes y NO han llegado al límite de 6
         currentBlockPair.forEach(id => {
           const op = ops.find(o => o.id === id);
-          if (op && !op.calendar?.[k]) scToday.push(id);
+          if (op && !op.calendar?.[k] && consecutiveSC[id] < 6) {
+            scToday.push(id);
+          }
         });
 
-        // 2. Si faltan personas para llegar a 2, buscar refuerzos entre los disponibles (CA)
+        // 2. Buscar refuerzos si faltan (Plan B)
         if (scToday.length < 2) {
           const substitutes = ops
             .filter(op => !op.calendar?.[k] && !scToday.includes(op.id))
             .sort((a, b) => {
-              // Priorizar por menos horas acumuladas
-              let scoreA = hSC[a.id], scoreB = hSC[b.id];
+              // Si ya llevan 6 días, la barrera es de 10.000 puntos para que sean los últimos elegidos.
+              // Si llevan menos, se penaliza gradualmente para preferir a gente fresca.
+              let scoreA = hSC[a.id] + (consecutiveSC[a.id] >= 6 ? 10000 : Math.pow(consecutiveSC[a.id], 2) * 50);
+              let scoreB = hSC[b.id] + (consecutiveSC[b.id] >= 6 ? 10000 : Math.pow(consecutiveSC[b.id], 2) * 50);
               if (turno === "N") { scoreA += nSC[a.id] * 150; scoreB += nSC[b.id] * 150; }
               return scoreA - scoreB;
             });
@@ -136,20 +158,22 @@ function autoAssign(ops, targetYear, off) {
           }
         }
 
-        // 3. Asignar los roles finales
+        // 3. Escribir roles y actualizar contadores de fatiga
         ops.forEach(op => {
           if (op.calendar?.[k]) {
             allAssigns[year][k][op.id] = op.calendar[k];
+            consecutiveSC[op.id] = 0; // La ausencia rompe la fatiga
           } else if (scToday.includes(op.id)) {
             allAssigns[year][k][op.id] = "SC";
             hSC[op.id] += 12;
             if (turno === "N") nSC[op.id] += 1;
+            consecutiveSC[op.id]++; // Suma un día seguido
           } else {
             allAssigns[year][k][op.id] = "CA";
+            consecutiveSC[op.id] = 0; // Estar en Carga rompe la fatiga
           }
         });
 
-        // Actualizar contador de parejas solo si hay 2
         if (scToday.length === 2) {
           pairs[scToday[0]] = pairs[scToday[0]] || {};
           pairs[scToday[1]] = pairs[scToday[1]] || {};

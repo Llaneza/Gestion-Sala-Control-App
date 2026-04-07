@@ -63,11 +63,16 @@ function cshift(y, m, d, off = 0) {
   return CYCLE[Math.floor(pos / 7)][pos % 7];
 }
 
-// --- MOTOR DE ASIGNACIÓN (PAUTA 2: 5 DÍAS) ---
+// --- MOTOR DE ASIGNACIÓN (PAUTA 1-5) ---
 function autoAssign(ops, targetYear, off) {
   const DAYS_PER_BLOCK = 5; 
-  const hSC = {}, hCompensada = {}, currentDaysInSC = {};
-  ops.forEach(o => { hSC[o.id] = 0; hCompensada[o.id] = 0; currentDaysInSC[o.id] = 0; });
+  const hSC = {}, hCompensada = {}, nSC = {}, currentDaysInSC = {};
+  ops.forEach(o => { 
+    hSC[o.id] = 0; 
+    hCompensada[o.id] = 0; 
+    nSC[o.id] = 0; // Contador de Noches acumuladas
+    currentDaysInSC[o.id] = 0; 
+  });
 
   let activeSC = []; 
   const allAssigns = {};
@@ -85,8 +90,10 @@ function autoAssign(ops, targetYear, off) {
           continue;
         }
 
+        // Pauta 2: Finalizar bloques
         activeSC = activeSC.filter(id => currentDaysInSC[id] < DAYS_PER_BLOCK);
 
+        // Pauta 4: Gestión de Bajas
         ops.forEach(op => {
           if (op.calendar?.[k] === "BA") {
             hCompensada[op.id] += 12; 
@@ -94,10 +101,17 @@ function autoAssign(ops, targetYear, off) {
           }
         });
 
+        // Pauta 1, 3 y 5: Selección con Equidad de Horas y Noches
         while (activeSC.length < 2) {
           const candidates = ops.filter(op => 
             !op.calendar?.[k] && !activeSC.includes(op.id)
-          ).sort((a, b) => (hSC[a.id] + hCompensada[a.id]) - (hSC[b.id] + hCompensada[b.id]));
+          ).sort((a, b) => {
+            // Primero comparamos horas totales
+            const diffH = (hSC[a.id] + hCompensada[a.id]) - (hSC[b.id] + hCompensada[b.id]);
+            if (diffH !== 0) return diffH;
+            // Si hay empate en horas, desempatamos por quien tiene menos NOCHES (Pauta 5)
+            return nSC[a.id] - nSC[b.id];
+          });
 
           if (candidates.length > 0) {
             const nextOp = candidates[0];
@@ -106,6 +120,7 @@ function autoAssign(ops, targetYear, off) {
           } else break; 
         }
 
+        // Asignación final y actualización de contadores
         ops.forEach(op => {
           const manual = op.calendar?.[k];
           if (manual) {
@@ -113,6 +128,7 @@ function autoAssign(ops, targetYear, off) {
           } else if (activeSC.includes(op.id)) {
             allAssigns[year][k][op.id] = "SC";
             hSC[op.id] += 12;
+            if (shiftType === "N") nSC[op.id]++; // Sumamos noche si aplica
             currentDaysInSC[op.id]++; 
           } else {
             allAssigns[year][k][op.id] = "CA";
@@ -198,7 +214,6 @@ export default function App() {
       <style>{`
         @media print { .no-print { display: none !important; } body { background: white !important; color: black !important; } }
         
-        /* Contenedor Calendario con Scroll Horizontal en Móvil */
         .calendar-container { 
           background: ${t.card}; 
           border-radius: 12px; 
@@ -210,7 +225,6 @@ export default function App() {
           -webkit-overflow-scrolling: touch;
         }
 
-        /* Grid que se expande si no cabe (Mobile First) */
         .calendar-grid { 
           display: grid; 
           grid-template-columns: 140px repeat(${dim(activeYear, month)}, minmax(46px, 1fr)); 
@@ -219,7 +233,6 @@ export default function App() {
           min-width: 100%;
         }
 
-        /* Ajuste para PC: Ocupar todo el ancho y quitar scroll si hay espacio */
         @media (min-width: 1024px) {
           .calendar-grid {
             width: 100%;
@@ -328,11 +341,11 @@ export default function App() {
 
         {view === "stats" && (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 20 }}>
-            {stats.sort((a,b) => b.hSC - a.hSC).map(s => (
+            {stats.sort((a,b) => b.hSC - a.hSC || b.nSC - a.nSC).map(s => (
               <div key={s.id} style={{ background: t.card, padding: 25, borderRadius: 16, border: `1px solid ${t.border}` }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 15 }}><Av name={s.name} color={s.color} size={32} /><div style={{ fontWeight: 'bold', color: t.accent, fontSize: 18 }}>{s.name}</div></div>
                 <div style={{ fontSize: 32, fontWeight: 800 }}>{s.sc} SC</div>
-                <div style={{ fontSize: 14, color: t.sub }}>{s.hSC} Horas / {s.nSC} Noches</div>
+                <div style={{ fontSize: 14, color: t.sub }}>{s.hSC} Horas / <span style={{ color: t.accent }}>{s.nSC} Noches</span></div>
               </div>
             ))}
           </div>

@@ -64,122 +64,134 @@ function cshift(y, m, d, off = 0) {
 
 // --FUNCIÓN AUTOASIGNACIÓN--
 function autoAssign(ops, targetYear, off) {
+
+  // --- PREPARACIÓN ---
   const days = [];
 
-  // 🔹 Construir lista de días laborales
   for (let mo = 0; mo < 12; mo++) {
     for (let d = 1; d <= dim(targetYear, mo); d++) {
       const k = mk(targetYear, mo + 1, d);
       const shift = cshift(targetYear, mo, d, off);
-      if (shift !== "D") {
-        days.push({ k, shift });
-      }
+      if (shift !== "D") days.push({ k, shift });
     }
   }
 
-  // 🔹 Estado
-  const state = {};
-  ops.forEach(o => {
-    state[o.id] = {
-      h: 0,
-      n: 0,
-      streak: 0,
-      lastDay: -10
-    };
-  });
+  const opIds = ops.map(o => o.id);
 
-  const assign = {};
+  // --- ESTADO ---
+  function createState(assign) {
+    const s = {};
+    opIds.forEach(id => {
+      s[id] = { h: 0, n: 0, streak: 0, last: -10 };
+    });
 
-  // 🔹 Inicialización vacía
+    days.forEach((day, di) => {
+      opIds.forEach(id => {
+        if (assign[day.k][id] === "SC") {
+          s[id].h += 12;
+          if (day.shift === "N") s[id].n++;
+
+          if (s[id].last === di - 1) s[id].streak++;
+          else s[id].streak = 1;
+
+          s[id].last = di;
+        } else {
+          s[id].streak = 0;
+        }
+      });
+    });
+
+    return s;
+  }
+
+  // --- INICIALIZACIÓN (SIEMPRE 2 SC) ---
+  let assign = {};
+
   days.forEach(day => {
     assign[day.k] = {};
+    const available = ops.filter(o => !o.calendar?.[day.k]);
+    const shuffled = [...available].sort(() => Math.random() - 0.5);
+
+    const selected = shuffled.slice(0, 2);
+
+    ops.forEach(op => {
+      assign[day.k][op.id] = selected.includes(op) ? "SC" : "CA";
+    });
   });
 
-  // 🔥 FUNCIÓN DE COSTE
-  function cost() {
+  // --- FUNCIÓN DE COSTE ---
+  function cost(assign) {
+    const s = createState(assign);
+
+    const hs = Object.values(s).map(x => x.h);
+    const ns = Object.values(s).map(x => x.n);
+
+    const avgH = hs.reduce((a,b)=>a+b,0)/hs.length;
+    const avgN = ns.reduce((a,b)=>a+b,0)/ns.length;
+
     let cost = 0;
 
-    const hs = Object.values(state).map(s => s.h);
-    const ns = Object.values(state).map(s => s.n);
+    // 🔥 noches (muy fuerte)
+    ns.forEach(n => {
+      cost += Math.pow(n - avgN, 2) * 10;
+    });
 
-    const avgH = hs.reduce((a,b)=>a+b,0) / hs.length;
-    const avgN = ns.reduce((a,b)=>a+b,0) / ns.length;
+    // 🔥 horas (medio)
+    hs.forEach(h => {
+      cost += Math.pow(h - avgH, 2) * 2;
+    });
 
-    hs.forEach(h => cost += Math.abs(h - avgH) * 2);
-    ns.forEach(n => cost += Math.abs(n - avgN) * 5);
+    // 🔥 rachas (dura)
+    Object.values(s).forEach(x => {
+      if (x.streak > 6) cost += 10000;
+    });
 
     return cost;
   }
 
-  // 🔹 Función para comprobar si puede trabajar
-  function canWork(op, dayIndex) {
-    const s = state[op.id];
+  // --- VALIDACIÓN DURA ---
+  function isValid(assign) {
+    const s = createState(assign);
 
-    if (op.calendar?.[days[dayIndex].k]) return false;
-
-    if (s.streak >= 6) return false;
-
-    if (dayIndex - s.lastDay <= 0 && s.streak >= 6) return false;
-
-    return true;
+    return Object.values(s).every(x => x.streak <= 6);
   }
 
-  // 🔹 Construcción inicial greedy simple
-  days.forEach((day, di) => {
-    const candidates = ops
-      .filter(op => canWork(op, di))
-      .sort((a,b) => state[a.id].n - state[b.id].n);
+  // --- OPTIMIZACIÓN ---
+  let best = JSON.parse(JSON.stringify(assign));
+  let bestCost = cost(best);
 
-    const selected = candidates.slice(0,2);
+  for (let iter = 0; iter < 5000; iter++) {
 
-    selected.forEach(op => {
-      assign[day.k][op.id] = "SC";
-      state[op.id].h += 12;
-      if (day.shift === "N") state[op.id].n++;
+    const newAssign = JSON.parse(JSON.stringify(best));
 
-      if (state[op.id].lastDay === di - 1) {
-        state[op.id].streak++;
-      } else {
-        state[op.id].streak = 1;
-      }
+    // elegir día aleatorio
+    const d = days[Math.floor(Math.random() * days.length)];
+    const scOps = opIds.filter(id => newAssign[d.k][id] === "SC");
+    const caOps = opIds.filter(id => newAssign[d.k][id] === "CA");
 
-      state[op.id].lastDay = di;
-    });
+    if (scOps.length < 2 || caOps.length === 0) continue;
 
-    ops.forEach(op => {
-      if (!assign[day.k][op.id]) {
-        assign[day.k][op.id] = "CA";
-        state[op.id].streak = 0;
-      }
-    });
-  });
-
-  // 🔥 OPTIMIZACIÓN ITERATIVA
-  for (let iter = 0; iter < 2000; iter++) {
-    const d1 = Math.floor(Math.random() * days.length);
-    const d2 = Math.floor(Math.random() * days.length);
-
-    const day1 = days[d1];
-    const day2 = days[d2];
-
-    const ops1 = Object.keys(assign[day1.k]).filter(id => assign[day1.k][id] === "SC");
-    const ops2 = Object.keys(assign[day2.k]).filter(id => assign[day2.k][id] === "SC");
-
-    if (ops1.length < 2 || ops2.length < 2) continue;
-
-    const opA = ops.find(o => o.id == ops1[0]);
-    const opB = ops.find(o => o.id == ops2[0]);
+    const out = scOps[Math.floor(Math.random() * scOps.length)];
+    const inp = caOps[Math.floor(Math.random() * caOps.length)];
 
     // swap
-    assign[day1.k][opA.id] = "CA";
-    assign[day2.k][opB.id] = "CA";
+    newAssign[d.k][out] = "CA";
+    newAssign[d.k][inp] = "SC";
 
-    assign[day1.k][opB.id] = "SC";
-    assign[day2.k][opA.id] = "SC";
+    if (!isValid(newAssign)) continue;
+
+    const newCost = cost(newAssign);
+
+    if (newCost < bestCost) {
+      best = newAssign;
+      bestCost = newCost;
+    }
   }
 
-  return assign;
+  return best;
 }
+
+
 // --- ICONOS Y COMPONENTES VISUALES ---
 const EyeIcon = ({ visible, color }) => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

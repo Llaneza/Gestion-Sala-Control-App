@@ -62,10 +62,10 @@ function cshift(y, m, d, off = 0) {
   return CYCLE[Math.floor(pos / 7)][pos % 7];
 }
 
-// --- MOTOR DE ASIGNACIÓN AVANZADO ---
+// --FUNCIÓN AUTOASIGNACIÓN--
 function autoAssign(ops, targetYear, off) {
   const hSC = {}, nSC = {}, streakSC = {};
-  const restWorkDaysLeft = {}; // descanso en días laborales
+  const restWorkDaysLeft = {};
   const lastWorkedDay = {};
 
   ops.forEach(o => {
@@ -78,7 +78,19 @@ function autoAssign(ops, targetYear, off) {
 
   const allAssigns = {};
   let globalDayIndex = 0;
-  let totalSCAssigned = 0;
+
+  // 🔥 CALCULAR OBJETIVO REAL
+  let totalWorkDays = 0;
+  for (let mo = 0; mo < 12; mo++) {
+    for (let d = 1; d <= dim(targetYear, mo); d++) {
+      const shiftType = cshift(targetYear, mo, d, off);
+      if (shiftType !== "D") totalWorkDays++;
+    }
+  }
+
+  const totalSCNeeded = totalWorkDays * 2;
+  const targetPerOp = totalSCNeeded / (ops.length || 1);
+  const maxAllowed = targetPerOp * 1.10; // 10%
 
   for (let year = 2024; year <= targetYear; year++) {
     allAssigns[year] = {};
@@ -91,7 +103,7 @@ function autoAssign(ops, targetYear, off) {
 
         const isWorkDay = shiftType !== "D";
 
-        // Reducir descansos pendientes SOLO en días laborales
+        // reducir descansos solo en días laborales
         if (isWorkDay) {
           ops.forEach(op => {
             if (restWorkDaysLeft[op.id] > 0) {
@@ -111,21 +123,16 @@ function autoAssign(ops, targetYear, off) {
 
         let activeSC = [];
 
-        const avgTarget = totalSCAssigned / (ops.length || 1);
-        const maxAllowed = avgTarget * 1.10;
-
         const baseCandidates = ops.filter(op => {
           const manual = op.calendar?.[k];
           if (manual) return false;
 
-          // descanso obligatorio
           if (restWorkDaysLeft[op.id] > 0) return false;
 
-          // NO permitir superar 6
           if (streakSC[op.id] >= 6) return false;
 
-          // NO permitir pasarse del límite global
-          if (hSC[op.id] > maxAllowed) return false;
+          // 🔥 CONTROL REAL DE HORAS
+          if (hSC[op.id] >= maxAllowed) return false;
 
           return true;
         });
@@ -134,11 +141,13 @@ function autoAssign(ops, targetYear, off) {
           const candidates = baseCandidates
             .filter(op => !activeSC.includes(op.id))
             .sort((a, b) => {
-              // 1. noches (CRÍTICO)
+              // 1. noches
               if (nSC[a.id] !== nSC[b.id]) return nSC[a.id] - nSC[b.id];
 
-              // 2. horas (control fino)
-              if (hSC[a.id] !== hSC[b.id]) return hSC[a.id] - hSC[b.id];
+              // 2. desviación respecto al objetivo
+              const devA = hSC[a.id] / targetPerOp;
+              const devB = hSC[b.id] / targetPerOp;
+              if (devA !== devB) return devA - devB;
 
               // 3. racha
               return streakSC[a.id] - streakSC[b.id];
@@ -146,7 +155,13 @@ function autoAssign(ops, targetYear, off) {
 
           if (candidates.length > 0) {
             activeSC.push(candidates[0].id);
-          } else break;
+          } else {
+            // fallback (evita bloqueo total)
+            const fallback = ops.filter(op => !op.calendar?.[k]);
+            if (fallback.length > 0) {
+              activeSC.push(fallback[0].id);
+            } else break;
+          }
         }
 
         ops.forEach(op => {
@@ -162,11 +177,8 @@ function autoAssign(ops, targetYear, off) {
             allAssigns[year][k][op.id] = "SC";
 
             hSC[op.id] += 12;
-            totalSCAssigned++;
-
             if (shiftType === "N") nSC[op.id]++;
 
-            // racha real
             if (lastWorkedDay[op.id] === globalDayIndex - 1) {
               streakSC[op.id]++;
             } else {
@@ -175,7 +187,6 @@ function autoAssign(ops, targetYear, off) {
 
             lastWorkedDay[op.id] = globalDayIndex;
 
-            // si llega a 6 → descanso 2 días laborales reales
             if (streakSC[op.id] >= 6) {
               restWorkDaysLeft[op.id] = 2;
             }
@@ -192,8 +203,7 @@ function autoAssign(ops, targetYear, off) {
   }
 
   return allAssigns[targetYear] || {};
-}
-        
+}        
 
 // --- ICONOS Y COMPONENTES VISUALES ---
 const EyeIcon = ({ visible, color }) => (

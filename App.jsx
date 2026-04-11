@@ -64,147 +64,122 @@ function cshift(y, m, d, off = 0) {
 
 // --FUNCIÓN AUTOASIGNACIÓN--
 function autoAssign(ops, targetYear, off) {
-  const hSC = {}, nSC = {}, streakSC = {};
-  const restWorkDaysLeft = {};
-  const lastWorkedDay = {};
+  const days = [];
 
-  ops.forEach(o => {
-    hSC[o.id] = 0;
-    nSC[o.id] = 0;
-    streakSC[o.id] = 0;
-    restWorkDaysLeft[o.id] = 0;
-    lastWorkedDay[o.id] = -1;
-  });
-
-  const allAssigns = {};
-  let globalDayIndex = 0;
-
-  // 🔥 CALCULAR OBJETIVO REAL
-  let totalWorkDays = 0;
+  // 🔹 Construir lista de días laborales
   for (let mo = 0; mo < 12; mo++) {
     for (let d = 1; d <= dim(targetYear, mo); d++) {
-      const shiftType = cshift(targetYear, mo, d, off);
-      if (shiftType !== "D") totalWorkDays++;
-    }
-  }
-
-  const totalSCNeeded = totalWorkDays * 2;
-  const targetPerOp = totalSCNeeded / (ops.length || 1);
-  const maxAllowed = targetPerOp * 1.10; // 10%
-
-  for (let year = 2024; year <= targetYear; year++) {
-    allAssigns[year] = {};
-
-    for (let mo = 0; mo < 12; mo++) {
-      for (let d = 1; d <= dim(year, mo); d++) {
-        const k = mk(year, mo + 1, d);
-        const shiftType = cshift(year, mo, d, off);
-        allAssigns[year][k] = {};
-
-        const isWorkDay = shiftType !== "D";
-
-        // reducir descansos solo en días laborales
-        if (isWorkDay) {
-          ops.forEach(op => {
-            if (restWorkDaysLeft[op.id] > 0) {
-              restWorkDaysLeft[op.id]--;
-            }
-          });
-        }
-
-        if (shiftType === "D") {
-          ops.forEach(op => {
-            allAssigns[year][k][op.id] = "D";
-            streakSC[op.id] = 0;
-          });
-          globalDayIndex++;
-          continue;
-        }
-
-        let activeSC = [];
-
-        const baseCandidates = ops.filter(op => {
-          const manual = op.calendar?.[k];
-          if (manual) return false;
-
-          if (restWorkDaysLeft[op.id] > 0) return false;
-
-          if (streakSC[op.id] >= 6) return false;
-
-          // 🔥 CONTROL REAL DE HORAS
-          if (hSC[op.id] >= maxAllowed) return false;
-
-          return true;
-        });
-
-        while (activeSC.length < 2) {
-          const candidates = baseCandidates
-            .filter(op => !activeSC.includes(op.id))
-            .sort((a, b) => {
-              // 1. noches
-              if (nSC[a.id] !== nSC[b.id]) return nSC[a.id] - nSC[b.id];
-
-              // 2. desviación respecto al objetivo
-              const devA = hSC[a.id] / targetPerOp;
-              const devB = hSC[b.id] / targetPerOp;
-              if (devA !== devB) return devA - devB;
-
-              // 3. racha
-              return streakSC[a.id] - streakSC[b.id];
-            });
-
-          if (candidates.length > 0) {
-            activeSC.push(candidates[0].id);
-          } else {
-            // fallback (evita bloqueo total)
-            const fallback = ops.filter(op => !op.calendar?.[k]);
-            if (fallback.length > 0) {
-              activeSC.push(fallback[0].id);
-            } else break;
-          }
-        }
-
-        ops.forEach(op => {
-          const manual = op.calendar?.[k];
-
-          if (manual) {
-            allAssigns[year][k][op.id] = manual;
-            streakSC[op.id] = 0;
-            return;
-          }
-
-          if (activeSC.includes(op.id)) {
-            allAssigns[year][k][op.id] = "SC";
-
-            hSC[op.id] += 12;
-            if (shiftType === "N") nSC[op.id]++;
-
-            if (lastWorkedDay[op.id] === globalDayIndex - 1) {
-              streakSC[op.id]++;
-            } else {
-              streakSC[op.id] = 1;
-            }
-
-            lastWorkedDay[op.id] = globalDayIndex;
-
-            if (streakSC[op.id] >= 6) {
-              restWorkDaysLeft[op.id] = 2;
-            }
-
-          } else {
-            allAssigns[year][k][op.id] = "CA";
-            streakSC[op.id] = 0;
-          }
-        });
-
-        globalDayIndex++;
+      const k = mk(targetYear, mo + 1, d);
+      const shift = cshift(targetYear, mo, d, off);
+      if (shift !== "D") {
+        days.push({ k, shift });
       }
     }
   }
 
-  return allAssigns[targetYear] || {};
-}        
+  // 🔹 Estado
+  const state = {};
+  ops.forEach(o => {
+    state[o.id] = {
+      h: 0,
+      n: 0,
+      streak: 0,
+      lastDay: -10
+    };
+  });
 
+  const assign = {};
+
+  // 🔹 Inicialización vacía
+  days.forEach(day => {
+    assign[day.k] = {};
+  });
+
+  // 🔥 FUNCIÓN DE COSTE
+  function cost() {
+    let cost = 0;
+
+    const hs = Object.values(state).map(s => s.h);
+    const ns = Object.values(state).map(s => s.n);
+
+    const avgH = hs.reduce((a,b)=>a+b,0) / hs.length;
+    const avgN = ns.reduce((a,b)=>a+b,0) / ns.length;
+
+    hs.forEach(h => cost += Math.abs(h - avgH) * 2);
+    ns.forEach(n => cost += Math.abs(n - avgN) * 5);
+
+    return cost;
+  }
+
+  // 🔹 Función para comprobar si puede trabajar
+  function canWork(op, dayIndex) {
+    const s = state[op.id];
+
+    if (op.calendar?.[days[dayIndex].k]) return false;
+
+    if (s.streak >= 6) return false;
+
+    if (dayIndex - s.lastDay <= 0 && s.streak >= 6) return false;
+
+    return true;
+  }
+
+  // 🔹 Construcción inicial greedy simple
+  days.forEach((day, di) => {
+    const candidates = ops
+      .filter(op => canWork(op, di))
+      .sort((a,b) => state[a.id].n - state[b.id].n);
+
+    const selected = candidates.slice(0,2);
+
+    selected.forEach(op => {
+      assign[day.k][op.id] = "SC";
+      state[op.id].h += 12;
+      if (day.shift === "N") state[op.id].n++;
+
+      if (state[op.id].lastDay === di - 1) {
+        state[op.id].streak++;
+      } else {
+        state[op.id].streak = 1;
+      }
+
+      state[op.id].lastDay = di;
+    });
+
+    ops.forEach(op => {
+      if (!assign[day.k][op.id]) {
+        assign[day.k][op.id] = "CA";
+        state[op.id].streak = 0;
+      }
+    });
+  });
+
+  // 🔥 OPTIMIZACIÓN ITERATIVA
+  for (let iter = 0; iter < 2000; iter++) {
+    const d1 = Math.floor(Math.random() * days.length);
+    const d2 = Math.floor(Math.random() * days.length);
+
+    const day1 = days[d1];
+    const day2 = days[d2];
+
+    const ops1 = Object.keys(assign[day1.k]).filter(id => assign[day1.k][id] === "SC");
+    const ops2 = Object.keys(assign[day2.k]).filter(id => assign[day2.k][id] === "SC");
+
+    if (ops1.length < 2 || ops2.length < 2) continue;
+
+    const opA = ops.find(o => o.id == ops1[0]);
+    const opB = ops.find(o => o.id == ops2[0]);
+
+    // swap
+    assign[day1.k][opA.id] = "CA";
+    assign[day2.k][opB.id] = "CA";
+
+    assign[day1.k][opB.id] = "SC";
+    assign[day2.k][opA.id] = "SC";
+  }
+
+  return assign;
+}
 // --- ICONOS Y COMPONENTES VISUALES ---
 const EyeIcon = ({ visible, color }) => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

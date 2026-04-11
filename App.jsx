@@ -62,21 +62,23 @@ function cshift(y, m, d, off = 0) {
   return CYCLE[Math.floor(pos / 7)][pos % 7];
 }
 
-// --- MOTOR DE ASIGNACIÓN MEJORADO ---
+// --- MOTOR DE ASIGNACIÓN AVANZADO ---
 function autoAssign(ops, targetYear, off) {
-  const hSC = {}, nSC = {}, streakSC = {}, forcedRestUntil = {}, lastWorkedDay = {};
+  const hSC = {}, nSC = {}, streakSC = {};
+  const restWorkDaysLeft = {}; // descanso en días laborales
+  const lastWorkedDay = {};
 
   ops.forEach(o => {
     hSC[o.id] = 0;
     nSC[o.id] = 0;
     streakSC[o.id] = 0;
-    forcedRestUntil[o.id] = -1;
+    restWorkDaysLeft[o.id] = 0;
     lastWorkedDay[o.id] = -1;
   });
 
   const allAssigns = {};
-
   let globalDayIndex = 0;
+  let totalSCAssigned = 0;
 
   for (let year = 2024; year <= targetYear; year++) {
     allAssigns[year] = {};
@@ -86,6 +88,17 @@ function autoAssign(ops, targetYear, off) {
         const k = mk(year, mo + 1, d);
         const shiftType = cshift(year, mo, d, off);
         allAssigns[year][k] = {};
+
+        const isWorkDay = shiftType !== "D";
+
+        // Reducir descansos pendientes SOLO en días laborales
+        if (isWorkDay) {
+          ops.forEach(op => {
+            if (restWorkDaysLeft[op.id] > 0) {
+              restWorkDaysLeft[op.id]--;
+            }
+          });
+        }
 
         if (shiftType === "D") {
           ops.forEach(op => {
@@ -98,30 +111,36 @@ function autoAssign(ops, targetYear, off) {
 
         let activeSC = [];
 
-        const candidatesBase = ops.filter(op => {
+        const avgTarget = totalSCAssigned / (ops.length || 1);
+        const maxAllowed = avgTarget * 1.10;
+
+        const baseCandidates = ops.filter(op => {
           const manual = op.calendar?.[k];
           if (manual) return false;
 
-          // descanso forzado
-          if (forcedRestUntil[op.id] >= globalDayIndex) return false;
+          // descanso obligatorio
+          if (restWorkDaysLeft[op.id] > 0) return false;
 
-          // máximo 6 días seguidos
+          // NO permitir superar 6
           if (streakSC[op.id] >= 6) return false;
+
+          // NO permitir pasarse del límite global
+          if (hSC[op.id] > maxAllowed) return false;
 
           return true;
         });
 
         while (activeSC.length < 2) {
-          const candidates = candidatesBase
+          const candidates = baseCandidates
             .filter(op => !activeSC.includes(op.id))
             .sort((a, b) => {
-              // PRIORIDAD 1: noches
+              // 1. noches (CRÍTICO)
               if (nSC[a.id] !== nSC[b.id]) return nSC[a.id] - nSC[b.id];
 
-              // PRIORIDAD 2: horas (con tolerancia natural)
+              // 2. horas (control fino)
               if (hSC[a.id] !== hSC[b.id]) return hSC[a.id] - hSC[b.id];
 
-              // PRIORIDAD 3: menor racha
+              // 3. racha
               return streakSC[a.id] - streakSC[b.id];
             });
 
@@ -143,10 +162,11 @@ function autoAssign(ops, targetYear, off) {
             allAssigns[year][k][op.id] = "SC";
 
             hSC[op.id] += 12;
+            totalSCAssigned++;
 
             if (shiftType === "N") nSC[op.id]++;
 
-            // racha
+            // racha real
             if (lastWorkedDay[op.id] === globalDayIndex - 1) {
               streakSC[op.id]++;
             } else {
@@ -155,9 +175,9 @@ function autoAssign(ops, targetYear, off) {
 
             lastWorkedDay[op.id] = globalDayIndex;
 
-            // si llega a 6 → forzar descanso 2 días laborales
+            // si llega a 6 → descanso 2 días laborales reales
             if (streakSC[op.id] >= 6) {
-              forcedRestUntil[op.id] = globalDayIndex + 2;
+              restWorkDaysLeft[op.id] = 2;
             }
 
           } else {

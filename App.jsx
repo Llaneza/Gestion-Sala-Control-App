@@ -62,15 +62,25 @@ function cshift(y, m, d, off = 0) {
   return CYCLE[Math.floor(pos / 7)][pos % 7];
 }
 
-// --- MOTOR DE ASIGNACIÓN: FOCO EN EQUIDAD DE NOCHES ---
+// --- MOTOR DE ASIGNACIÓN MEJORADO ---
 function autoAssign(ops, targetYear, off) {
-  const hSC = {}, hCompensada = {}, nSC = {};
-  ops.forEach(o => { hSC[o.id] = 0; hCompensada[o.id] = 0; nSC[o.id] = 0; });
+  const hSC = {}, nSC = {}, streakSC = {}, forcedRestUntil = {}, lastWorkedDay = {};
+
+  ops.forEach(o => {
+    hSC[o.id] = 0;
+    nSC[o.id] = 0;
+    streakSC[o.id] = 0;
+    forcedRestUntil[o.id] = -1;
+    lastWorkedDay[o.id] = -1;
+  });
 
   const allAssigns = {};
 
+  let globalDayIndex = 0;
+
   for (let year = 2024; year <= targetYear; year++) {
     allAssigns[year] = {};
+
     for (let mo = 0; mo < 12; mo++) {
       for (let d = 1; d <= dim(year, mo); d++) {
         const k = mk(year, mo + 1, d);
@@ -78,50 +88,92 @@ function autoAssign(ops, targetYear, off) {
         allAssigns[year][k] = {};
 
         if (shiftType === "D") {
-          ops.forEach(op => { allAssigns[year][k][op.id] = "D"; });
+          ops.forEach(op => {
+            allAssigns[year][k][op.id] = "D";
+            streakSC[op.id] = 0;
+          });
+          globalDayIndex++;
           continue;
         }
 
         let activeSC = [];
 
-        ops.forEach(op => {
-          if (op.calendar?.[k] === "BA") { hCompensada[op.id] += 12; }
+        const candidatesBase = ops.filter(op => {
+          const manual = op.calendar?.[k];
+          if (manual) return false;
+
+          // descanso forzado
+          if (forcedRestUntil[op.id] >= globalDayIndex) return false;
+
+          // máximo 6 días seguidos
+          if (streakSC[op.id] >= 6) return false;
+
+          return true;
         });
 
         while (activeSC.length < 2) {
-          const candidates = ops.filter(op => 
-            !op.calendar?.[k] && !activeSC.includes(op.id)
-          ).sort((a, b) => {
-            // PRIORIDAD 1: EQUIDAD DE NOCHES (nSC)
-            const diffN = nSC[a.id] - nSC[b.id];
-            if (diffN !== 0) return diffN;
-            
-            // PRIORIDAD 2: HORAS TOTALES (hSC)
-            return (hSC[a.id] + hCompensada[a.id]) - (hSC[b.id] + hCompensada[b.id]);
-          });
+          const candidates = candidatesBase
+            .filter(op => !activeSC.includes(op.id))
+            .sort((a, b) => {
+              // PRIORIDAD 1: noches
+              if (nSC[a.id] !== nSC[b.id]) return nSC[a.id] - nSC[b.id];
+
+              // PRIORIDAD 2: horas (con tolerancia natural)
+              if (hSC[a.id] !== hSC[b.id]) return hSC[a.id] - hSC[b.id];
+
+              // PRIORIDAD 3: menor racha
+              return streakSC[a.id] - streakSC[b.id];
+            });
 
           if (candidates.length > 0) {
             activeSC.push(candidates[0].id);
-          } else break; 
+          } else break;
         }
 
         ops.forEach(op => {
           const manual = op.calendar?.[k];
+
           if (manual) {
             allAssigns[year][k][op.id] = manual;
-          } else if (activeSC.includes(op.id)) {
+            streakSC[op.id] = 0;
+            return;
+          }
+
+          if (activeSC.includes(op.id)) {
             allAssigns[year][k][op.id] = "SC";
+
             hSC[op.id] += 12;
-            if (shiftType === "N") nSC[op.id]++; // Registro estricto de noche
+
+            if (shiftType === "N") nSC[op.id]++;
+
+            // racha
+            if (lastWorkedDay[op.id] === globalDayIndex - 1) {
+              streakSC[op.id]++;
+            } else {
+              streakSC[op.id] = 1;
+            }
+
+            lastWorkedDay[op.id] = globalDayIndex;
+
+            // si llega a 6 → forzar descanso 2 días laborales
+            if (streakSC[op.id] >= 6) {
+              forcedRestUntil[op.id] = globalDayIndex + 2;
+            }
+
           } else {
             allAssigns[year][k][op.id] = "CA";
+            streakSC[op.id] = 0;
           }
         });
+
+        globalDayIndex++;
       }
     }
   }
+
   return allAssigns[targetYear] || {};
 }
+        
 
 // --- ICONOS Y COMPONENTES VISUALES ---
 const EyeIcon = ({ visible, color }) => (

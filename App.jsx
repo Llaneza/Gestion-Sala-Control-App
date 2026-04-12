@@ -333,9 +333,33 @@ export default function App() {
 
       <nav className="no-print" style={{ display: 'flex', background: t.card, borderBottom: `1px solid ${t.border}`, position: 'sticky', top: 48, zIndex: 190, justifyContent: 'center' }}>
         <div style={{ display: 'flex', width: '100%', maxWidth: 800 }}>
-          {["calendar", "stats", canSeeEditor && "editor", isAdmin && "config"].filter(Boolean).map(v => (
-            <button key={v} onClick={() => setView(v)} style={{ flex: 1, padding: '15px 10px', color: view === v ? t.accent : t.sub, background: 'none', border: 'none', cursor: 'pointer', fontWeight: 'bold', borderBottom: view === v ? `3px solid ${t.accent}` : 'none', fontSize: 11 }}>{v.toUpperCase()}</button>
-          ))}
+          {["calendar", "stats", canSeeEditor && "editor", isAdmin && "config"].filter(Boolean).map(v => {
+  const labels = {
+    calendar: "Calendario",
+    stats: "Estadísticas",
+    editor: "Editor",
+    config: "Administración"
+  };
+  return (
+    <button
+      key={v}
+      onClick={() => setView(v)}
+      style={{
+        flex: 1,
+        padding: '15px 10px',
+        color: view === v ? t.accent : t.sub,
+        background: 'none',
+        border: 'none',
+        cursor: 'pointer',
+        fontWeight: 'bold',
+        borderBottom: view === v ? `3px solid ${t.accent}` : 'none',
+        fontSize: 11
+      }}
+    >
+      {labels[v]}
+    </button>
+  );
+})}
         </div>
       </nav>
 

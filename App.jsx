@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { initializeApp } from "firebase/app";
 import { getDatabase, ref, onValue, set } from "firebase/database";
+import cortevaLogo from "./Corteva_VerColor_RGB.png";
 
 // --- CONFIGURACIÓN DE FIREBASE ---
 const firebaseConfig = {
@@ -284,94 +285,209 @@ function computeStats(ops, year, asgn, off) {
   });
 }
 
-function PrintableYearCalendar({ ops, year, asgn, off }) {
+function formatDateTime(date) {
+  return new Intl.DateTimeFormat("es-ES", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit"
+  }).format(date);
+}
+
+function countAbsencesForYear(op, year) {
+  const counters = { VA: 0, EN: 0, BA: 0 };
+  Object.entries(op.calendar || {}).forEach(([dateKey, code]) => {
+    if (String(dateKey).startsWith(`${year}-`) && counters[code] !== undefined) {
+      counters[code] += 1;
+    }
+  });
+  return counters;
+}
+
+function PrintableHeader({ year, title, subtitle, generatedAt, generatedBy, operator }) {
   return (
-    <section className="print-only" style={{ padding: 24, color: "#0f172a", background: "#ffffff" }}>
-      <div style={{ marginBottom: 24 }}>
-        <div style={{ fontSize: 12, textTransform: "uppercase", letterSpacing: "0.08em", color: "#64748b", marginBottom: 8 }}>Exportación anual</div>
-        <h1 style={{ margin: 0, fontSize: 28 }}>Calendario anual {year}</h1>
+    <div style={{ display: "flex", justifyContent: "space-between", gap: 20, alignItems: "flex-start", marginBottom: 24, paddingBottom: 18, borderBottom: "2px solid #dbeafe" }}>
+      <div style={{ display: "flex", gap: 18, alignItems: "center" }}>
+        <img src={cortevaLogo} alt="Corteva" style={{ width: 88, height: "auto", objectFit: "contain" }} />
+        <div>
+          <div style={{ fontSize: 12, textTransform: "uppercase", letterSpacing: "0.1em", color: "#2563eb", marginBottom: 6 }}>CORTEVA</div>
+          <h1 style={{ margin: 0, fontSize: 28, lineHeight: 1.1 }}>{title}</h1>
+          <div style={{ marginTop: 8, fontSize: 13, color: "#475569" }}>{subtitle}</div>
+          {operator && <div style={{ marginTop: 6, fontSize: 13, color: "#0f172a", fontWeight: 700 }}>Operador: {operator.name}</div>}
+        </div>
+      </div>
+      <div style={{ minWidth: 220, background: "#f8fafc", border: "1px solid #dbeafe", borderRadius: 14, padding: 14 }}>
+        <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.08em", color: "#64748b", marginBottom: 8 }}>Documento</div>
+        <div style={{ fontSize: 13, marginBottom: 5 }}><strong>Año:</strong> {year}</div>
+        <div style={{ fontSize: 13, marginBottom: 5 }}><strong>Generado:</strong> {generatedAt}</div>
+        <div style={{ fontSize: 13 }}><strong>Usuario:</strong> {generatedBy}</div>
+      </div>
+    </div>
+  );
+}
+
+function PrintableLegend() {
+  const items = [
+    { label: "SC asignado", bg: "#dcfce7", color: "#166534" },
+    { label: "Mañana", bg: "#fef3c7", color: "#92400e" },
+    { label: "Noche", bg: "#e0e7ff", color: "#3730a3" },
+    { label: "Vacaciones / ausencia", bg: "#ecfccb", color: "#14532d" }
+  ];
+
+  return (
+    <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 18 }}>
+      {items.map(item => (
+        <div key={item.label} style={{ display: "flex", alignItems: "center", gap: 8, border: "1px solid #cbd5e1", borderRadius: 999, padding: "7px 12px" }}>
+          <span style={{ width: 12, height: 12, borderRadius: 999, background: item.bg, border: `1px solid ${item.color}` }} />
+          <span style={{ fontSize: 12, color: "#334155" }}>{item.label}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function PrintableMonthTable({ ops, year, monthIndex, asgn, off }) {
+  const monthName = MONTHS[monthIndex];
+  return (
+    <div key={monthName} style={{ marginBottom: 28, breakInside: "avoid-page" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+        <h2 style={{ margin: 0, fontSize: 18 }}>{monthName}</h2>
+        <span style={{ fontSize: 12, color: "#64748b" }}>Turnos y ausencias</span>
       </div>
 
-      {MONTHS.map((monthName, monthIndex) => (
-        <div key={monthName} style={{ marginBottom: 28, breakInside: "avoid-page" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-            <h2 style={{ margin: 0, fontSize: 18 }}>{monthName}</h2>
-            <span style={{ fontSize: 12, color: "#64748b" }}>Turnos y ausencias</span>
+      <div style={{ overflow: "hidden", border: "1px solid #cbd5e1", borderRadius: 12 }}>
+        <div style={{ display: "grid", gridTemplateColumns: `140px repeat(${dim(year, monthIndex)}, minmax(24px, 1fr))`, width: "100%" }}>
+          <div style={{ padding: "8px 10px", fontSize: 11, fontWeight: 700, background: "#f8fafc", borderRight: "1px solid #cbd5e1", borderBottom: "1px solid #cbd5e1" }}>
+            Operador
           </div>
+          {Array.from({ length: dim(year, monthIndex) }).map((_, dayIndex) => {
+            const day = dayIndex + 1;
+            const rotHeader = cshift(year, monthIndex, day, off);
+            return (
+              <div key={day} style={{ padding: "6px 0", borderRight: "1px solid #e2e8f0", borderBottom: "1px solid #cbd5e1", textAlign: "center", background: "#f8fafc" }}>
+                <div style={{ fontSize: 9, color: dow(year, monthIndex, day) >= 5 ? "#dc2626" : "#64748b" }}>{DOW_S[dow(year, monthIndex, day)]}</div>
+                <div style={{ fontSize: 11, fontWeight: 700 }}>{day}</div>
+                <div style={{ fontSize: 9, color: TURNO_DEF[rotHeader]?.color || "#64748b" }}>{rotHeader === "D" ? "" : rotHeader}</div>
+              </div>
+            );
+          })}
 
-          <div style={{ overflow: "hidden", border: "1px solid #cbd5e1", borderRadius: 12 }}>
-            <div style={{ display: "grid", gridTemplateColumns: `140px repeat(${dim(year, monthIndex)}, minmax(24px, 1fr))`, width: "100%" }}>
-              <div style={{ padding: "8px 10px", fontSize: 11, fontWeight: 700, background: "#f8fafc", borderRight: "1px solid #cbd5e1", borderBottom: "1px solid #cbd5e1" }}>
-                Operador
+          {ops.map(op => (
+            <div key={op.id} style={{ display: "contents" }}>
+              <div style={{ padding: "8px 10px", fontSize: 11, fontWeight: 700, borderRight: "1px solid #cbd5e1", borderBottom: "1px solid #e2e8f0", background: "#ffffff" }}>
+                {op.name}
               </div>
               {Array.from({ length: dim(year, monthIndex) }).map((_, dayIndex) => {
                 const day = dayIndex + 1;
-                const rotHeader = cshift(year, monthIndex, day, off);
+                const dateKey = mk(year, monthIndex + 1, day);
+                const absence = op.calendar?.[dateKey];
+                const rotation = cshift(year, monthIndex, day, off);
+                const assignment = asgn[dateKey]?.[op.id];
+                const finalCode = absence || assignment || rotation;
+
+                let background = "#ffffff";
+                let color = "#0f172a";
+
+                if (absence) {
+                  background = `${ABSENCE[absence].color}33`;
+                } else if (assignment === "SC") {
+                  background = "#dcfce7";
+                  color = "#166534";
+                } else if (rotation === "M") {
+                  background = "#fef3c7";
+                  color = "#92400e";
+                } else if (rotation === "N") {
+                  background = "#e0e7ff";
+                  color = "#3730a3";
+                }
+
                 return (
-                  <div key={day} style={{ padding: "6px 0", borderRight: "1px solid #e2e8f0", borderBottom: "1px solid #cbd5e1", textAlign: "center", background: "#f8fafc" }}>
-                    <div style={{ fontSize: 9, color: dow(year, monthIndex, day) >= 5 ? "#dc2626" : "#64748b" }}>{DOW_S[dow(year, monthIndex, day)]}</div>
-                    <div style={{ fontSize: 11, fontWeight: 700 }}>{day}</div>
-                    <div style={{ fontSize: 9, color: TURNO_DEF[rotHeader]?.color || "#64748b" }}>{rotHeader === "D" ? "" : rotHeader}</div>
+                  <div
+                    key={dateKey}
+                    style={{
+                      height: 28,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      borderRight: "1px solid #e2e8f0",
+                      borderBottom: "1px solid #e2e8f0",
+                      fontSize: 10,
+                      fontWeight: finalCode !== "D" ? 700 : 500,
+                      background,
+                      color
+                    }}
+                  >
+                    {finalCode}
                   </div>
                 );
               })}
-
-              {ops.map(op => (
-                <div key={op.id} style={{ display: "contents" }}>
-                  <div style={{ padding: "8px 10px", fontSize: 11, fontWeight: 700, borderRight: "1px solid #cbd5e1", borderBottom: "1px solid #e2e8f0", background: "#ffffff" }}>
-                    {op.name}
-                  </div>
-                  {Array.from({ length: dim(year, monthIndex) }).map((_, dayIndex) => {
-                    const day = dayIndex + 1;
-                    const dateKey = mk(year, monthIndex + 1, day);
-                    const absence = op.calendar?.[dateKey];
-                    const rotation = cshift(year, monthIndex, day, off);
-                    const assignment = asgn[dateKey]?.[op.id];
-                    const finalCode = absence || assignment || rotation;
-
-                    let background = "#ffffff";
-                    let color = "#0f172a";
-
-                    if (absence) {
-                      background = `${ABSENCE[absence].color}33`;
-                      color = "#0f172a";
-                    } else if (assignment === "SC") {
-                      background = "#dcfce7";
-                      color = "#166534";
-                    } else if (rotation === "M") {
-                      background = "#fef3c7";
-                      color = "#92400e";
-                    } else if (rotation === "N") {
-                      background = "#e0e7ff";
-                      color = "#3730a3";
-                    }
-
-                    return (
-                      <div
-                        key={dateKey}
-                        style={{
-                          height: 28,
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          borderRight: "1px solid #e2e8f0",
-                          borderBottom: "1px solid #e2e8f0",
-                          fontSize: 10,
-                          fontWeight: finalCode !== "D" ? 700 : 500,
-                          background,
-                          color
-                        }}
-                      >
-                        {finalCode}
-                      </div>
-                    );
-                  })}
-                </div>
-              ))}
             </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PrintableIndividualCalendar({ operator, year, asgn, off, generatedAt, generatedBy, statsItem }) {
+  const absences = countAbsencesForYear(operator, year);
+  return (
+    <section className="print-only" style={{ padding: 24, color: "#0f172a", background: "#ffffff" }}>
+      <PrintableHeader
+        year={year}
+        title={`Calendario individual ${year}`}
+        subtitle="Planificación anual individual para consulta, impresión o archivo PDF."
+        generatedAt={generatedAt}
+        generatedBy={generatedBy}
+        operator={operator}
+      />
+
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: 14, marginBottom: 20 }}>
+        <div style={{ padding: 14, borderRadius: 14, background: "#f8fafc", border: "1px solid #dbeafe" }}>
+          <div style={{ fontSize: 11, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.08em" }}>Horas SC</div>
+          <div style={{ fontSize: 26, fontWeight: 800 }}>{statsItem?.hSC || 0}</div>
+        </div>
+        <div style={{ padding: 14, borderRadius: 14, background: "#f8fafc", border: "1px solid #dbeafe" }}>
+          <div style={{ fontSize: 11, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.08em" }}>SC</div>
+          <div style={{ fontSize: 26, fontWeight: 800 }}>{statsItem?.sc || 0}</div>
+        </div>
+        <div style={{ padding: 14, borderRadius: 14, background: "#f8fafc", border: "1px solid #dbeafe" }}>
+          <div style={{ fontSize: 11, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.08em" }}>Noches</div>
+          <div style={{ fontSize: 26, fontWeight: 800 }}>{statsItem?.nSC || 0}</div>
+        </div>
+        <div style={{ padding: 14, borderRadius: 14, background: "#f8fafc", border: "1px solid #dbeafe" }}>
+          <div style={{ fontSize: 11, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.08em" }}>Ausencias</div>
+          <div style={{ fontSize: 16, fontWeight: 700, lineHeight: 1.6 }}>
+            VA {absences.VA} · EN {absences.EN} · BA {absences.BA}
           </div>
         </div>
-      ))}
+      </div>
+
+      <PrintableLegend />
+      {MONTHS.map((_, monthIndex) => <PrintableMonthTable key={monthIndex} ops={[operator]} year={year} monthIndex={monthIndex} asgn={asgn} off={off} />)}
+      <div style={{ marginTop: 16, paddingTop: 12, borderTop: "1px solid #cbd5e1", fontSize: 11, color: "#64748b" }}>
+        Documento generado automáticamente por Sala de Control · CORTEVA
+      </div>
+    </section>
+  );
+}
+
+function PrintableYearCalendar({ ops, year, asgn, off, generatedAt, generatedBy }) {
+  return (
+    <section className="print-only" style={{ padding: 24, color: "#0f172a", background: "#ffffff" }}>
+      <PrintableHeader
+        year={year}
+        title={`Calendario anual ${year}`}
+        subtitle="Planificación general de personal para consulta, archivo o impresión."
+        generatedAt={generatedAt}
+        generatedBy={generatedBy}
+      />
+      <PrintableLegend />
+      {MONTHS.map((_, monthIndex) => <PrintableMonthTable key={monthIndex} ops={ops} year={year} monthIndex={monthIndex} asgn={asgn} off={off} />)}
+      <div style={{ marginTop: 16, paddingTop: 12, borderTop: "1px solid #cbd5e1", fontSize: 11, color: "#64748b" }}>
+        Documento generado automáticamente por Sala de Control · CORTEVA
+      </div>
     </section>
   );
 }
@@ -389,6 +505,8 @@ export default function App() {
   const [themeMode, setThemeMode] = useState('dark');
   const [manualTheme, setManualTheme] = useState(false);
   const [showConfigPass, setShowConfigPass] = useState(false);
+  const [printMode, setPrintMode] = useState("annual");
+  const [printOpId, setPrintOpId] = useState("");
 
   useEffect(() => {
     onValue(ref(db, 'ops'), (s) => { if (s.val()) setOps(s.val()); });
@@ -416,6 +534,15 @@ export default function App() {
   const asgn = useMemo(() => autoAssign(ops, activeYear, off), [ops, activeYear, off]);
   const stats = useMemo(() => computeStats(ops, activeYear, asgn, off), [ops, activeYear, asgn, off]);
   const currentMonthLabel = `${MONTHS[month]} ${activeYear}`;
+  const selectedPrintOp = useMemo(() => ops.find(op => String(op.id) === String(printOpId)) || ops[0] || null, [ops, printOpId]);
+  const selectedPrintStats = useMemo(() => stats.find(op => String(op.id) === String(selectedPrintOp?.id)), [stats, selectedPrintOp]);
+  const generatedAt = formatDateTime(new Date());
+
+  useEffect(() => {
+    if (!printOpId && ops[0]?.id) {
+      setPrintOpId(String(ops[0].id));
+    }
+  }, [ops, printOpId]);
 
   const handlePrevMonth = () => { if (month === 0) { setMonth(11); setAY(v => v - 1); } else setMonth(month - 1); };
   const handleNextMonth = () => { if (month === 11) { setMonth(0); setAY(v => v + 1); } else setMonth(month + 1); };
@@ -437,6 +564,7 @@ export default function App() {
           body { background: white !important; color: black !important; }
           .app-shell { max-width: none !important; padding: 0 !important; }
           .calendar-container { display: none !important; }
+          @page { size: A4 landscape; margin: 12mm; }
         }
         .app-shell { max-width: 1440px; margin: 0 auto; padding: 24px 14px 40px; }
         .glass-panel { background: ${t.card}; border: 1px solid ${t.border}; box-shadow: 0 18px 50px rgba(15, 23, 42, 0.16); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
@@ -543,9 +671,18 @@ export default function App() {
                 <div style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.08em', color: t.sub, marginBottom: 6 }}>Calendario operativo</div>
                 <h2 style={{ margin: 0, minWidth: 120, textAlign: 'center', fontSize: 24, color: t.title, letterSpacing: '-0.02em' }}>{currentMonthLabel}</h2>
               </div>
-              <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+              <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                 <button style={{ padding: '10px 14px', borderRadius: 12, border: `1px solid ${t.border}`, background: t.shell, color: t.text, cursor: 'pointer', fontSize: 12, fontWeight: 700 }} onClick={handlePrevMonth}>Mes anterior</button>
                 <button style={{ padding: '10px 14px', borderRadius: 12, border: `1px solid ${t.border}`, background: t.accentSoft, color: t.title, cursor: 'pointer', fontSize: 12, fontWeight: 700 }} onClick={handleNextMonth}>Mes siguiente</button>
+                <select value={printMode} onChange={e => setPrintMode(e.target.value)} style={{ padding: '10px 14px', borderRadius: 12, border: `1px solid ${t.border}`, background: t.shell, color: t.text, fontSize: 12, minWidth: 210 }}>
+                  <option value="annual">Exportación anual completa</option>
+                  <option value="individual">Calendario individual</option>
+                </select>
+                {printMode === "individual" && (
+                  <select value={printOpId} onChange={e => setPrintOpId(e.target.value)} style={{ padding: '10px 14px', borderRadius: 12, border: `1px solid ${t.border}`, background: t.shell, color: t.text, fontSize: 12, minWidth: 220 }}>
+                    {ops.map(op => <option key={op.id} value={String(op.id)}>{op.name}</option>)}
+                  </select>
+                )}
                 <button
                   style={{ padding: '10px 14px', borderRadius: 12, border: `1px solid ${t.border}`, background: t.cardSolid, color: t.text, cursor: 'pointer', fontSize: 12, fontWeight: 700 }}
                   onClick={() => window.print()}
@@ -594,7 +731,28 @@ export default function App() {
           </div>
         )}
 
-        {view === "calendar" && <PrintableYearCalendar ops={ops} year={activeYear} asgn={asgn} off={off} />}
+        {view === "calendar" && printMode === "annual" && (
+          <PrintableYearCalendar
+            ops={ops}
+            year={activeYear}
+            asgn={asgn}
+            off={off}
+            generatedAt={generatedAt}
+            generatedBy={session.user}
+          />
+        )}
+
+        {view === "calendar" && printMode === "individual" && selectedPrintOp && (
+          <PrintableIndividualCalendar
+            operator={selectedPrintOp}
+            year={activeYear}
+            asgn={asgn}
+            off={off}
+            generatedAt={generatedAt}
+            generatedBy={session.user}
+            statsItem={selectedPrintStats}
+          />
+        )}
 
         {view === "stats" && (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 20 }}>

@@ -15,7 +15,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
-// --- UTILS SEGURIDAD ---
+// --- UTILIDADES DE SEGURIDAD ---
 function simpleHash(str) {
   let h = 0x811c9dc5;
   for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = (h * 0x01000193) >>> 0; }
@@ -62,7 +62,7 @@ function cshift(y, m, d, off = 0) {
   return CYCLE[Math.floor(pos / 7)][pos % 7];
 }
 
-// --FUNCIÓN AUTOASIGNACIÓN--
+// --- FUNCIÓN DE AUTOASIGNACIÓN ---
 function autoAssign(ops, targetYear, off) {
 
   // --- PREPARACIÓN ---
@@ -166,17 +166,17 @@ function autoAssign(ops, targetYear, off) {
 
     let cost = 0;
 
-    // 🔥 NOCHES (PRIORIDAD MÁXIMA)
+    // NOCHES (PRIORIDAD MÁXIMA)
     ns.forEach(n => {
       cost += Math.pow(n - avgN, 2) * 15;
     });
 
-    // 🔥 HORAS
+    // HORAS
     hs.forEach(h => {
       cost += Math.pow(h - avgH, 2) * 3;
     });
 
-    // 🔥 RACHAS COMPLETAS (FORMA)
+    // RACHAS COMPLETAS (FORMA)
     const streaks = getStreaks(assign);
 
     streaks.forEach(len => {
@@ -319,7 +319,7 @@ export default function App() {
 
       <header className="no-print" style={{ background: t.card, padding: "10px 20px", display: 'flex', justifyContent: 'space-between', borderBottom: `1px solid ${t.border}`, alignItems: 'center', position: 'sticky', top: 0, zIndex: 200 }}>
         <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-          <span style={{ fontWeight: 800, color: t.accent, fontSize: 16 }}>SALA DE CONTROL ☁️</span>
+          <span style={{ fontWeight: 800, color: t.accent, fontSize: 16 }}>SALA DE CONTROL</span>
           <button onClick={() => { setManualTheme(true); setThemeMode(themeMode === 'dark' ? 'light' : 'dark'); }} style={{ background: t.bg, border: `1px solid ${t.border}`, borderRadius: 8, padding: '4px 8px', cursor: 'pointer' }}>{themeMode === 'dark' ? '🌙' : '☀️'}</button>
           <select value={activeYear} onChange={e => setAY(Number(e.target.value))} style={{ background: t.bg, color: t.text, border: `1px solid ${t.border}`, borderRadius: 4, padding: '4px 8px', fontSize: 12 }}>
             {[2024, 2025, 2026, 2027, 2028, 2029, 2030].map(y => <option key={y} value={y}>{y}</option>)}
@@ -428,7 +428,7 @@ export default function App() {
         {view === "config" && isAdmin && (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 30 }}>
             <div style={{ background: t.card, padding: 25, borderRadius: 16, border: `1px solid ${t.border}` }}>
-              <h3 style={{ color: t.accent }}>⚙️ OPERADORES</h3>
+              <h3 style={{ color: t.accent }}>OPERADORES</h3>
               <div style={{ display: 'flex', gap: 10, marginBottom: 20 }}>
                 <input id="newOpN" placeholder="Nombre..." style={{ flex: 1, padding: 12, borderRadius: 8, border: `1px solid ${t.border}`, background: t.bg, color: t.text }} />
                 <button onClick={() => { const n = document.getElementById('newOpN').value; if(n) { saveOps([...ops, { id: Date.now(), name: n, color: '#'+Math.random().toString(16).slice(2,8), calendar: {} }]); document.getElementById('newOpN').value = ''; } }} style={{ padding: '0 20px', background: t.accent, borderRadius: 8, fontWeight: 'bold', cursor: 'pointer' }}>AÑADIR</button>
@@ -443,7 +443,7 @@ export default function App() {
 
             {isSuper && (
               <div style={{ background: t.card, padding: 25, borderRadius: 16, border: `1px solid ${t.border}` }}>
-                <h3 style={{ color: t.accent }}>🔐 GESTIÓN DE ACCESOS</h3>
+              <h3 style={{ color: t.accent }}>GESTIÓN DE ACCESOS</h3>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
                   <input id="newU" placeholder="Usuario" style={{ padding: 10, borderRadius: 8, border: `1px solid ${t.border}`, background: t.bg, color: t.text }} />
                   <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
@@ -487,7 +487,7 @@ function EditorComponent({ ops, saveOps, activeYear, theme: t, off, canEdit }) {
 
   return (
     <div style={{ background: t.card, padding: 25, borderRadius: 16, border: `1px solid ${t.border}` }}>
-      {!canEdit && <p style={{ color: '#EF4444', fontSize: 12, marginBottom: 15, fontWeight: 'bold' }}>⚠️ MODO LECTURA</p>}
+      {!canEdit && <p style={{ color: '#EF4444', fontSize: 12, marginBottom: 15, fontWeight: 'bold' }}>MODO LECTURA</p>}
       <select value={selOp} onChange={e => setSelOp(Number(e.target.value))} style={{ padding: 12, width: '100%', background: t.bg, color: t.text, border: `1px solid ${t.border}`, borderRadius: 8, marginBottom: 20 }}>
         {ops.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
       </select>

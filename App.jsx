@@ -531,6 +531,14 @@ export default function App() {
   const canEdit = isAdmin || session?.role === "editor";
   const canSeeEditor = canEdit || session?.role === "guest";
 
+  const sessionDisplayName = session?.role === "guest" ? "Invitado" : session?.user;
+  const sessionDisplayRole = session?.role === "guest" ? "" : session?.role;
+  const profileDisplayRole = session?.role === "guest"
+    ? "Invitado"
+    : session?.role
+      ? session.role.charAt(0).toUpperCase() + session.role.slice(1)
+      : "";
+
   const asgn = useMemo(() => autoAssign(ops, activeYear, off), [ops, activeYear, off]);
   const stats = useMemo(() => computeStats(ops, activeYear, asgn, off), [ops, activeYear, asgn, off]);
   const currentMonthLabel = `${MONTHS[month]} ${activeYear}`;
@@ -599,10 +607,10 @@ export default function App() {
           </select>
         </div>
         <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
-          <div style={{ padding: '10px 14px', borderRadius: 14, background: t.shell, border: `1px solid ${t.border}` }}>
+                    <div style={{ padding: '10px 14px', borderRadius: 14, background: t.shell, border: `1px solid ${t.border}` }}>
             <div style={{ fontSize: 11, color: t.sub, marginBottom: 3 }}>Sesión activa</div>
-            <div style={{ fontSize: 13, fontWeight: 700, color: t.title }}>{session.user}</div>
-            <div style={{ fontSize: 11, color: t.sub }}>{session.role}</div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: t.title }}>{sessionDisplayName}</div>
+            {sessionDisplayRole && <div style={{ fontSize: 11, color: t.sub }}>{sessionDisplayRole}</div>}
           </div>
           <button onClick={() => setSession(null)} style={{ background: t.dangerSoft, color: '#EF4444', border: `1px solid rgba(239, 68, 68, 0.24)`, padding: '10px 14px', borderRadius: 12, fontSize: 12, fontWeight: 'bold', cursor: 'pointer' }}>Cerrar sesión</button>
         </div>
@@ -658,7 +666,7 @@ export default function App() {
           </div>
           <div className="glass-panel hero-card">
             <div className="hero-kpi-label">Perfil</div>
-            <div className="hero-kpi-value" style={{ fontSize: 22 }}>{session.role}</div>
+            <div className="hero-kpi-value" style={{ fontSize: 22 }}>{profileDisplayRole}</div>
             <div className="hero-sub">Permisos activos de la sesión actual.</div>
           </div>
         </section>

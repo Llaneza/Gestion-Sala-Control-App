@@ -557,6 +557,7 @@ const profileDisplayRole = session?.role === "guest" ? "Invitado" : (roleLabels[
   const selectedPrintOp = useMemo(() => ops.find(op => String(op.id) === String(printOpId)) || ops[0] || null, [ops, printOpId]);
   const selectedPrintStats = useMemo(() => stats.find(op => String(op.id) === String(selectedPrintOp?.id)), [stats, selectedPrintOp]);
   const generatedAt = formatDateTime(new Date());
+  const todayKey = mk(today.getFullYear(), today.getMonth() + 1, today.getDate());
 
   useEffect(() => {
     if (!printOpId && ops[0]?.id) {
@@ -714,15 +715,31 @@ const profileDisplayRole = session?.role === "guest" ? "Invitado" : (roleLabels[
               <div className="calendar-grid">
                 <div className="sticky-col" style={{ height: 55, borderBottom: `1px solid ${t.border}` }} />
                 {Array.from({ length: dim(activeYear, month) }).map((_, i) => {
-                  const rotHeader = cshift(activeYear, month, i+1, off);
-                  return (
-                    <div key={i} className="cell-day header-day">
-                      <span style={{ color: dow(activeYear, month, i+1) >= 5 ? '#EF4444' : t.sub, fontSize: 9 }}>{DOW_S[dow(activeYear, month, i+1)]}</span>
-                      <span style={{ fontWeight: 'bold', fontSize: 11 }}>{i+1}</span>
-                      <span style={{ fontSize: 9, fontWeight: '800', color: TURNO_DEF[rotHeader]?.color }}>{rotHeader === 'D' ? '' : rotHeader}</span>
-                    </div>
-                  );
-                })}
+  const dayNumber = i + 1;
+  const rotHeader = cshift(activeYear, month, dayNumber, off);
+  const headerDateKey = mk(activeYear, month + 1, dayNumber);
+  const isToday = headerDateKey === todayKey;
+
+  return (
+    <div
+      key={i}
+      className="cell-day header-day"
+      style={{
+        background: isToday ? t.accentSoft : undefined,
+        boxShadow: isToday ? `inset 0 0 0 2px ${t.accent}` : undefined,
+        borderRadius: isToday ? 12 : undefined
+      }}
+    >
+      <span style={{ color: dow(activeYear, month, dayNumber) >= 5 ? '#EF4444' : t.sub, fontSize: 9 }}>
+        {DOW_S[dow(activeYear, month, dayNumber)]}
+      </span>
+      <span style={{ fontWeight: 'bold', fontSize: 11 }}>{dayNumber}</span>
+      <span style={{ fontSize: 9, fontWeight: '800', color: TURNO_DEF[rotHeader]?.color }}>
+        {rotHeader === 'D' ? '' : rotHeader}
+      </span>
+    </div>
+  );
+})}
                 {ops.map(op => (
                   <div key={op.id} style={{ display: 'contents' }}>
                     <div className="sticky-col" style={{ padding: '10px 12px', fontSize: 12, borderTop: `1px solid ${t.border}`, display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -730,18 +747,34 @@ const profileDisplayRole = session?.role === "guest" ? "Invitado" : (roleLabels[
                       <span style={{ fontWeight: 'bold', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{op.name}</span>
                     </div>
                     {Array.from({ length: dim(activeYear, month) }).map((_, i) => {
-                      const dk = mk(activeYear, month+1, i+1), abs = op.calendar?.[dk], rot = cshift(activeYear, month, i+1, off), calcAsgn = asgn[dk]?.[op.id];
-                      const finalCode = abs || calcAsgn || rot;
-                      let cellBg = "transparent", cellColor = t.text;
-                      if (abs) { cellBg = ABSENCE[abs].color; cellColor = "#000"; }
-                      else if (calcAsgn === "SC") { cellBg = EXTRA_VISUALS.SC.bg; cellColor = EXTRA_VISUALS.SC.color; }
-                      else if (TURNO_DEF[rot]) { cellBg = TURNO_DEF[rot].bg; cellColor = TURNO_DEF[rot].color; }
-                      return (
-                        <div key={i} className="cell-day" style={{ borderTop: `1px solid ${t.border}`, background: cellBg, color: cellColor, fontWeight: rot !== 'D' || abs || calcAsgn === 'SC' ? 'bold' : 'normal' }}>
-                          {finalCode}
-                        </div>
-                      );
-                    })}
+  const dk = mk(activeYear, month + 1, i + 1);
+  const abs = op.calendar?.[dk];
+  const rot = cshift(activeYear, month, i + 1, off);
+  const calcAsgn = asgn[dk]?.[op.id];
+  const finalCode = abs || calcAsgn || rot;
+  const isToday = dk === todayKey;
+
+  let cellBg = "transparent", cellColor = t.text;
+  if (abs) { cellBg = ABSENCE[abs].color; cellColor = "#000"; }
+  else if (calcAsgn === "SC") { cellBg = EXTRA_VISUALS.SC.bg; cellColor = EXTRA_VISUALS.SC.color; }
+  else if (TURNO_DEF[rot]) { cellBg = TURNO_DEF[rot].bg; cellColor = TURNO_DEF[rot].color; }
+
+  return (
+    <div
+      key={i}
+      className="cell-day"
+      style={{
+        borderTop: `1px solid ${t.border}`,
+        background: cellBg,
+        color: cellColor,
+        fontWeight: rot !== 'D' || abs || calcAsgn === 'SC' ? 'bold' : 'normal',
+        boxShadow: isToday ? `inset 0 0 0 2px ${t.accent}` : undefined
+      }}
+    >
+      {finalCode}
+    </div>
+  );
+})}
                   </div>
                 ))}
               </div>

@@ -587,7 +587,7 @@ export default function App() {
         .print-only { display: none; }
       `}</style>
 
-      <header className="no-print glass-panel" style={{ margin: '14px 14px 0', padding: "14px 18px", display: 'flex', justifyContent: 'space-between', borderRadius: 22, alignItems: 'center', position: 'sticky', top: 12, zIndex: 200, gap: 12, flexWrap: 'wrap' }}>
+      <header className="no-print glass-panel" style={{ margin: '14px 14px 0', padding: "14px 18px", display: 'flex', justifyContent: 'space-between', borderRadius: 22, alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
         <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
           <div style={{ padding: '10px 14px', borderRadius: 14, background: t.accentSoft, border: `1px solid ${t.border}` }}>
             <div style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.08em', color: t.sub }}>Panel</div>
@@ -608,7 +608,7 @@ export default function App() {
         </div>
       </header>
 
-      <nav className="no-print glass-panel" style={{ display: 'flex', margin: '14px 14px 0', padding: 8, borderRadius: 18, position: 'sticky', top: 108, zIndex: 190, justifyContent: 'center' }}>
+      <nav className="no-print glass-panel" style={{ display: 'flex', margin: '14px 14px 0', padding: 8, borderRadius: 18, justifyContent: 'center' }}>
         <div style={{ display: 'flex', width: '100%', maxWidth: 820, gap: 8, flexWrap: 'wrap' }}>
           {["calendar", "stats", canSeeEditor && "editor", isAdmin && "config"].filter(Boolean).map(v => {
   const labels = {
@@ -643,10 +643,9 @@ export default function App() {
       <main className="app-shell">
         <section className="hero-grid no-print">
           <div className="glass-panel hero-card" style={{ background: `linear-gradient(135deg, ${t.card} 0%, ${t.accentSoft} 100%)` }}>
-            <div style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.12em', color: t.accent, marginBottom: 12 }}>Gestión de personal</div>
-            <h1 className="hero-title">Vista operativa de turnos, ausencias y control diario.</h1>
-            <p className="hero-sub">La lógica de asignación sigue intacta. Esta capa solo mejora la lectura, la presentación y la comodidad de uso en el día a día.</p>
-          </div>
+  <div style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.12em', color: t.accent, marginBottom: 12 }}>Gestión de personal</div>
+  <h1 className="hero-title">Vista operativa de turnos, ausencias y control diario.</h1>
+</div>
           <div className="glass-panel hero-card">
             <div className="hero-kpi-label">Operadores</div>
             <div className="hero-kpi-value">{ops.length}</div>

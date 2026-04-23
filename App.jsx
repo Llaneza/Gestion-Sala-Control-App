@@ -23,7 +23,7 @@ function simpleHash(str) {
   return h.toString(16);
 }
 
-const DEFAULT_ADMINS = [{ user: "admin", passHash: simpleHash("admin1234"), role: "superadmin" }];
+const DEFAULT_ADMINS = [{ user: "admin", passHash: simpleHash("admin1234"), role: "admin" }];
 
 const THEMES = {
   dark: {
@@ -527,17 +527,29 @@ export default function App() {
 
   const t = THEMES[themeMode];
   const isSuper = session?.role === "superadmin";
-  const isAdmin = session?.role === "admin" || isSuper;
-  const canEdit = isAdmin || session?.role === "editor";
-  const canSeeEditor = canEdit || session?.role === "guest";
+const isAdmin = session?.role === "admin" || isSuper;
+const canEdit = isAdmin || session?.role === "editor";
+const canSeeEditor = canEdit || session?.role === "guest";
 
-  const sessionDisplayName = session?.role === "guest" ? "Invitado" : session?.user;
-  const sessionDisplayRole = session?.role === "guest" ? "" : session?.role;
-  const profileDisplayRole = session?.role === "guest"
+const roleLabels = {
+  guest: "Invitado",
+  admin: "Administrador",
+  superadmin: "Administrador",
+  editor: "Editor"
+};
+
+const sessionDisplayName =
+  session?.role === "guest"
     ? "Invitado"
-    : session?.role
-      ? session.role.charAt(0).toUpperCase() + session.role.slice(1)
-      : "";
+    : session?.role === "editor"
+      ? "Editor"
+      : isAdmin
+        ? "Admin"
+        : (session?.user || "");
+
+const sessionDisplayRole = session?.role === "guest" ? "" : (roleLabels[session?.role] || "");
+
+const profileDisplayRole = session?.role === "guest" ? "Invitado" : (roleLabels[session?.role] || "");
 
   const asgn = useMemo(() => autoAssign(ops, activeYear, off), [ops, activeYear, off]);
   const stats = useMemo(() => computeStats(ops, activeYear, asgn, off), [ops, activeYear, asgn, off]);
@@ -609,8 +621,7 @@ export default function App() {
         <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
                     <div style={{ padding: '10px 14px', borderRadius: 14, background: t.shell, border: `1px solid ${t.border}` }}>
             <div style={{ fontSize: 11, color: t.sub, marginBottom: 3 }}>Sesión activa</div>
-            <div style={{ fontSize: 13, fontWeight: 700, color: t.title }}>{sessionDisplayName}</div>
-            {sessionDisplayRole && <div style={{ fontSize: 11, color: t.sub }}>{sessionDisplayRole}</div>}
+<div style={{ fontSize: 13, fontWeight: 700, color: t.title }}>{sessionDisplayRole || sessionDisplayName}</div>
           </div>
           <button onClick={() => setSession(null)} style={{ background: t.dangerSoft, color: '#EF4444', border: `1px solid rgba(239, 68, 68, 0.24)`, padding: '10px 14px', borderRadius: 12, fontSize: 12, fontWeight: 'bold', cursor: 'pointer' }}>Cerrar sesión</button>
         </div>

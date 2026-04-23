@@ -519,11 +519,12 @@ export default function App() {
   const saveOff = (n) => set(ref(db, 'offset'), n);
 
   useEffect(() => {
-    if (!manualTheme) {
-      const hour = new Date().getHours();
-      setThemeMode(hour >= 8 && hour < 20 ? 'light' : 'dark');
-    }
-  }, [manualTheme]);
+  if (session) {
+    const now = new Date();
+    setAY(now.getFullYear());
+    setMonth(now.getMonth());
+  }
+}, [session]);
 
   const t = THEMES[themeMode];
   const isSuper = session?.role === "superadmin";

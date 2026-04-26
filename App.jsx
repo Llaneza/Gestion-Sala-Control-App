@@ -492,8 +492,13 @@ function PrintableYearCalendar({ ops, year, asgn, off, generatedAt, generatedBy 
   );
 }
 
-// --- APP PRINCIPAL ---
-export default function App() {
+ // --- APP PRINCIPAL ---
+function getThemeBySchedule() {
+  const hour = new Date().getHours();
+  return hour >= 6 && hour < 19 ? "light" : "dark";
+}
+
+ export default function App() {
   const today = new Date();
   const [session, setSession] = useState(null);
   const [admins, setAdmins] = useState(DEFAULT_ADMINS);
@@ -502,7 +507,7 @@ export default function App() {
   const [view, setView] = useState("calendar");
   const [activeYear, setAY] = useState(today.getFullYear());
   const [month, setMonth] = useState(today.getMonth());
-  const [themeMode, setThemeMode] = useState('dark');
+  const [themeMode, setThemeMode] = useState(getThemeBySchedule);
   const [manualTheme, setManualTheme] = useState(false);
   const [showConfigPass, setShowConfigPass] = useState(false);
   const [printMode, setPrintMode] = useState("annual");
@@ -513,7 +518,17 @@ export default function App() {
     onValue(ref(db, 'admins'), (s) => { if (s.val()) setAdmins(s.val()); });
     onValue(ref(db, 'offset'), (s) => { if (s.val() !== null) setOff(s.val()); });
   }, []);
+  useEffect(() => {
+  const applyThemeBySchedule = () => {
+    setThemeMode(getThemeBySchedule());
+  };
 
+  applyThemeBySchedule();
+
+  const intervalId = setInterval(applyThemeBySchedule, 60 * 1000);
+
+  return () => clearInterval(intervalId);
+  }, []);
   const saveOps = (n) => set(ref(db, 'ops'), n);
   const saveAdmins = (n) => set(ref(db, 'admins'), n);
   const saveOff = (n) => set(ref(db, 'offset'), n);
@@ -843,7 +858,7 @@ const profileDisplayRole = session?.role === "guest" ? "Invitado" : (roleLabels[
               <input type="number" value={off} onChange={e => saveOff(Number(e.target.value))} style={{ padding: 12, width: '100%', borderRadius: 12, border: `1px solid ${t.border}`, background: t.shell, color: t.text }} />
             </div>
 
-            {isSuper && (
+             {isAdmin && (
               <div className="glass-panel section-card" style={{ padding: 25 }}>
               <h3 style={{ color: t.title, marginTop: 0 }}>GESTIÓN DE ACCESOS</h3>
                 <p style={{ color: t.sub, fontSize: 13, marginTop: 0, marginBottom: 18 }}>Creación y retirada de usuarios con permisos administrativos o de edición.</p>
@@ -937,7 +952,26 @@ function LoginScreen({ admins, onLogin, theme: t }) {
             <button onClick={() => setShowPass(!showPass)} style={{ position: 'absolute', right: 12, background: 'none', border: 'none', cursor: 'pointer', display: 'flex' }}><EyeIcon visible={showPass} color={t.sub} /></button>
           </div>
           <button onClick={() => { const f = admins.find(a => a.user === user && a.passHash === simpleHash(pass)); if(f) onLogin(f); else alert("Acceso denegado"); }} style={{ padding: 16, background: t.accentSoft, color: t.title, borderRadius: 14, border: `1px solid ${t.border}`, fontWeight: 'bold', cursor: 'pointer' }}>ENTRAR</button>
-          <button onClick={() => onLogin({ role: "guest", user: "Invitado" })} style={{ background: 'none', border: 'none', color: t.sub, textDecoration: 'underline', cursor: 'pointer', fontSize: 13 }}>Modo lectura</button>
+          <button
+  onClick={() => onLogin({ role: "guest", user: "Invitado" })}
+  style={{
+    padding: '14px 16px',
+    background: `linear-gradient(180deg, ${t.shell} 0%, ${t.bg} 100%)`,
+    border: `1px solid ${t.border}`,
+    borderRadius: 14,
+    cursor: 'pointer',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    color: t.title,
+    boxShadow: '0 8px 22px rgba(15, 23, 42, 0.06)'
+  }}
+>
+  <span style={{ fontSize: 14, fontWeight: 800 }}>Modo lectura</span>
+  <span style={{ fontSize: 12, color: t.sub }}>Acceso de consulta sin permisos de edición</span>
+</button>
         </div>
       </div>
     </div>

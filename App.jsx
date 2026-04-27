@@ -304,6 +304,19 @@ function countAbsencesForYear(op, year) {
   });
   return counters;
 }
+function stableStringify(value) {
+  if (value === undefined) return "undefined";
+  if (value === null || typeof value !== "object") return JSON.stringify(value);
+
+  if (Array.isArray(value)) {
+    return `[${value.map(stableStringify).join(",")}]`;
+  }
+
+  return `{${Object.keys(value)
+    .sort()
+    .map(key => `${JSON.stringify(key)}:${stableStringify(value[key])}`)
+    .join(",")}}`;
+}
 
 function PrintableHeader({ year, title, subtitle, generatedAt, generatedBy, operator }) {
   return (
@@ -512,11 +525,14 @@ function getThemeBySchedule() {
   const [showConfigPass, setShowConfigPass] = useState(false);
   const [printMode, setPrintMode] = useState("annual");
   const [printOpId, setPrintOpId] = useState("");
+  const [plans, setPlans] = useState({});
+  const [isRecalculating, setIsRecalculating] = useState(false);
 
   useEffect(() => {
     onValue(ref(db, 'ops'), (s) => { if (s.val()) setOps(s.val()); });
     onValue(ref(db, 'admins'), (s) => { if (s.val()) setAdmins(s.val()); });
     onValue(ref(db, 'offset'), (s) => { if (s.val() !== null) setOff(s.val()); });
+    onValue(ref(db, 'plans'), (s) => { setPlans(s.val() || {}); });
   }, []);
   useEffect(() => {
   const applyThemeBySchedule = () => {
@@ -529,9 +545,23 @@ function getThemeBySchedule() {
 
   return () => clearInterval(intervalId);
   }, []);
-  const saveOps = (n) => set(ref(db, 'ops'), n);
-  const saveAdmins = (n) => set(ref(db, 'admins'), n);
-  const saveOff = (n) => set(ref(db, 'offset'), n);
+const saveOps = (n) => {
+  setOps(n);
+  set(ref(db, 'ops'), n).catch((error) => {
+    console.error("Error guardando operadores:", error);
+    alert("No se han podido guardar los cambios. Revisa la conexión.");
+  });
+};
+
+const saveAdmins = (n) => set(ref(db, 'admins'), n);
+
+const saveOff = (n) => {
+  setOff(n);
+  set(ref(db, 'offset'), n).catch((error) => {
+    console.error("Error guardando offset:", error);
+    alert("No se ha podido guardar el offset. Revisa la conexión.");
+  });
+};
 
   useEffect(() => {
   if (session) {
@@ -567,8 +597,53 @@ const sessionDisplayRole = session?.role === "guest" ? "" : (roleLabels[session?
 
 const profileDisplayRole = session?.role === "guest" ? "Invitado" : (roleLabels[session?.role] || "");
 
-  const asgn = useMemo(() => autoAssign(ops, activeYear, off), [ops, activeYear, off]);
+ const needsPlanning = view === "calendar" || view === "stats";
+
+  const currentPlanHash = useMemo(() => stableStringify({ ops, off }), [ops, off]);
+  const savedPlanData = plans?.[activeYear] || null;
+  const hasSavedPlan = !!savedPlanData?.assign && Object.keys(savedPlanData.assign).length > 0;
+  const planHasPendingChanges = hasSavedPlan && savedPlanData.inputHash !== currentPlanHash;
+
+  const asgn = useMemo(() => savedPlanData?.assign || {}, [savedPlanData]);
   const stats = useMemo(() => computeStats(ops, activeYear, asgn, off), [ops, activeYear, asgn, off]);
+
+  const handleRecalculatePlan = async () => {
+    if (!isAdmin) return;
+
+    if (ops.length === 0) {
+      alert("No hay operadores cargados para generar la planificación.");
+      return;
+    }
+
+    const confirmMessage = hasSavedPlan
+      ? `Vas a recalcular la planificación oficial de ${activeYear}. Esto puede cambiar el calendario completo de ese año. ¿Quieres continuar?`
+      : `Vas a generar la planificación oficial de ${activeYear}. ¿Quieres continuar?`;
+
+    if (!window.confirm(confirmMessage)) return;
+
+    setIsRecalculating(true);
+
+    try {
+      const newPlan = autoAssign(ops, activeYear, off);
+
+      const planPayload = {
+        assign: newPlan,
+        inputHash: currentPlanHash,
+        updatedAt: new Date().toISOString(),
+        updatedBy: session?.user || "Administrador",
+        year: activeYear
+      };
+
+      setPlans(prev => ({ ...prev, [activeYear]: planPayload }));
+      await set(ref(db, `plans/${activeYear}`), planPayload);
+    } catch (error) {
+      console.error("Error recalculando planificación:", error);
+      alert("No se ha podido recalcular la planificación.");
+    } finally {
+      setIsRecalculating(false);
+    }
+  };
+
   const currentMonthLabel = `${MONTHS[month]} ${activeYear}`;
   const selectedPrintOp = useMemo(() => ops.find(op => String(op.id) === String(printOpId)) || ops[0] || null, [ops, printOpId]);
   const selectedPrintStats = useMemo(() => stats.find(op => String(op.id) === String(selectedPrintOp?.id)), [stats, selectedPrintOp]);
@@ -713,11 +788,31 @@ const profileDisplayRole = session?.role === "guest" ? "Invitado" : (roleLabels[
                   <option value="annual">Exportación anual completa</option>
                   <option value="individual">Calendario individual</option>
                 </select>
-                {printMode === "individual" && (
+                                {printMode === "individual" && (
                   <select value={printOpId} onChange={e => setPrintOpId(e.target.value)} style={{ padding: '10px 14px', borderRadius: 12, border: `1px solid ${t.border}`, background: t.shell, color: t.text, fontSize: 12, minWidth: 220 }}>
                     {ops.map(op => <option key={op.id} value={String(op.id)}>{op.name}</option>)}
                   </select>
                 )}
+
+                {isAdmin && (
+                  <button
+                    onClick={handleRecalculatePlan}
+                    disabled={isRecalculating}
+                    style={{
+                      padding: '10px 14px',
+                      borderRadius: 12,
+                      border: `1px solid ${planHasPendingChanges || !hasSavedPlan ? 'rgba(245, 158, 11, 0.55)' : t.border}`,
+                      background: planHasPendingChanges || !hasSavedPlan ? 'rgba(245, 158, 11, 0.16)' : t.accentSoft,
+                      color: t.title,
+                      cursor: isRecalculating ? 'not-allowed' : 'pointer',
+                      fontSize: 12,
+                      fontWeight: 800
+                    }}
+                  >
+                    {isRecalculating ? "Calculando..." : hasSavedPlan ? "Recalcular planificación" : "Generar planificación"}
+                  </button>
+                )}
+
                 <button
                   style={{ padding: '10px 14px', borderRadius: 12, border: `1px solid ${t.border}`, background: t.cardSolid, color: t.text, cursor: 'pointer', fontSize: 12, fontWeight: 700 }}
                   onClick={() => window.print()}
@@ -726,7 +821,23 @@ const profileDisplayRole = session?.role === "guest" ? "Invitado" : (roleLabels[
                 </button>
               </div>
             </div>
+                        {!hasSavedPlan && (
+              <div className="glass-panel section-card no-print" style={{ padding: 16, marginBottom: 16, border: '1px solid rgba(245, 158, 11, 0.45)', background: 'rgba(245, 158, 11, 0.12)' }}>
+                <div style={{ fontWeight: 800, color: t.title, marginBottom: 4 }}>No hay planificación oficial generada para {activeYear}</div>
+                <div style={{ fontSize: 13, color: t.sub }}>
+                  El calendario no se calculará automáticamente. Un administrador debe pulsar “Generar planificación”.
+                </div>
+              </div>
+            )}
 
+            {hasSavedPlan && planHasPendingChanges && (
+              <div className="glass-panel section-card no-print" style={{ padding: 16, marginBottom: 16, border: '1px solid rgba(245, 158, 11, 0.45)', background: 'rgba(245, 158, 11, 0.12)' }}>
+                <div style={{ fontWeight: 800, color: t.title, marginBottom: 4 }}>Hay cambios pendientes sin recalcular</div>
+                <div style={{ fontSize: 13, color: t.sub }}>
+                  Has modificado personal, ausencias u offset. La planificación oficial sigue estable hasta que pulses “Recalcular planificación”.
+                </div>
+              </div>
+            )}
             <div className="calendar-container">
               <div className="calendar-grid">
                 <div className="sticky-col" style={{ height: 55, borderBottom: `1px solid ${t.border}` }} />

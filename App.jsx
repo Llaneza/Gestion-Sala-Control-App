@@ -1,30 +1,9 @@
 import { useState, useMemo, useEffect } from "react";
-import { initializeApp } from "firebase/app";
-import { getDatabase, ref, onValue, set } from "firebase/database";
+import { ref, onValue, set } from "firebase/database";
 import cortevaLogo from "./Corteva_VerColor_RGB.png";
 import { autoAssign } from "./src/Logic/autoAssign";
-
-// --- CONFIGURACIÓN DE FIREBASE ---
-const firebaseConfig = {
-  apiKey: "AIzaSyAAW-KbrhHIzDyRTgmVjlzPa7TK8o9FeI4",
-  authDomain: "app-sala-control.firebaseapp.com",
-  projectId: "app-sala-control",
-  storageBucket: "app-sala-control.firebasestorage.app",
-  messagingSenderId: "622611612673",
-  appId: "1:622611612673:web:4200dcddc50292908c2c00"
-};
-
-const app = initializeApp(firebaseConfig);
-const db = getDatabase(app);
-
-// --- UTILIDADES DE SEGURIDAD ---
-function simpleHash(str) {
-  let h = 0x811c9dc5;
-  for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = (h * 0x01000193) >>> 0; }
-  return h.toString(16);
-}
-
-const DEFAULT_ADMINS = [{ user: "admin", passHash: simpleHash("admin1234"), role: "admin" }];
+import { db } from "./src/services/firebase";
+import { DEFAULT_ADMINS, simpleHash } from "./src/utils/security";
 
 const THEMES = {
   dark: {

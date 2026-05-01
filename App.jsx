@@ -6,6 +6,7 @@ import { db } from "./src/services/firebase";
 import { DEFAULT_ADMINS, simpleHash } from "./src/utils/security";
 import { ABSENCE, DOW_S, EXTRA_VISUALS, MONTHS, THEMES, TURNO_DEF } from "./src/config/constants";
 import { cshift, dim, dow, formatDateTime, mk } from "./src/utils/dateUtils";
+import { stableStringify } from "./src/utils/planUtils";
 
 // --- ICONOS Y COMPONENTES VISUALES ---
 const EyeIcon = ({ visible, color }) => (
@@ -39,19 +40,6 @@ function countAbsencesForYear(op, year) {
     }
   });
   return counters;
-}
-function stableStringify(value) {
-  if (value === undefined) return "undefined";
-  if (value === null || typeof value !== "object") return JSON.stringify(value);
-
-  if (Array.isArray(value)) {
-    return `[${value.map(stableStringify).join(",")}]`;
-  }
-
-  return `{${Object.keys(value)
-    .sort()
-    .map(key => `${JSON.stringify(key)}:${stableStringify(value[key])}`)
-    .join(",")}}`;
 }
 
 function PrintableHeader({ year, title, subtitle, generatedAt, generatedBy, operator }) {

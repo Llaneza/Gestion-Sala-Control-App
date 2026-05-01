@@ -7,6 +7,7 @@ import { DEFAULT_ADMINS, simpleHash } from "./src/utils/security";
 import { ABSENCE, DOW_S, EXTRA_VISUALS, MONTHS, THEMES, TURNO_DEF } from "./src/config/constants";
 import { cshift, dim, dow, formatDateTime, mk } from "./src/utils/dateUtils";
 import { stableStringify } from "./src/utils/planUtils";
+import { countAbsencesForYear } from "./src/utils/statsUtils";
 
 // --- ICONOS Y COMPONENTES VISUALES ---
 const EyeIcon = ({ visible, color }) => (
@@ -30,16 +31,6 @@ function computeStats(ops, year, asgn, off) {
     }
     return { ...op, sc, nSC, hSC: sc * 12 };
   });
-}
-
-function countAbsencesForYear(op, year) {
-  const counters = { VA: 0, EN: 0, BA: 0 };
-  Object.entries(op.calendar || {}).forEach(([dateKey, code]) => {
-    if (String(dateKey).startsWith(`${year}-`) && counters[code] !== undefined) {
-      counters[code] += 1;
-    }
-  });
-  return counters;
 }
 
 function PrintableHeader({ year, title, subtitle, generatedAt, generatedBy, operator }) {

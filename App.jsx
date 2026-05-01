@@ -4,68 +4,8 @@ import cortevaLogo from "./Corteva_VerColor_RGB.png";
 import { autoAssign } from "./src/Logic/autoAssign";
 import { db } from "./src/services/firebase";
 import { DEFAULT_ADMINS, simpleHash } from "./src/utils/security";
-
-const THEMES = {
-  dark: {
-    bg: "#08111f",
-    shell: "#0b1628",
-    card: "rgba(13, 21, 38, 0.82)",
-    cardSolid: "#0d1526",
-    text: "#d7e3f4",
-    title: "#ffffff",
-    border: "rgba(90, 116, 148, 0.22)",
-    sub: "#7f93ae",
-    accent: "#39c89a",
-    accentSoft: "rgba(57, 200, 154, 0.14)",
-    dangerSoft: "rgba(239, 68, 68, 0.14)"
-  },
-  light: {
-    bg: "#eef4fb",
-    shell: "#f8fbff",
-    card: "rgba(255, 255, 255, 0.9)",
-    cardSolid: "#ffffff",
-    text: "#334155",
-    title: "#0f172a",
-    border: "rgba(148, 163, 184, 0.28)",
-    sub: "#64748b",
-    accent: "#0f9f78",
-    accentSoft: "rgba(15, 159, 120, 0.12)",
-    dangerSoft: "rgba(239, 68, 68, 0.12)"
-  }
-};
-
-const CYCLE = [
-  ["M", "M", "D", "D", "N", "N", "N"],
-  ["D", "D", "M", "M", "D", "D", "D"],
-  ["N", "N", "D", "D", "M", "M", "M"],
-  ["D", "D", "N", "N", "D", "D", "D"],
-];
-const CYCLE_LEN = 28;
-
-const ABSENCE = {
-  VA: { label: "Vacaciones", icon: "🌴", color: "#10B981" },
-  EN: { label: "Entrenamiento", icon: "📖", color: "#A78BFA" },
-  BA: { label: "Baja", icon: "🤒", color: "#F87171" }
-};
-
-const MONTHS = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
-const DOW_S = ["L", "M", "X", "J", "V", "S", "D"];
-const TURNO_DEF = {
-  M: { color: "#F59E0B", label: "Mañana", bg: "#F59E0B15" },
-  N: { color: "#818CF8", label: "Noche", bg: "#818CF815" },
-  D: { color: "#64748B", label: "Descanso", bg: "transparent" }
-};
-const EXTRA_VISUALS = { SC: { color: "#34D399", bg: "#34D39925" }, CA: { color: "#475569", bg: "transparent" } };
-
-const dim = (y, m) => new Date(y, m + 1, 0).getDate();
-const dow = (y, m, d) => { const r = new Date(y, m, d).getDay(); return r === 0 ? 6 : r - 1; };
-const dse = (y, m, d) => Math.round((new Date(y, m, d) - new Date(1970, 0, 1)) / 86400000);
-const mk = (y, m, d) => `${y}-${m}-${d}`;
-
-function cshift(y, m, d, off = 0) {
-  const pos = ((dse(y, m, d) + off) % CYCLE_LEN + CYCLE_LEN) % CYCLE_LEN;
-  return CYCLE[Math.floor(pos / 7)][pos % 7];
-}
+import { ABSENCE, DOW_S, EXTRA_VISUALS, MONTHS, THEMES, TURNO_DEF } from "./src/config/constants";
+import { cshift, dim, dow, formatDateTime, mk } from "./src/utils/dateUtils";
 
 // --- ICONOS Y COMPONENTES VISUALES ---
 const EyeIcon = ({ visible, color }) => (
@@ -89,16 +29,6 @@ function computeStats(ops, year, asgn, off) {
     }
     return { ...op, sc, nSC, hSC: sc * 12 };
   });
-}
-
-function formatDateTime(date) {
-  return new Intl.DateTimeFormat("es-ES", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit"
-  }).format(date);
 }
 
 function countAbsencesForYear(op, year) {

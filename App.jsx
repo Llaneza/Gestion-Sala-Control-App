@@ -10,6 +10,7 @@ import { stableStringify } from "./src/utils/planUtils";
 import { countAbsencesForYear, computeStats } from "./src/utils/statsUtils";
 import { Av } from "./src/components/Avatar";
 import { EyeIcon } from "./src/components/EyeIcon";
+import { getThemeBySchedule } from "./src/utils/themeUtils";
 
 // --- ICONOS Y COMPONENTES VISUALES ---
 
@@ -201,10 +202,6 @@ function PrintableYearCalendar({ ops, year, asgn, off, generatedAt, generatedBy 
 }
 
  // --- APP PRINCIPAL ---
-function getThemeBySchedule() {
-  const hour = new Date().getHours();
-  return hour >= 6 && hour < 19 ? "light" : "dark";
-}
 
  export default function App() {
   const today = new Date();

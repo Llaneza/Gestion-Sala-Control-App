@@ -8,10 +8,8 @@ import { ABSENCE, DOW_S, EXTRA_VISUALS, MONTHS, THEMES, TURNO_DEF } from "./src/
 import { cshift, dim, dow, formatDateTime, mk } from "./src/utils/dateUtils";
 import { stableStringify } from "./src/utils/planUtils";
 import { countAbsencesForYear, computeStats } from "./src/utils/statsUtils";
-import { Av } from "./src/components/Avatar";
 import { getThemeBySchedule } from "./src/utils/themeUtils";
-import { LoginScreenComponent } from "./src/components/LoginScreen";
-import { EyeIcon } from "./src/components/EyeIcon";
+import { Av, EyeIcon, LoginScreenComponent } from "./src/components";
 
 // --- ICONOS Y COMPONENTES VISUALES ---
 

@@ -3,13 +3,9 @@ import { ref, onValue, set } from "firebase/database";
 import cortevaLogo from "./Corteva_VerColor_RGB.png";
 import { autoAssign } from "./src/Logic/autoAssign";
 import { db } from "./src/services/firebase";
-import { DEFAULT_ADMINS, simpleHash } from "./src/utils/security";
 import { ABSENCE, DOW_S, EXTRA_VISUALS, MONTHS, THEMES, TURNO_DEF } from "./src/config/constants";
-import { cshift, dim, dow, formatDateTime, mk } from "./src/utils/dateUtils";
-import { stableStringify } from "./src/utils/planUtils";
-import { countAbsencesForYear, computeStats } from "./src/utils/statsUtils";
-import { getThemeBySchedule } from "./src/utils/themeUtils";
 import { Av, EyeIcon, LoginScreenComponent } from "./src/components";
+import { DEFAULT_ADMINS, simpleHash, cshift, dim, dow, formatDateTime, mk, stableStringify, countAbsencesForYear, computeStats, getThemeBySchedule } from "./src/utils";
 
 // --- ICONOS Y COMPONENTES VISUALES ---
 

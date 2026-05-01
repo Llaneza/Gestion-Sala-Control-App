@@ -7,7 +7,7 @@ import { DEFAULT_ADMINS, simpleHash } from "./src/utils/security";
 import { ABSENCE, DOW_S, EXTRA_VISUALS, MONTHS, THEMES, TURNO_DEF } from "./src/config/constants";
 import { cshift, dim, dow, formatDateTime, mk } from "./src/utils/dateUtils";
 import { stableStringify } from "./src/utils/planUtils";
-import { countAbsencesForYear } from "./src/utils/statsUtils";
+import { countAbsencesForYear, computeStats } from "./src/utils/statsUtils";
 
 // --- ICONOS Y COMPONENTES VISUALES ---
 const EyeIcon = ({ visible, color }) => (
@@ -21,17 +21,6 @@ const Av = ({ name, color, size = 24 }) => (
     {name?.substring(0, 2).toUpperCase() || "??"}
   </div>
 );
-
-function computeStats(ops, year, asgn, off) {
-  return ops.map(op => {
-    let sc = 0, nSC = 0;
-    for (let mo = 0; mo < 12; mo++) for (let d = 1; d <= dim(year, mo); d++) {
-      const k = mk(year, mo + 1, d), t = cshift(year, mo, d, off), a = asgn[k]?.[op.id];
-      if (t !== "D" && a === "SC") { sc++; if (t === "N") nSC++; }
-    }
-    return { ...op, sc, nSC, hSC: sc * 12 };
-  });
-}
 
 function PrintableHeader({ year, title, subtitle, generatedAt, generatedBy, operator }) {
   return (

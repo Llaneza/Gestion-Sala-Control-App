@@ -1,5 +1,6 @@
 export {
   ABSENCE,
+  CALENDAR_LEGEND,
   DOW_S,
   EXTRA_VISUALS,
   MONTHS,

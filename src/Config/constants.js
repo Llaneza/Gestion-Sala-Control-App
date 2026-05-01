@@ -55,3 +55,54 @@ export const EXTRA_VISUALS = {
   SC: { color: "#34D399", bg: "#34D39925" },
   CA: { color: "#475569", bg: "transparent" }
 };
+
+export const CALENDAR_LEGEND = [
+  {
+    code: "D",
+    label: "Descanso",
+    color: "transparent",
+    textColor: "#64748b"
+  },
+  {
+    code: "CA",
+    label: "Campo",
+    color: "rgba(251, 191, 36, 0.18)",
+    textColor: "#f59e0b"
+  },
+  {
+    code: "SC",
+    label: "Sala de control",
+    color: "rgba(16, 185, 129, 0.16)",
+    textColor: "#10b981"
+  },
+  {
+    code: "VA",
+    label: "Vacaciones",
+    color: "rgba(16, 185, 129, 0.78)",
+    textColor: "#052e1b"
+  },
+  {
+    code: "N",
+    label: "Noche",
+    color: "transparent",
+    textColor: "#6366f1"
+  },
+  {
+    code: "M",
+    label: "Mañana",
+    color: "transparent",
+    textColor: "#f59e0b"
+  },
+  {
+    code: "EN",
+    label: "Entrenamiento",
+    color: "rgba(99, 102, 241, 0.14)",
+    textColor: "#6366f1"
+  },
+  {
+    code: "BA",
+    label: "Baja",
+    color: "rgba(239, 68, 68, 0.14)",
+    textColor: "#ef4444"
+  }
+];

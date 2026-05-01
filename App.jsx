@@ -3,7 +3,7 @@ import { ref, onValue, set } from "firebase/database";
 import cortevaLogo from "./Corteva_VerColor_RGB.png";
 import { autoAssign } from "./src/logic";
 import { db } from "./src/services/firebase";
-import { ABSENCE, DOW_S, EXTRA_VISUALS, MONTHS, THEMES, TURNO_DEF } from "./src/config";
+import { ABSENCE, CALENDAR_LEGEND, DOW_S, EXTRA_VISUALS, MONTHS, THEMES, TURNO_DEF } from "./src/config";
 import { Av, EyeIcon, LoginScreenComponent } from "./src/components";
 import { DEFAULT_ADMINS, simpleHash, cshift, dim, dow, formatDateTime, mk, stableStringify, countAbsencesForYear, computeStats, getThemeBySchedule } from "./src/utils";
 
@@ -207,8 +207,10 @@ function PrintableYearCalendar({ ops, year, asgn, off, generatedAt, generatedBy 
   const [view, setView] = useState("calendar");
   const [activeYear, setAY] = useState(today.getFullYear());
   const [month, setMonth] = useState(today.getMonth());
-  const [themeMode, setThemeMode] = useState(getThemeBySchedule);
-  const [manualTheme, setManualTheme] = useState(false);
+  const themeSessionKey = "gestion-personal-theme-mode";
+  const [themeMode, setThemeMode] = useState(() => {
+  return sessionStorage.getItem(themeSessionKey) || getThemeBySchedule();
+});
   const [showConfigPass, setShowConfigPass] = useState(false);
   const [printMode, setPrintMode] = useState("annual");
   const [printOpId, setPrintOpId] = useState("");
@@ -392,7 +394,26 @@ const profileDisplayRole = session?.role === "guest" ? "Invitado" : (roleLabels[
             <div style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.08em', color: t.sub }}>Panel</div>
             <span style={{ fontWeight: 800, color: t.title, fontSize: 18, letterSpacing: '0.02em' }}>Sala de Control</span>
           </div>
-          <button onClick={() => { setManualTheme(true); setThemeMode(themeMode === 'dark' ? 'light' : 'dark'); }} style={{ background: t.shell, border: `1px solid ${t.border}`, borderRadius: 12, padding: '9px 12px', cursor: 'pointer', color: t.text, fontWeight: 700 }}>{themeMode === 'dark' ? 'Modo claro' : 'Modo oscuro'}</button>
+         <button
+  onClick={() => {
+    setThemeMode(prev => {
+      const next = prev === "dark" ? "light" : "dark";
+      sessionStorage.setItem(themeSessionKey, next);
+      return next;
+    });
+  }}
+  style={{
+    background: t.shell,
+    border: `1px solid ${t.border}`,
+    borderRadius: 12,
+    padding: "9px 12px",
+    cursor: "pointer",
+    color: t.text,
+    fontWeight: 700
+  }}
+>
+  {themeMode === "dark" ? "Modo claro" : "Modo oscuro"}
+</button>
           <select value={activeYear} onChange={e => setAY(Number(e.target.value))} style={{ background: t.shell, color: t.text, border: `1px solid ${t.border}`, borderRadius: 12, padding: '9px 12px', fontSize: 13, minWidth: 110 }}>
             {[2024, 2025, 2026, 2027, 2028, 2029, 2030].map(y => <option key={y} value={y}>{y}</option>)}
           </select>
@@ -439,34 +460,32 @@ const profileDisplayRole = session?.role === "guest" ? "Invitado" : (roleLabels[
       </nav>
 
       <main className="app-shell">
-        <section className="hero-grid no-print">
-          <div className="glass-panel hero-card" style={{ background: `linear-gradient(135deg, ${t.card} 0%, ${t.accentSoft} 100%)` }}>
-  <div style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.12em', color: t.accent, marginBottom: 12 }}>Gestión de personal</div>
-  <h1 className="hero-title">Vista operativa de turnos, ausencias y control diario.</h1>
-</div>
-          <div className="glass-panel hero-card">
-            <div className="hero-kpi-label">Operadores</div>
-            <div className="hero-kpi-value">{ops.length}</div>
-            <div className="hero-sub">Personal cargado en la base de datos.</div>
-          </div>
-          <div className="glass-panel hero-card">
-            <div className="hero-kpi-label">Periodo visible</div>
-            <div className="hero-kpi-value" style={{ fontSize: 22 }}>{currentMonthLabel}</div>
-            <div className="hero-sub">Mes y año activos en pantalla.</div>
-          </div>
-          <div className="glass-panel hero-card">
-            <div className="hero-kpi-label">Perfil</div>
-            <div className="hero-kpi-value" style={{ fontSize: 22 }}>{profileDisplayRole}</div>
-            <div className="hero-sub">Permisos activos de la sesión actual.</div>
-          </div>
-        </section>
-
+       
         {view === "calendar" && (
           <div>
             <div className="glass-panel section-card no-print" style={{ display: 'flex', justifyContent: 'space-between', gap: 12, marginBottom: 20, alignItems: 'center', padding: 18, flexWrap: 'wrap' }}>
               <div>
                 <div style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.08em', color: t.sub, marginBottom: 6 }}>Calendario operativo</div>
                 <h2 style={{ margin: 0, minWidth: 120, textAlign: 'center', fontSize: 24, color: t.title, letterSpacing: '-0.02em' }}>{currentMonthLabel}</h2>
+                {isAdmin && (
+  <button
+    onClick={handleRecalculatePlan}
+    disabled={isRecalculating}
+    style={{
+      marginTop: 12,
+      padding: '10px 14px',
+      borderRadius: 12,
+      border: `1px solid ${planHasPendingChanges || !hasSavedPlan ? 'rgba(245, 158, 11, 0.55)' : t.border}`,
+      background: planHasPendingChanges || !hasSavedPlan ? 'rgba(245, 158, 11, 0.16)' : t.accentSoft,
+      color: t.title,
+      cursor: isRecalculating ? 'not-allowed' : 'pointer',
+      fontSize: 12,
+      fontWeight: 800
+    }}
+  >
+    {isRecalculating ? "Calculando..." : hasSavedPlan ? "Recalcular planificación" : "Generar planificación"}
+  </button>
+)}
               </div>
               <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                 <button style={{ padding: '10px 14px', borderRadius: 12, border: `1px solid ${t.border}`, background: t.shell, color: t.text, cursor: 'pointer', fontSize: 12, fontWeight: 700 }} onClick={handlePrevMonth}>Mes anterior</button>
@@ -481,24 +500,7 @@ const profileDisplayRole = session?.role === "guest" ? "Invitado" : (roleLabels[
                   </select>
                 )}
 
-                {isAdmin && (
-                  <button
-                    onClick={handleRecalculatePlan}
-                    disabled={isRecalculating}
-                    style={{
-                      padding: '10px 14px',
-                      borderRadius: 12,
-                      border: `1px solid ${planHasPendingChanges || !hasSavedPlan ? 'rgba(245, 158, 11, 0.55)' : t.border}`,
-                      background: planHasPendingChanges || !hasSavedPlan ? 'rgba(245, 158, 11, 0.16)' : t.accentSoft,
-                      color: t.title,
-                      cursor: isRecalculating ? 'not-allowed' : 'pointer',
-                      fontSize: 12,
-                      fontWeight: 800
-                    }}
-                  >
-                    {isRecalculating ? "Calculando..." : hasSavedPlan ? "Recalcular planificación" : "Generar planificación"}
-                  </button>
-                )}
+               
 
                 <button
                   style={{ padding: '10px 14px', borderRadius: 12, border: `1px solid ${t.border}`, background: t.cardSolid, color: t.text, cursor: 'pointer', fontSize: 12, fontWeight: 700 }}
@@ -589,6 +591,50 @@ const profileDisplayRole = session?.role === "guest" ? "Invitado" : (roleLabels[
     </div>
   );
 })}
+                  </div>
+                ))}
+              </div>
+                            <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 16,
+                  flexWrap: "wrap",
+                  padding: "16px 18px",
+                  borderTop: `1px solid ${t.border}`,
+                  color: t.sub,
+                  fontSize: 12
+                }}
+              >
+                {CALENDAR_LEGEND.map(item => (
+                  <div
+                    key={item.code}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 7,
+                      whiteSpace: "nowrap"
+                    }}
+                  >
+                    <span
+                      style={{
+                        width: 24,
+                        height: 24,
+                        borderRadius: 8,
+                        border: `1px solid ${t.border}`,
+                        background: item.color,
+                        color: item.textColor,
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: 10,
+                        fontWeight: 900
+                      }}
+                    >
+                      {item.code}
+                    </span>
+
+                    <span>{item.label}</span>
                   </div>
                 ))}
               </div>

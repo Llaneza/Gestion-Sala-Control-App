@@ -3,7 +3,7 @@ import { ref, onValue, set } from "firebase/database";
 import cortevaLogo from "./Corteva_VerColor_RGB.png";
 import { autoAssign } from "./src/logic/autoAssign";
 import { db } from "./src/services/firebase";
-import { ABSENCE, DOW_S, EXTRA_VISUALS, MONTHS, THEMES, TURNO_DEF } from "./src/config/constants";
+import { ABSENCE, DOW_S, EXTRA_VISUALS, MONTHS, THEMES, TURNO_DEF } from "./src/config";
 import { Av, EyeIcon, LoginScreenComponent } from "./src/components";
 import { DEFAULT_ADMINS, simpleHash, cshift, dim, dow, formatDateTime, mk, stableStringify, countAbsencesForYear, computeStats, getThemeBySchedule } from "./src/utils";
 

@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { ref, onValue, set } from "firebase/database";
 import cortevaLogo from "./Corteva_VerColor_RGB.png";
-import { autoAssign } from "./src/logic";
+import { autoAssign } from "./src/logic/autoAssign.js";
 import { db } from "./src/services/firebase";
 import { ABSENCE, CALENDAR_LEGEND, DOW_S, EXTRA_VISUALS, MONTHS, THEMES, TURNO_DEF } from "./src/config";
 import { Av, EyeIcon, LoginScreenComponent } from "./src/components";

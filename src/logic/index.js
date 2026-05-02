@@ -1,1 +1,1 @@
-export { autoAssign } from "./autoAssign";
+export { autoAssign } from "./autoAssign.js";

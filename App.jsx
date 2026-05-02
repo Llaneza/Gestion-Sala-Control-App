@@ -3,7 +3,7 @@ import { ref, onValue, set } from "firebase/database";
 import cortevaLogo from "./Corteva_VerColor_RGB.png";
 import { autoAssign } from "./src/logic/autoAssign.js";
 import { db } from "./src/services/firebase";
-import { ABSENCE, CALENDAR_LEGEND, DOW_S, EXTRA_VISUALS, MONTHS, THEMES, TURNO_DEF } from "./src/config";
+import { ABSENCE, CALENDAR_LEGEND, DOW_S, EXTRA_VISUALS, MONTHS, SECURITY_ROLES, THEMES, TURNO_DEF } from "./src/config";
 import { Av, EyeIcon, LoginScreenComponent } from "./src/components";
 import { DEFAULT_ADMINS, simpleHash, cshift, dim, dow, formatDateTime, mk, stableStringify, countAbsencesForYear, computeStats, getThemeBySchedule } from "./src/utils";
 
@@ -242,7 +242,26 @@ const saveOps = (n) => {
   });
 };
 
+const toggleSecurityRole = (operatorId, roleId) => {
+  const updatedOps = ops.map(op => {
+    if (op.id !== operatorId) return op;
+
+    const currentRoles = Array.isArray(op.securityRoles) ? op.securityRoles : [];
+    const hasRole = currentRoles.includes(roleId);
+
+    return {
+      ...op,
+      securityRoles: hasRole
+        ? currentRoles.filter(id => id !== roleId)
+        : [...currentRoles, roleId]
+    };
+  });
+
+  saveOps(updatedOps);
+};
+
 const saveAdmins = (n) => set(ref(db, 'admins'), n);
+
 
 const saveOff = (n) => {
   setOff(n);
@@ -690,9 +709,95 @@ const profileDisplayRole = session?.role === "guest" ? "Invitado" : (roleLabels[
               <p style={{ color: t.sub, fontSize: 13, marginTop: 0, marginBottom: 18 }}>Alta y baja de personal operativo disponible en el sistema.</p>
               <div style={{ display: 'flex', gap: 10, marginBottom: 20 }}>
                 <input id="newOpN" placeholder="Nombre..." style={{ flex: 1, padding: 12, borderRadius: 12, border: `1px solid ${t.border}`, background: t.shell, color: t.text }} />
-                <button onClick={() => { const n = document.getElementById('newOpN').value; if(n) { saveOps([...ops, { id: Date.now(), name: n, color: '#'+Math.random().toString(16).slice(2,8), calendar: {} }]); document.getElementById('newOpN').value = ''; } }} style={{ padding: '0 20px', background: t.accentSoft, color: t.title, border: `1px solid ${t.border}`, borderRadius: 12, fontWeight: 'bold', cursor: 'pointer' }}>AÑADIR</button>
+               <button onClick={() => { const n = document.getElementById('newOpN').value; if(n) { saveOps([...ops, { id: Date.now(), name: n, color: '#'+Math.random().toString(16).slice(2,8), calendar: {}, securityRoles: [] }]); document.getElementById('newOpN').value = ''; } }} style={{ padding: '0 20px', background: t.accentSoft, color: t.title, border: `1px solid ${t.border}`, borderRadius: 12, fontWeight: 'bold', cursor: 'pointer' }}>AÑADIR</button>
               </div>
-              {ops.map(o => <div key={o.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderTop: `1px solid ${t.border}`, alignItems: 'center' }}><span style={{ fontWeight: 600 }}>{o.name}</span><button onClick={() => saveOps(ops.filter(x => x.id !== o.id))} style={{ color: '#EF4444', border: 'none', background: 'none', cursor: 'pointer', fontSize: 18 }}>×</button></div>)}
+              {ops.map(o => {
+  const selectedRoles = Array.isArray(o.securityRoles) ? o.securityRoles : [];
+
+  return (
+    <div
+      key={o.id}
+      style={{
+        padding: "14px 0",
+        borderTop: `1px solid ${t.border}`,
+        display: "flex",
+        flexDirection: "column",
+        gap: 12
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          gap: 12
+        }}
+      >
+        <span style={{ fontWeight: 700, color: t.title }}>{o.name}</span>
+
+        <button
+          onClick={() => saveOps(ops.filter(x => x.id !== o.id))}
+          style={{
+            color: "#EF4444",
+            border: "none",
+            background: "none",
+            cursor: "pointer",
+            fontSize: 18
+          }}
+        >
+          ×
+        </button>
+      </div>
+
+      <div>
+        <div
+          style={{
+            fontSize: 11,
+            color: t.sub,
+            marginBottom: 8,
+            textTransform: "uppercase",
+            letterSpacing: "0.08em",
+            fontWeight: 800
+          }}
+        >
+          Roles de seguridad
+        </div>
+
+        <div
+          style={{
+            display: "flex",
+            gap: 8,
+            flexWrap: "wrap"
+          }}
+        >
+          {SECURITY_ROLES.map(role => {
+            const active = selectedRoles.includes(role.id);
+
+            return (
+              <button
+                key={role.id}
+                type="button"
+                onClick={() => toggleSecurityRole(o.id, role.id)}
+                style={{
+                  padding: "7px 10px",
+                  borderRadius: 999,
+                  border: `1px solid ${active ? t.accent : t.border}`,
+                  background: active ? t.accentSoft : t.shell,
+                  color: active ? t.title : t.sub,
+                  cursor: "pointer",
+                  fontSize: 11,
+                  fontWeight: 800
+                }}
+              >
+                {role.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+})}
             </div>
 
             <div className="glass-panel section-card" style={{ padding: 25 }}>

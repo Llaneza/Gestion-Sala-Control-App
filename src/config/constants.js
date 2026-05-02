@@ -106,3 +106,21 @@ export const CALENDAR_LEGEND = [
     textColor: "#ef4444"
   }
 ];
+export const SECURITY_ROLES = [
+  {
+    id: "BRIGADA",
+    label: "Brigada"
+  },
+  {
+    id: "DCS",
+    label: "DCS"
+  },
+  {
+    id: "COORDINADOR_EMERGENCIAS",
+    label: "Coordinador de Emergencias"
+  },
+  {
+    id: "CONTEO",
+    label: "Conteo"
+  }
+];

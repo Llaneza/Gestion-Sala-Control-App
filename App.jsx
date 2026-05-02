@@ -242,18 +242,33 @@ const saveOps = (n) => {
   });
 };
 
+
 const toggleSecurityRole = (operatorId, roleId) => {
+  const operator = ops.find(op => op.id === operatorId);
+  const currentRoles = Array.isArray(operator?.securityRoles) ? operator.securityRoles : [];
+  const hasRole = currentRoles.includes(roleId);
+
+  if (roleId === "DCS") {
+    const confirmed = window.confirm(
+      hasRole
+        ? "Vas a quitar el rol DCS a este operador. Dejará de aparecer en el calendario de Sala de Control y puede requerir recalcular la planificación. ¿Quieres continuar?"
+        : "Vas a añadir el rol DCS a este operador. Aparecerá en el calendario de Sala de Control y puede requerir recalcular la planificación. ¿Quieres continuar?"
+    );
+
+    if (!confirmed) return;
+  }
+
   const updatedOps = ops.map(op => {
     if (op.id !== operatorId) return op;
 
-    const currentRoles = Array.isArray(op.securityRoles) ? op.securityRoles : [];
-    const hasRole = currentRoles.includes(roleId);
+    const roles = Array.isArray(op.securityRoles) ? op.securityRoles : [];
+    const active = roles.includes(roleId);
 
     return {
       ...op,
-      securityRoles: hasRole
-        ? currentRoles.filter(id => id !== roleId)
-        : [...currentRoles, roleId]
+      securityRoles: active
+        ? roles.filter(id => id !== roleId)
+        : [...roles, roleId]
     };
   });
 
@@ -307,21 +322,36 @@ const profileDisplayRole = session?.role === "guest" ? "Invitado" : (roleLabels[
 
  const needsPlanning = view === "calendar" || view === "stats";
 
-  const currentPlanHash = useMemo(() => stableStringify({ ops, off }), [ops, off]);
+ const dcsOps = useMemo(
+  () => ops.filter(op => Array.isArray(op.securityRoles) && op.securityRoles.includes("DCS")),
+  [ops]
+);
+
+  const dcsPlanningFingerprint = useMemo(() => {
+  return dcsOps.map(op => ({
+    id: op.id,
+    calendar: op.calendar || {}
+  }));
+}, [dcsOps]);
+
+const currentPlanHash = useMemo(
+  () => stableStringify({ ops: dcsPlanningFingerprint, off }),
+  [dcsPlanningFingerprint, off]
+);
   const savedPlanData = plans?.[activeYear] || null;
   const hasSavedPlan = !!savedPlanData?.assign && Object.keys(savedPlanData.assign).length > 0;
   const planHasPendingChanges = hasSavedPlan && savedPlanData.inputHash !== currentPlanHash;
 
   const asgn = useMemo(() => savedPlanData?.assign || {}, [savedPlanData]);
-  const stats = useMemo(() => computeStats(ops, activeYear, asgn, off), [ops, activeYear, asgn, off]);
+  const stats = useMemo(() => computeStats(dcsOps, activeYear, asgn, off), [dcsOps, activeYear, asgn, off]);
 
   const handleRecalculatePlan = async () => {
     if (!isAdmin) return;
 
-    if (ops.length === 0) {
-      alert("No hay operadores cargados para generar la planificación.");
-      return;
-    }
+    if (dcsOps.length === 0) {
+  alert("No hay operadores con rol DCS para generar la planificación de Sala de Control.");
+  return;
+}
 
     const confirmMessage = hasSavedPlan
       ? `Vas a recalcular la planificación oficial de ${activeYear}. Esto puede cambiar el calendario completo de ese año. ¿Quieres continuar?`
@@ -332,7 +362,7 @@ const profileDisplayRole = session?.role === "guest" ? "Invitado" : (roleLabels[
     setIsRecalculating(true);
 
     try {
-      const newPlan = autoAssign(ops, activeYear, off);
+      const newPlan = autoAssign(dcsOps, activeYear, off);
 
       const planPayload = {
         assign: newPlan,
@@ -352,17 +382,17 @@ const profileDisplayRole = session?.role === "guest" ? "Invitado" : (roleLabels[
     }
   };
 
-  const currentMonthLabel = `${MONTHS[month]} ${activeYear}`;
-  const selectedPrintOp = useMemo(() => ops.find(op => String(op.id) === String(printOpId)) || ops[0] || null, [ops, printOpId]);
+  const currentMonthLabel = `${MONTHS[month]} ${activeYear}`;const selectedPrintOp = useMemo(() => dcsOps.find(op => String(op.id) === String(printOpId)) || dcsOps[0] || null, [dcsOps, printOpId]);
+  
   const selectedPrintStats = useMemo(() => stats.find(op => String(op.id) === String(selectedPrintOp?.id)), [stats, selectedPrintOp]);
   const generatedAt = formatDateTime(new Date());
   const todayKey = mk(today.getFullYear(), today.getMonth() + 1, today.getDate());
 
   useEffect(() => {
-    if (!printOpId && ops[0]?.id) {
-      setPrintOpId(String(ops[0].id));
-    }
-  }, [ops, printOpId]);
+  if (!printOpId && dcsOps[0]?.id) {
+    setPrintOpId(String(dcsOps[0].id));
+  }
+}, [dcsOps, printOpId]);
 
   const handlePrevMonth = () => { if (month === 0) { setMonth(11); setAY(v => v - 1); } else setMonth(month - 1); };
   const handleNextMonth = () => { if (month === 11) { setMonth(0); setAY(v => v + 1); } else setMonth(month + 1); };
@@ -515,7 +545,7 @@ const profileDisplayRole = session?.role === "guest" ? "Invitado" : (roleLabels[
                 </select>
                                 {printMode === "individual" && (
                   <select value={printOpId} onChange={e => setPrintOpId(e.target.value)} style={{ padding: '10px 14px', borderRadius: 12, border: `1px solid ${t.border}`, background: t.shell, color: t.text, fontSize: 12, minWidth: 220 }}>
-                    {ops.map(op => <option key={op.id} value={String(op.id)}>{op.name}</option>)}
+                    {dcsOps.map(op => <option key={op.id} value={String(op.id)}>{op.name}</option>)}
                   </select>
                 )}
 
@@ -575,7 +605,7 @@ const profileDisplayRole = session?.role === "guest" ? "Invitado" : (roleLabels[
     </div>
   );
 })}
-                {ops.map(op => (
+                {dcsOps.map(op => (
                   <div key={op.id} style={{ display: 'contents' }}>
                     <div className="sticky-col" style={{ padding: '10px 12px', fontSize: 12, borderTop: `1px solid ${t.border}`, display: 'flex', alignItems: 'center', gap: 6 }}>
                       <Av name={op.name} color={op.color} size={18} />

@@ -1,309 +1,13 @@
 import { useState, useMemo, useEffect } from "react";
-import { initializeApp } from "firebase/app";
-import { getDatabase, ref, onValue, set } from "firebase/database";
+import { ref, onValue, set } from "firebase/database";
 import cortevaLogo from "./Corteva_VerColor_RGB.png";
-
-// --- CONFIGURACIÓN DE FIREBASE ---
-const firebaseConfig = {
-  apiKey: "AIzaSyAAW-KbrhHIzDyRTgmVjlzPa7TK8o9FeI4",
-  authDomain: "app-sala-control.firebaseapp.com",
-  projectId: "app-sala-control",
-  storageBucket: "app-sala-control.firebasestorage.app",
-  messagingSenderId: "622611612673",
-  appId: "1:622611612673:web:4200dcddc50292908c2c00"
-};
-
-const app = initializeApp(firebaseConfig);
-const db = getDatabase(app);
-
-// --- UTILIDADES DE SEGURIDAD ---
-function simpleHash(str) {
-  let h = 0x811c9dc5;
-  for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = (h * 0x01000193) >>> 0; }
-  return h.toString(16);
-}
-
-const DEFAULT_ADMINS = [{ user: "admin", passHash: simpleHash("admin1234"), role: "superadmin" }];
-
-const THEMES = {
-  dark: {
-    bg: "#08111f",
-    shell: "#0b1628",
-    card: "rgba(13, 21, 38, 0.82)",
-    cardSolid: "#0d1526",
-    text: "#d7e3f4",
-    title: "#ffffff",
-    border: "rgba(90, 116, 148, 0.22)",
-    sub: "#7f93ae",
-    accent: "#39c89a",
-    accentSoft: "rgba(57, 200, 154, 0.14)",
-    dangerSoft: "rgba(239, 68, 68, 0.14)"
-  },
-  light: {
-    bg: "#eef4fb",
-    shell: "#f8fbff",
-    card: "rgba(255, 255, 255, 0.9)",
-    cardSolid: "#ffffff",
-    text: "#334155",
-    title: "#0f172a",
-    border: "rgba(148, 163, 184, 0.28)",
-    sub: "#64748b",
-    accent: "#0f9f78",
-    accentSoft: "rgba(15, 159, 120, 0.12)",
-    dangerSoft: "rgba(239, 68, 68, 0.12)"
-  }
-};
-
-const CYCLE = [
-  ["M", "M", "D", "D", "N", "N", "N"],
-  ["D", "D", "M", "M", "D", "D", "D"],
-  ["N", "N", "D", "D", "M", "M", "M"],
-  ["D", "D", "N", "N", "D", "D", "D"],
-];
-const CYCLE_LEN = 28;
-
-const ABSENCE = {
-  VA: { label: "Vacaciones", icon: "🌴", color: "#10B981" },
-  EN: { label: "Entrenamiento", icon: "📖", color: "#A78BFA" },
-  BA: { label: "Baja", icon: "🤒", color: "#F87171" }
-};
-
-const MONTHS = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
-const DOW_S = ["L", "M", "X", "J", "V", "S", "D"];
-const TURNO_DEF = {
-  M: { color: "#F59E0B", label: "Mañana", bg: "#F59E0B15" },
-  N: { color: "#818CF8", label: "Noche", bg: "#818CF815" },
-  D: { color: "#64748B", label: "Descanso", bg: "transparent" }
-};
-const EXTRA_VISUALS = { SC: { color: "#34D399", bg: "#34D39925" }, CA: { color: "#475569", bg: "transparent" } };
-
-const dim = (y, m) => new Date(y, m + 1, 0).getDate();
-const dow = (y, m, d) => { const r = new Date(y, m, d).getDay(); return r === 0 ? 6 : r - 1; };
-const dse = (y, m, d) => Math.round((new Date(y, m, d) - new Date(1970, 0, 1)) / 86400000);
-const mk = (y, m, d) => `${y}-${m}-${d}`;
-
-function cshift(y, m, d, off = 0) {
-  const pos = ((dse(y, m, d) + off) % CYCLE_LEN + CYCLE_LEN) % CYCLE_LEN;
-  return CYCLE[Math.floor(pos / 7)][pos % 7];
-}
-
-// --- FUNCIÓN DE AUTOASIGNACIÓN ---
-function autoAssign(ops, targetYear, off) {
-
-  // --- PREPARACIÓN ---
-  const days = [];
-
-  for (let mo = 0; mo < 12; mo++) {
-    for (let d = 1; d <= dim(targetYear, mo); d++) {
-      const k = mk(targetYear, mo + 1, d);
-      const shift = cshift(targetYear, mo, d, off);
-      if (shift !== "D") days.push({ k, shift });
-    }
-  }
-
-  const opIds = ops.map(o => o.id);
-
-  // --- ESTADO ---
-  function createState(assign) {
-    const s = {};
-    opIds.forEach(id => {
-      s[id] = { h: 0, n: 0, streak: 0, last: -10 };
-    });
-
-    days.forEach((day, di) => {
-      opIds.forEach(id => {
-        if (assign[day.k][id] === "SC") {
-          s[id].h += 12;
-          if (day.shift === "N") s[id].n++;
-
-          if (s[id].last === di - 1) s[id].streak++;
-          else s[id].streak = 1;
-
-          s[id].last = di;
-        } else {
-          s[id].streak = 0;
-        }
-      });
-    });
-
-    return s;
-  }
-
-  // --- DETECTAR RACHAS COMPLETAS ---
-  function getStreaks(assign) {
-    const streaks = [];
-    const perOp = {};
-
-    ops.forEach(op => perOp[op.id] = []);
-
-    days.forEach((day, di) => {
-      ops.forEach(op => {
-        if (assign[day.k][op.id] === "SC") {
-          perOp[op.id].push(di);
-        }
-      });
-    });
-
-    Object.values(perOp).forEach(arr => {
-      if (arr.length === 0) return;
-
-      let current = 1;
-
-      for (let i = 1; i < arr.length; i++) {
-        if (arr[i] === arr[i - 1] + 1) {
-          current++;
-        } else {
-          streaks.push(current);
-          current = 1;
-        }
-      }
-      streaks.push(current);
-    });
-
-    return streaks;
-  }
-
-  // --- INICIALIZACIÓN (SIEMPRE 2 SC) ---
-  let assign = {};
-
-  days.forEach(day => {
-    assign[day.k] = {};
-
-    const available = ops.filter(o => !o.calendar?.[day.k]);
-    const shuffled = [...available].sort(() => Math.random() - 0.5);
-
-    const selected = shuffled.slice(0, 2);
-
-    ops.forEach(op => {
-      assign[day.k][op.id] = selected.includes(op) ? "SC" : "CA";
-    });
-  });
-
-  // --- FUNCIÓN DE COSTE ---
-  function cost(assign) {
-    const s = createState(assign);
-
-    const hs = Object.values(s).map(x => x.h);
-    const ns = Object.values(s).map(x => x.n);
-
-    const avgH = hs.reduce((a, b) => a + b, 0) / hs.length;
-    const avgN = ns.reduce((a, b) => a + b, 0) / ns.length;
-
-    let cost = 0;
-
-    // NOCHES (PRIORIDAD MÁXIMA)
-    ns.forEach(n => {
-      cost += Math.pow(n - avgN, 2) * 15;
-    });
-
-    // HORAS
-    hs.forEach(h => {
-      cost += Math.pow(h - avgH, 2) * 3;
-    });
-
-    // RACHAS COMPLETAS (FORMA)
-    const streaks = getStreaks(assign);
-
-    streaks.forEach(len => {
-      if (len === 1) cost += 80;
-      else if (len === 2) cost += 40;
-      else if (len === 3) cost += 15;
-      else if (len === 4) cost += 0;
-      else if (len === 5) cost += 20;
-      else if (len === 6) cost += 50;
-      else if (len > 6) cost += 10000;
-    });
-
-    return cost;
-  }
-
-  // --- VALIDACIÓN DURA ---
-  function isValid(assign) {
-    const s = createState(assign);
-    return Object.values(s).every(x => x.streak <= 6);
-  }
-
-  // --- OPTIMIZACIÓN ---
-  let best = JSON.parse(JSON.stringify(assign));
-  let bestCost = cost(best);
-
-  for (let iter = 0; iter < 8000; iter++) {
-
-    const newAssign = JSON.parse(JSON.stringify(best));
-
-    const d = days[Math.floor(Math.random() * days.length)];
-    const scOps = opIds.filter(id => newAssign[d.k][id] === "SC");
-    const caOps = opIds.filter(id => newAssign[d.k][id] === "CA");
-
-    if (scOps.length < 2 || caOps.length === 0) continue;
-
-    const out = scOps[Math.floor(Math.random() * scOps.length)];
-    const inp = caOps[Math.floor(Math.random() * caOps.length)];
-
-    // evitar asignar a alguien con ausencia
-    const opIn = ops.find(o => o.id === inp);
-    if (opIn.calendar?.[d.k]) continue;
-
-    // swap
-    newAssign[d.k][out] = "CA";
-    newAssign[d.k][inp] = "SC";
-
-    if (!isValid(newAssign)) continue;
-
-    const newCost = cost(newAssign);
-
-    if (newCost < bestCost) {
-      best = newAssign;
-      bestCost = newCost;
-    }
-  }
-
-  return best;
-}
+import { autoAssign } from "./src/logic/autoAssign.js";
+import { db } from "./src/services/firebase";
+import { ABSENCE, CALENDAR_LEGEND, DOW_S, EXTRA_VISUALS, MONTHS, THEMES, TURNO_DEF } from "./src/config";
+import { Av, EyeIcon, LoginScreenComponent } from "./src/components";
+import { DEFAULT_ADMINS, simpleHash, cshift, dim, dow, formatDateTime, mk, stableStringify, countAbsencesForYear, computeStats, getThemeBySchedule } from "./src/utils";
 
 // --- ICONOS Y COMPONENTES VISUALES ---
-const EyeIcon = ({ visible, color }) => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    {visible ? (<><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></>) : (<><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></>)}
-  </svg>
-);
-
-const Av = ({ name, color, size = 24 }) => (
-  <div style={{ width: size, height: size, borderRadius: 8, background: color || '#ccc', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: size * 0.4, color: '#000', fontWeight: 'bold', flexShrink: 0 }}>
-    {name?.substring(0, 2).toUpperCase() || "??"}
-  </div>
-);
-
-function computeStats(ops, year, asgn, off) {
-  return ops.map(op => {
-    let sc = 0, nSC = 0;
-    for (let mo = 0; mo < 12; mo++) for (let d = 1; d <= dim(year, mo); d++) {
-      const k = mk(year, mo + 1, d), t = cshift(year, mo, d, off), a = asgn[k]?.[op.id];
-      if (t !== "D" && a === "SC") { sc++; if (t === "N") nSC++; }
-    }
-    return { ...op, sc, nSC, hSC: sc * 12 };
-  });
-}
-
-function formatDateTime(date) {
-  return new Intl.DateTimeFormat("es-ES", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit"
-  }).format(date);
-}
-
-function countAbsencesForYear(op, year) {
-  const counters = { VA: 0, EN: 0, BA: 0 };
-  Object.entries(op.calendar || {}).forEach(([dateKey, code]) => {
-    if (String(dateKey).startsWith(`${year}-`) && counters[code] !== undefined) {
-      counters[code] += 1;
-    }
-  });
-  return counters;
-}
 
 function PrintableHeader({ year, title, subtitle, generatedAt, generatedBy, operator }) {
   return (
@@ -492,8 +196,9 @@ function PrintableYearCalendar({ ops, year, asgn, off, generatedAt, generatedBy 
   );
 }
 
-// --- APP PRINCIPAL ---
-export default function App() {
+ // --- APP PRINCIPAL ---
+
+ export default function App() {
   const today = new Date();
   const [session, setSession] = useState(null);
   const [admins, setAdmins] = useState(DEFAULT_ADMINS);
@@ -502,41 +207,137 @@ export default function App() {
   const [view, setView] = useState("calendar");
   const [activeYear, setAY] = useState(today.getFullYear());
   const [month, setMonth] = useState(today.getMonth());
-  const [themeMode, setThemeMode] = useState('dark');
-  const [manualTheme, setManualTheme] = useState(false);
+  const themeSessionKey = "gestion-personal-theme-mode";
+  const [themeMode, setThemeMode] = useState(() => {
+  return sessionStorage.getItem(themeSessionKey) || getThemeBySchedule();
+});
   const [showConfigPass, setShowConfigPass] = useState(false);
   const [printMode, setPrintMode] = useState("annual");
   const [printOpId, setPrintOpId] = useState("");
+  const [plans, setPlans] = useState({});
+  const [isRecalculating, setIsRecalculating] = useState(false);
 
   useEffect(() => {
     onValue(ref(db, 'ops'), (s) => { if (s.val()) setOps(s.val()); });
     onValue(ref(db, 'admins'), (s) => { if (s.val()) setAdmins(s.val()); });
     onValue(ref(db, 'offset'), (s) => { if (s.val() !== null) setOff(s.val()); });
+    onValue(ref(db, 'plans'), (s) => { setPlans(s.val() || {}); });
   }, []);
+  useEffect(() => {
+  const applyThemeBySchedule = () => {
+    setThemeMode(getThemeBySchedule());
+  };
 
-  const saveOps = (n) => set(ref(db, 'ops'), n);
-  const saveAdmins = (n) => set(ref(db, 'admins'), n);
-  const saveOff = (n) => set(ref(db, 'offset'), n);
+  applyThemeBySchedule();
+
+  const intervalId = setInterval(applyThemeBySchedule, 60 * 1000);
+
+  return () => clearInterval(intervalId);
+  }, []);
+const saveOps = (n) => {
+  setOps(n);
+  set(ref(db, 'ops'), n).catch((error) => {
+    console.error("Error guardando operadores:", error);
+    alert("No se han podido guardar los cambios. Revisa la conexión.");
+  });
+};
+
+const saveAdmins = (n) => set(ref(db, 'admins'), n);
+
+const saveOff = (n) => {
+  setOff(n);
+  set(ref(db, 'offset'), n).catch((error) => {
+    console.error("Error guardando offset:", error);
+    alert("No se ha podido guardar el offset. Revisa la conexión.");
+  });
+};
 
   useEffect(() => {
-    if (!manualTheme) {
-      const hour = new Date().getHours();
-      setThemeMode(hour >= 8 && hour < 20 ? 'light' : 'dark');
-    }
-  }, [manualTheme]);
+  if (session) {
+    const now = new Date();
+    setAY(now.getFullYear());
+    setMonth(now.getMonth());
+  }
+}, [session]);
 
   const t = THEMES[themeMode];
   const isSuper = session?.role === "superadmin";
-  const isAdmin = session?.role === "admin" || isSuper;
-  const canEdit = isAdmin || session?.role === "editor";
-  const canSeeEditor = canEdit || session?.role === "guest";
+const isAdmin = session?.role === "admin" || isSuper;
+const canEdit = isAdmin || session?.role === "editor";
+const canSeeEditor = canEdit || session?.role === "guest";
 
-  const asgn = useMemo(() => autoAssign(ops, activeYear, off), [ops, activeYear, off]);
+const roleLabels = {
+  guest: "Invitado",
+  admin: "Administrador",
+  superadmin: "Administrador",
+  editor: "Editor"
+};
+
+const sessionDisplayName =
+  session?.role === "guest"
+    ? "Invitado"
+    : session?.role === "editor"
+      ? "Editor"
+      : isAdmin
+        ? "Admin"
+        : (session?.user || "");
+
+const sessionDisplayRole = session?.role === "guest" ? "" : (roleLabels[session?.role] || "");
+
+const profileDisplayRole = session?.role === "guest" ? "Invitado" : (roleLabels[session?.role] || "");
+
+ const needsPlanning = view === "calendar" || view === "stats";
+
+  const currentPlanHash = useMemo(() => stableStringify({ ops, off }), [ops, off]);
+  const savedPlanData = plans?.[activeYear] || null;
+  const hasSavedPlan = !!savedPlanData?.assign && Object.keys(savedPlanData.assign).length > 0;
+  const planHasPendingChanges = hasSavedPlan && savedPlanData.inputHash !== currentPlanHash;
+
+  const asgn = useMemo(() => savedPlanData?.assign || {}, [savedPlanData]);
   const stats = useMemo(() => computeStats(ops, activeYear, asgn, off), [ops, activeYear, asgn, off]);
+
+  const handleRecalculatePlan = async () => {
+    if (!isAdmin) return;
+
+    if (ops.length === 0) {
+      alert("No hay operadores cargados para generar la planificación.");
+      return;
+    }
+
+    const confirmMessage = hasSavedPlan
+      ? `Vas a recalcular la planificación oficial de ${activeYear}. Esto puede cambiar el calendario completo de ese año. ¿Quieres continuar?`
+      : `Vas a generar la planificación oficial de ${activeYear}. ¿Quieres continuar?`;
+
+    if (!window.confirm(confirmMessage)) return;
+
+    setIsRecalculating(true);
+
+    try {
+      const newPlan = autoAssign(ops, activeYear, off);
+
+      const planPayload = {
+        assign: newPlan,
+        inputHash: currentPlanHash,
+        updatedAt: new Date().toISOString(),
+        updatedBy: session?.user || "Administrador",
+        year: activeYear
+      };
+
+      setPlans(prev => ({ ...prev, [activeYear]: planPayload }));
+      await set(ref(db, `plans/${activeYear}`), planPayload);
+    } catch (error) {
+      console.error("Error recalculando planificación:", error);
+      alert("No se ha podido recalcular la planificación.");
+    } finally {
+      setIsRecalculating(false);
+    }
+  };
+
   const currentMonthLabel = `${MONTHS[month]} ${activeYear}`;
   const selectedPrintOp = useMemo(() => ops.find(op => String(op.id) === String(printOpId)) || ops[0] || null, [ops, printOpId]);
   const selectedPrintStats = useMemo(() => stats.find(op => String(op.id) === String(selectedPrintOp?.id)), [stats, selectedPrintOp]);
   const generatedAt = formatDateTime(new Date());
+  const todayKey = mk(today.getFullYear(), today.getMonth() + 1, today.getDate());
 
   useEffect(() => {
     if (!printOpId && ops[0]?.id) {
@@ -547,7 +348,7 @@ export default function App() {
   const handlePrevMonth = () => { if (month === 0) { setMonth(11); setAY(v => v - 1); } else setMonth(month - 1); };
   const handleNextMonth = () => { if (month === 11) { setMonth(0); setAY(v => v + 1); } else setMonth(month + 1); };
 
-  if (!session) return <LoginScreen admins={admins} onLogin={setSession} theme={t} />;
+  if (!session) return <LoginScreenComponent admins={admins} onLogin={setSession} theme={t} />;
 
   return (
     <div style={{
@@ -587,28 +388,46 @@ export default function App() {
         .print-only { display: none; }
       `}</style>
 
-      <header className="no-print glass-panel" style={{ margin: '14px 14px 0', padding: "14px 18px", display: 'flex', justifyContent: 'space-between', borderRadius: 22, alignItems: 'center', position: 'sticky', top: 12, zIndex: 200, gap: 12, flexWrap: 'wrap' }}>
+      <header className="no-print glass-panel" style={{ margin: '14px 14px 0', padding: "14px 18px", display: 'flex', justifyContent: 'space-between', borderRadius: 22, alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
         <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
           <div style={{ padding: '10px 14px', borderRadius: 14, background: t.accentSoft, border: `1px solid ${t.border}` }}>
             <div style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.08em', color: t.sub }}>Panel</div>
             <span style={{ fontWeight: 800, color: t.title, fontSize: 18, letterSpacing: '0.02em' }}>Sala de Control</span>
           </div>
-          <button onClick={() => { setManualTheme(true); setThemeMode(themeMode === 'dark' ? 'light' : 'dark'); }} style={{ background: t.shell, border: `1px solid ${t.border}`, borderRadius: 12, padding: '9px 12px', cursor: 'pointer', color: t.text, fontWeight: 700 }}>{themeMode === 'dark' ? 'Modo claro' : 'Modo oscuro'}</button>
+         <button
+  onClick={() => {
+    setThemeMode(prev => {
+      const next = prev === "dark" ? "light" : "dark";
+      sessionStorage.setItem(themeSessionKey, next);
+      return next;
+    });
+  }}
+  style={{
+    background: t.shell,
+    border: `1px solid ${t.border}`,
+    borderRadius: 12,
+    padding: "9px 12px",
+    cursor: "pointer",
+    color: t.text,
+    fontWeight: 700
+  }}
+>
+  {themeMode === "dark" ? "Modo claro" : "Modo oscuro"}
+</button>
           <select value={activeYear} onChange={e => setAY(Number(e.target.value))} style={{ background: t.shell, color: t.text, border: `1px solid ${t.border}`, borderRadius: 12, padding: '9px 12px', fontSize: 13, minWidth: 110 }}>
             {[2024, 2025, 2026, 2027, 2028, 2029, 2030].map(y => <option key={y} value={y}>{y}</option>)}
           </select>
         </div>
         <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
-          <div style={{ padding: '10px 14px', borderRadius: 14, background: t.shell, border: `1px solid ${t.border}` }}>
+                    <div style={{ padding: '10px 14px', borderRadius: 14, background: t.shell, border: `1px solid ${t.border}` }}>
             <div style={{ fontSize: 11, color: t.sub, marginBottom: 3 }}>Sesión activa</div>
-            <div style={{ fontSize: 13, fontWeight: 700, color: t.title }}>{session.user}</div>
-            <div style={{ fontSize: 11, color: t.sub }}>{session.role}</div>
+<div style={{ fontSize: 13, fontWeight: 700, color: t.title }}>{sessionDisplayRole || sessionDisplayName}</div>
           </div>
           <button onClick={() => setSession(null)} style={{ background: t.dangerSoft, color: '#EF4444', border: `1px solid rgba(239, 68, 68, 0.24)`, padding: '10px 14px', borderRadius: 12, fontSize: 12, fontWeight: 'bold', cursor: 'pointer' }}>Cerrar sesión</button>
         </div>
       </header>
 
-      <nav className="no-print glass-panel" style={{ display: 'flex', margin: '14px 14px 0', padding: 8, borderRadius: 18, position: 'sticky', top: 108, zIndex: 190, justifyContent: 'center' }}>
+      <nav className="no-print glass-panel" style={{ display: 'flex', margin: '14px 14px 0', padding: 8, borderRadius: 18, justifyContent: 'center' }}>
         <div style={{ display: 'flex', width: '100%', maxWidth: 820, gap: 8, flexWrap: 'wrap' }}>
           {["calendar", "stats", canSeeEditor && "editor", isAdmin && "config"].filter(Boolean).map(v => {
   const labels = {
@@ -641,35 +460,32 @@ export default function App() {
       </nav>
 
       <main className="app-shell">
-        <section className="hero-grid no-print">
-          <div className="glass-panel hero-card" style={{ background: `linear-gradient(135deg, ${t.card} 0%, ${t.accentSoft} 100%)` }}>
-            <div style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.12em', color: t.accent, marginBottom: 12 }}>Gestión de personal</div>
-            <h1 className="hero-title">Vista operativa de turnos, ausencias y control diario.</h1>
-            <p className="hero-sub">La lógica de asignación sigue intacta. Esta capa solo mejora la lectura, la presentación y la comodidad de uso en el día a día.</p>
-          </div>
-          <div className="glass-panel hero-card">
-            <div className="hero-kpi-label">Operadores</div>
-            <div className="hero-kpi-value">{ops.length}</div>
-            <div className="hero-sub">Personal cargado en la base de datos.</div>
-          </div>
-          <div className="glass-panel hero-card">
-            <div className="hero-kpi-label">Periodo visible</div>
-            <div className="hero-kpi-value" style={{ fontSize: 22 }}>{currentMonthLabel}</div>
-            <div className="hero-sub">Mes y año activos en pantalla.</div>
-          </div>
-          <div className="glass-panel hero-card">
-            <div className="hero-kpi-label">Perfil</div>
-            <div className="hero-kpi-value" style={{ fontSize: 22 }}>{session.role}</div>
-            <div className="hero-sub">Permisos activos de la sesión actual.</div>
-          </div>
-        </section>
-
+       
         {view === "calendar" && (
           <div>
             <div className="glass-panel section-card no-print" style={{ display: 'flex', justifyContent: 'space-between', gap: 12, marginBottom: 20, alignItems: 'center', padding: 18, flexWrap: 'wrap' }}>
               <div>
                 <div style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.08em', color: t.sub, marginBottom: 6 }}>Calendario operativo</div>
                 <h2 style={{ margin: 0, minWidth: 120, textAlign: 'center', fontSize: 24, color: t.title, letterSpacing: '-0.02em' }}>{currentMonthLabel}</h2>
+                {isAdmin && (
+  <button
+    onClick={handleRecalculatePlan}
+    disabled={isRecalculating}
+    style={{
+      marginTop: 12,
+      padding: '10px 14px',
+      borderRadius: 12,
+      border: `1px solid ${planHasPendingChanges || !hasSavedPlan ? 'rgba(245, 158, 11, 0.55)' : t.border}`,
+      background: planHasPendingChanges || !hasSavedPlan ? 'rgba(245, 158, 11, 0.16)' : t.accentSoft,
+      color: t.title,
+      cursor: isRecalculating ? 'not-allowed' : 'pointer',
+      fontSize: 12,
+      fontWeight: 800
+    }}
+  >
+    {isRecalculating ? "Calculando..." : hasSavedPlan ? "Recalcular planificación" : "Generar planificación"}
+  </button>
+)}
               </div>
               <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                 <button style={{ padding: '10px 14px', borderRadius: 12, border: `1px solid ${t.border}`, background: t.shell, color: t.text, cursor: 'pointer', fontSize: 12, fontWeight: 700 }} onClick={handlePrevMonth}>Mes anterior</button>
@@ -678,11 +494,14 @@ export default function App() {
                   <option value="annual">Exportación anual completa</option>
                   <option value="individual">Calendario individual</option>
                 </select>
-                {printMode === "individual" && (
+                                {printMode === "individual" && (
                   <select value={printOpId} onChange={e => setPrintOpId(e.target.value)} style={{ padding: '10px 14px', borderRadius: 12, border: `1px solid ${t.border}`, background: t.shell, color: t.text, fontSize: 12, minWidth: 220 }}>
                     {ops.map(op => <option key={op.id} value={String(op.id)}>{op.name}</option>)}
                   </select>
                 )}
+
+               
+
                 <button
                   style={{ padding: '10px 14px', borderRadius: 12, border: `1px solid ${t.border}`, background: t.cardSolid, color: t.text, cursor: 'pointer', fontSize: 12, fontWeight: 700 }}
                   onClick={() => window.print()}
@@ -691,20 +510,52 @@ export default function App() {
                 </button>
               </div>
             </div>
+                        {!hasSavedPlan && (
+              <div className="glass-panel section-card no-print" style={{ padding: 16, marginBottom: 16, border: '1px solid rgba(245, 158, 11, 0.45)', background: 'rgba(245, 158, 11, 0.12)' }}>
+                <div style={{ fontWeight: 800, color: t.title, marginBottom: 4 }}>No hay planificación oficial generada para {activeYear}</div>
+                <div style={{ fontSize: 13, color: t.sub }}>
+                  El calendario no se calculará automáticamente. Un administrador debe pulsar “Generar planificación”.
+                </div>
+              </div>
+            )}
 
+            {hasSavedPlan && planHasPendingChanges && (
+              <div className="glass-panel section-card no-print" style={{ padding: 16, marginBottom: 16, border: '1px solid rgba(245, 158, 11, 0.45)', background: 'rgba(245, 158, 11, 0.12)' }}>
+                <div style={{ fontWeight: 800, color: t.title, marginBottom: 4 }}>Hay cambios pendientes sin recalcular</div>
+                <div style={{ fontSize: 13, color: t.sub }}>
+                  Has modificado personal, ausencias u offset. La planificación oficial sigue estable hasta que pulses “Recalcular planificación”.
+                </div>
+              </div>
+            )}
             <div className="calendar-container">
               <div className="calendar-grid">
                 <div className="sticky-col" style={{ height: 55, borderBottom: `1px solid ${t.border}` }} />
                 {Array.from({ length: dim(activeYear, month) }).map((_, i) => {
-                  const rotHeader = cshift(activeYear, month, i+1, off);
-                  return (
-                    <div key={i} className="cell-day header-day">
-                      <span style={{ color: dow(activeYear, month, i+1) >= 5 ? '#EF4444' : t.sub, fontSize: 9 }}>{DOW_S[dow(activeYear, month, i+1)]}</span>
-                      <span style={{ fontWeight: 'bold', fontSize: 11 }}>{i+1}</span>
-                      <span style={{ fontSize: 9, fontWeight: '800', color: TURNO_DEF[rotHeader]?.color }}>{rotHeader === 'D' ? '' : rotHeader}</span>
-                    </div>
-                  );
-                })}
+  const dayNumber = i + 1;
+  const rotHeader = cshift(activeYear, month, dayNumber, off);
+  const headerDateKey = mk(activeYear, month + 1, dayNumber);
+  const isToday = headerDateKey === todayKey;
+
+  return (
+    <div
+      key={i}
+      className="cell-day header-day"
+      style={{
+        background: isToday ? t.accentSoft : undefined,
+        boxShadow: isToday ? `inset 0 0 0 2px ${t.accent}` : undefined,
+        borderRadius: isToday ? 12 : undefined
+      }}
+    >
+      <span style={{ color: dow(activeYear, month, dayNumber) >= 5 ? '#EF4444' : t.sub, fontSize: 9 }}>
+        {DOW_S[dow(activeYear, month, dayNumber)]}
+      </span>
+      <span style={{ fontWeight: 'bold', fontSize: 11 }}>{dayNumber}</span>
+      <span style={{ fontSize: 9, fontWeight: '800', color: TURNO_DEF[rotHeader]?.color }}>
+        {rotHeader === 'D' ? '' : rotHeader}
+      </span>
+    </div>
+  );
+})}
                 {ops.map(op => (
                   <div key={op.id} style={{ display: 'contents' }}>
                     <div className="sticky-col" style={{ padding: '10px 12px', fontSize: 12, borderTop: `1px solid ${t.border}`, display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -712,18 +563,78 @@ export default function App() {
                       <span style={{ fontWeight: 'bold', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{op.name}</span>
                     </div>
                     {Array.from({ length: dim(activeYear, month) }).map((_, i) => {
-                      const dk = mk(activeYear, month+1, i+1), abs = op.calendar?.[dk], rot = cshift(activeYear, month, i+1, off), calcAsgn = asgn[dk]?.[op.id];
-                      const finalCode = abs || calcAsgn || rot;
-                      let cellBg = "transparent", cellColor = t.text;
-                      if (abs) { cellBg = ABSENCE[abs].color; cellColor = "#000"; }
-                      else if (calcAsgn === "SC") { cellBg = EXTRA_VISUALS.SC.bg; cellColor = EXTRA_VISUALS.SC.color; }
-                      else if (TURNO_DEF[rot]) { cellBg = TURNO_DEF[rot].bg; cellColor = TURNO_DEF[rot].color; }
-                      return (
-                        <div key={i} className="cell-day" style={{ borderTop: `1px solid ${t.border}`, background: cellBg, color: cellColor, fontWeight: rot !== 'D' || abs || calcAsgn === 'SC' ? 'bold' : 'normal' }}>
-                          {finalCode}
-                        </div>
-                      );
-                    })}
+  const dk = mk(activeYear, month + 1, i + 1);
+  const abs = op.calendar?.[dk];
+  const rot = cshift(activeYear, month, i + 1, off);
+  const calcAsgn = asgn[dk]?.[op.id];
+  const finalCode = abs || calcAsgn || rot;
+  const isToday = dk === todayKey;
+
+  let cellBg = "transparent", cellColor = t.text;
+  if (abs) { cellBg = ABSENCE[abs].color; cellColor = "#000"; }
+  else if (calcAsgn === "SC") { cellBg = EXTRA_VISUALS.SC.bg; cellColor = EXTRA_VISUALS.SC.color; }
+  else if (TURNO_DEF[rot]) { cellBg = TURNO_DEF[rot].bg; cellColor = TURNO_DEF[rot].color; }
+
+  return (
+    <div
+      key={i}
+      className="cell-day"
+      style={{
+        borderTop: `1px solid ${t.border}`,
+        background: cellBg,
+        color: cellColor,
+        fontWeight: rot !== 'D' || abs || calcAsgn === 'SC' ? 'bold' : 'normal',
+        boxShadow: isToday ? `inset 0 0 0 2px ${t.accent}` : undefined
+      }}
+    >
+      {finalCode}
+    </div>
+  );
+})}
+                  </div>
+                ))}
+              </div>
+                            <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 16,
+                  flexWrap: "wrap",
+                  padding: "16px 18px",
+                  borderTop: `1px solid ${t.border}`,
+                  color: t.sub,
+                  fontSize: 12
+                }}
+              >
+                {CALENDAR_LEGEND.map(item => (
+                  <div
+                    key={item.code}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 7,
+                      whiteSpace: "nowrap"
+                    }}
+                  >
+                    <span
+                      style={{
+                        width: 24,
+                        height: 24,
+                        borderRadius: 8,
+                        border: `1px solid ${t.border}`,
+                        background: item.color,
+                        color: item.textColor,
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: 10,
+                        fontWeight: 900
+                      }}
+                    >
+                      {item.code}
+                    </span>
+
+                    <span>{item.label}</span>
                   </div>
                 ))}
               </div>
@@ -791,7 +702,7 @@ export default function App() {
               <input type="number" value={off} onChange={e => saveOff(Number(e.target.value))} style={{ padding: 12, width: '100%', borderRadius: 12, border: `1px solid ${t.border}`, background: t.shell, color: t.text }} />
             </div>
 
-            {isSuper && (
+             {isAdmin && (
               <div className="glass-panel section-card" style={{ padding: 25 }}>
               <h3 style={{ color: t.title, marginTop: 0 }}>GESTIÓN DE ACCESOS</h3>
                 <p style={{ color: t.sub, fontSize: 13, marginTop: 0, marginBottom: 18 }}>Creación y retirada de usuarios con permisos administrativos o de edición.</p>
@@ -868,26 +779,4 @@ function EditorComponent({ ops, saveOps, activeYear, theme: t, off, canEdit }) {
   );
 }
 
-function LoginScreen({ admins, onLogin, theme: t }) {
-  const [user, setUser] = useState(""), [pass, setPass] = useState(""), [showPass, setShowPass] = useState(false);
-  return (
-    <div style={{ minHeight: "100vh", background: `radial-gradient(circle at top left, ${t.accentSoft}, transparent 32%), linear-gradient(180deg, ${t.shell} 0%, ${t.bg} 100%)`, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
-      <div className="glass-panel" style={{ padding: 40, borderRadius: 28, width: "100%", maxWidth: 430 }}>
-        <div style={{ marginBottom: 28 }}>
-          <div style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.12em', color: t.accent, marginBottom: 10, textAlign: 'center' }}>Acceso seguro</div>
-          <h2 style={{ textAlign: 'center', color: t.title, marginBottom: 10, marginTop: 0, fontSize: 30 }}>Sala de Control</h2>
-          <p style={{ textAlign: 'center', color: t.sub, margin: 0, fontSize: 14 }}>Accede al panel de turnos y gestión de personal.</p>
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 15 }}>
-          <input value={user} onChange={e => setUser(e.target.value)} placeholder="Usuario" style={{ padding: 14, borderRadius: 14, border: `1px solid ${t.border}`, background: t.shell, color: t.text }} />
-          <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-            <input type={showPass ? "text" : "password"} value={pass} onChange={e => setPass(e.target.value)} placeholder="Contraseña" style={{ flex: 1, padding: 14, paddingRight: 45, borderRadius: 14, border: `1px solid ${t.border}`, background: t.shell, color: t.text }} />
-            <button onClick={() => setShowPass(!showPass)} style={{ position: 'absolute', right: 12, background: 'none', border: 'none', cursor: 'pointer', display: 'flex' }}><EyeIcon visible={showPass} color={t.sub} /></button>
-          </div>
-          <button onClick={() => { const f = admins.find(a => a.user === user && a.passHash === simpleHash(pass)); if(f) onLogin(f); else alert("Acceso denegado"); }} style={{ padding: 16, background: t.accentSoft, color: t.title, borderRadius: 14, border: `1px solid ${t.border}`, fontWeight: 'bold', cursor: 'pointer' }}>ENTRAR</button>
-          <button onClick={() => onLogin({ role: "guest", user: "Invitado" })} style={{ background: 'none', border: 'none', color: t.sub, textDecoration: 'underline', cursor: 'pointer', fontSize: 13 }}>Modo lectura</button>
-        </div>
-      </div>
-    </div>
-  );
-}
+

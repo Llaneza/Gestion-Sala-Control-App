@@ -798,7 +798,192 @@ const handleGenerateSecurityPlan = async () => {
   </div>
 )}
     </div>
+{activeSecurityPlan?.days && (
+  <div
+    style={{
+      marginTop: 26,
+      border: `1px solid ${t.border}`,
+      background: t.shell,
+      borderRadius: 22,
+      padding: 18
+    }}
+  >
+    <div
+      style={{
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        gap: 12,
+        marginBottom: 16,
+        flexWrap: "wrap"
+      }}
+    >
+      <div>
+        <div
+          style={{
+            fontSize: 12,
+            textTransform: "uppercase",
+            letterSpacing: "0.12em",
+            color: t.sub,
+            marginBottom: 4
+          }}
+        >
+          Calendario mensual de seguridad
+        </div>
 
+        <h3 style={{ margin: 0, color: t.title, fontSize: 24 }}>
+          {MONTHS[month]} {activeYear}
+        </h3>
+      </div>
+
+      <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+  <button
+    onClick={() => {
+      if (month === 0) {
+        setAY(activeYear - 1);
+        setMonth(11);
+      } else {
+        setMonth(month - 1);
+      }
+    }}
+    style={{
+      padding: "10px 14px",
+      borderRadius: 12,
+      border: `1px solid ${t.border}`,
+      background: t.card,
+      color: t.text,
+      cursor: "pointer",
+      fontWeight: 700
+    }}
+  >
+    Mes anterior
+  </button>
+
+  <button
+    onClick={() => {
+      if (month === 11) {
+        setAY(activeYear + 1);
+        setMonth(0);
+      } else {
+        setMonth(month + 1);
+      }
+    }}
+    style={{
+      padding: "10px 14px",
+      borderRadius: 12,
+      border: `1px solid ${t.border}`,
+      background: t.accentSoft,
+      color: t.title,
+      cursor: "pointer",
+      fontWeight: 800
+    }}
+  >
+    Mes siguiente
+  </button>
+</div>
+    </div>
+
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))",
+        gap: 10
+      }}
+    >
+      {Array.from({ length: dim(activeYear, month) }).map((_, i) => {
+        const dayNumber = i + 1;
+        const dateKey = `${activeYear}-${month + 1}-${dayNumber}`;
+        const dayPlan = activeSecurityPlan.days?.[dateKey] || {};
+        const isToday =
+          today.getFullYear() === activeYear &&
+          today.getMonth() === month &&
+          today.getDate() === dayNumber;
+
+        const roleRows = [
+          ["DCS", "DCS"],
+          ["BRIGADA", "Brigada"],
+          ["COORDINADOR_EMERGENCIAS", "Coord."],
+          ["CONTEO", "Conteo"]
+        ];
+
+        return (
+          <div
+            key={dateKey}
+            style={{
+              border: `1px solid ${isToday ? t.accent : t.border}`,
+              background: isToday ? t.accentSoft : t.card,
+              borderRadius: 16,
+              padding: 12,
+              boxShadow: isToday ? `inset 0 0 0 2px ${t.accent}` : undefined
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: 10
+              }}
+            >
+              <strong style={{ color: t.title, fontSize: 16 }}>
+                {dayNumber}
+              </strong>
+
+              <span style={{ color: t.sub, fontSize: 11 }}>
+                {dayPlan.dateLabel || `${String(dayNumber).padStart(2, "0")}/${String(month + 1).padStart(2, "0")}/${activeYear}`}
+              </span>
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              {roleRows.map(([roleId, label]) => {
+                const operatorId = dayPlan?.[roleId];
+
+                return (
+                  <div
+                    key={roleId}
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      gap: 8,
+                      fontSize: 12,
+                      color: t.text
+                    }}
+                  >
+                    <span style={{ color: t.sub }}>
+                      {label}
+                    </span>
+
+                    <strong
+                      style={{
+                        color: operatorId ? t.title : t.sub,
+                        textAlign: "right"
+                      }}
+                    >
+                      {operatorId ? getOperatorNameById(operatorId) : "—"}
+                    </strong>
+                  </div>
+                );
+              })}
+            </div>
+
+            {dayPlan.warnings?.length > 0 && (
+              <div
+                style={{
+                  marginTop: 8,
+                  color: "#ef4444",
+                  fontSize: 11,
+                  fontWeight: 800
+                }}
+              >
+                {dayPlan.warnings.length} aviso/s
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  </div>
+)}
     <div
       style={{
         display: "grid",

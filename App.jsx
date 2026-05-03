@@ -858,7 +858,7 @@ const handleGenerateSecurityPlan = async () => {
         );
       })}
     </div>
-    {activeSecurityPlan?.counters?.DCS && (
+{activeSecurityPlan?.counters && (
   <div
     style={{
       marginTop: 18,
@@ -867,35 +867,56 @@ const handleGenerateSecurityPlan = async () => {
     }}
   >
     <h3 style={{ margin: "0 0 12px", color: t.title, fontSize: 16 }}>
-      Reparto DCS seguridad
+      Reparto de seguridad
     </h3>
 
     <div
       style={{
         display: "grid",
-        gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-        gap: 10
+        gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+        gap: 14
       }}
     >
-      {Object.entries(activeSecurityPlan.counters.DCS).map(([operatorId, count]) => (
+      {[
+        ["DCS", "DCS seguridad"],
+        ["BRIGADA", "Brigada"]
+      ].map(([roleId, title]) => (
         <div
-          key={operatorId}
+          key={roleId}
           style={{
             border: `1px solid ${t.border}`,
             background: t.shell,
-            borderRadius: 14,
-            padding: 12,
-            display: "flex",
-            justifyContent: "space-between",
-            gap: 10
+            borderRadius: 16,
+            padding: 14
           }}
         >
-          <span style={{ color: t.text, fontSize: 13 }}>
-            {getOperatorNameById(operatorId)}
-          </span>
-          <strong style={{ color: t.title }}>
-            {count}
-          </strong>
+          <h4 style={{ margin: "0 0 10px", color: t.title, fontSize: 14 }}>
+            {title}
+          </h4>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {Object.entries(activeSecurityPlan.counters?.[roleId] || {}).length > 0 ? (
+              Object.entries(activeSecurityPlan.counters?.[roleId] || {}).map(([operatorId, count]) => (
+                <div
+                  key={operatorId}
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    gap: 10,
+                    color: t.text,
+                    fontSize: 13
+                  }}
+                >
+                  <span>{getOperatorNameById(operatorId)}</span>
+                  <strong style={{ color: t.title }}>{count}</strong>
+                </div>
+              ))
+            ) : (
+              <span style={{ color: t.sub, fontSize: 13 }}>
+                Sin asignaciones
+              </span>
+            )}
+          </div>
         </div>
       ))}
     </div>

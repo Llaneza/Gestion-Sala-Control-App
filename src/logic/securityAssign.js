@@ -147,7 +147,27 @@ export function generateSecurityPlan({ operators = [], year, dcsPlan = {} }) {
       } else {
         warnings.push("Sin DCS disponible");
       }
+      const brigadaCandidates = getAvailableOperatorsByRole({
+        operators,
+        dateKey,
+        roleId: SECURITY_ROLE_IDS.BRIGADA,
+        dcsPlan
+      });
 
+      const selectedBrigada = pickLeastAssignedOperator({
+        candidates: brigadaCandidates,
+        roleId: SECURITY_ROLE_IDS.BRIGADA,
+        counters,
+        usedOperatorIds
+      });
+
+      if (selectedBrigada) {
+        securityDay.BRIGADA = selectedBrigada.id;
+        usedOperatorIds.add(selectedBrigada.id);
+        counters.BRIGADA[selectedBrigada.id] = (counters.BRIGADA[selectedBrigada.id] || 0) + 1;
+      } else {
+        warnings.push("Sin Brigada disponible");
+      }
       days[dateKey] = {
   ...securityDay,
   dateLabel: formatEuropeanDate(year, monthNumber, day)

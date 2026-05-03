@@ -1,3 +1,5 @@
+import { cshift } from "../utils/dateUtils.js";
+
 const SECURITY_ROLE_IDS = {
   BRIGADA: "BRIGADA",
   DCS: "DCS",
@@ -28,17 +30,12 @@ const isBlockedByAbsence = (operator, dateKey) => {
   return BLOCKING_ABSENCE_CODES.includes(dayValue);
 };
 
-const isOperatorWorking = (operator, dateKey, dcsPlan) => {
-  const dayValue = getOperatorDayValue(operator, dateKey);
-
-  if (BLOCKING_ABSENCE_CODES.includes(dayValue)) {
+const isOperatorWorking = ({ operator, dateKey, shiftCode }) => {
+  if (isBlockedByAbsence(operator, dateKey)) {
     return false;
   }
 
-  const dcsDayAssignments = dcsPlan?.[dateKey] || {};
-  const operatorDcsValue = dcsDayAssignments?.[operator.id];
-
-  return Boolean(operatorDcsValue);
+  return Boolean(shiftCode) && shiftCode !== "D";
 };
 const getDcsOperatorsForDay = ({ operators, dateKey, dcsPlan }) => {
   const dcsDayAssignments = dcsPlan?.[dateKey] || {};
@@ -71,12 +68,11 @@ const pickLeastAssignedOperator = ({ candidates, roleId, counters, usedOperatorI
   })[0];
 };
 
-const getAvailableOperatorsByRole = ({ operators, dateKey, roleId, dcsPlan }) => {
+const getAvailableOperatorsByRole = ({ operators, dateKey, roleId, shiftCode }) => {
   return operators.filter(operator => {
     return (
       hasSecurityRole(operator, roleId) &&
-      !isBlockedByAbsence(operator, dateKey) &&
-      isOperatorWorking(operator, dateKey, dcsPlan)
+      isOperatorWorking({ operator, dateKey, shiftCode })
     );
   });
 };
@@ -97,7 +93,7 @@ const getAvailableOperatorsByRole = ({ operators, dateKey, roleId, dcsPlan }) =>
  * - Un operador no debe ocupar dos roles de seguridad el mismo día.
  * - El reparto debe ser lo más equitativo posible durante el año.
  */
-export function generateSecurityPlan({ operators = [], year, dcsPlan = {} }) {
+ export function generateSecurityPlan({ operators = [], year, dcsPlan = {}, off = 0 }) {
   if (!year) {
     return {};
   }
@@ -116,6 +112,7 @@ export function generateSecurityPlan({ operators = [], year, dcsPlan = {} }) {
     for (let day = 1; day <= daysInMonth; day++) {
       const monthNumber = monthIndex + 1;
       const dateKey = makeAppDateKey(year, monthNumber, day);
+      const shiftCode = cshift(year, monthIndex, day, off);
       const usedOperatorIds = new Set();
       const warnings = [];
 
@@ -148,11 +145,11 @@ export function generateSecurityPlan({ operators = [], year, dcsPlan = {} }) {
         warnings.push("Sin DCS disponible");
       }
       const brigadaCandidates = getAvailableOperatorsByRole({
-        operators,
-        dateKey,
-        roleId: SECURITY_ROLE_IDS.BRIGADA,
-        dcsPlan
-      });
+  operators,
+  dateKey,
+  roleId: SECURITY_ROLE_IDS.BRIGADA,
+  shiftCode
+});
 
       const selectedBrigada = pickLeastAssignedOperator({
         candidates: brigadaCandidates,

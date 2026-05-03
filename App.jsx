@@ -409,10 +409,11 @@ const handleGenerateSecurityPlan = async () => {
   if (!confirmed) return;
 
   const newSecurityPlan = generateSecurityPlan({
-    operators: ops,
-    year: activeYear,
-    dcsPlan: asgn
-  });
+  operators: ops,
+  year: activeYear,
+  dcsPlan: asgn,
+  off
+});
 
   const nextSecurityPlans = {
     ...(securityPlan || {}),

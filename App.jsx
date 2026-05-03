@@ -482,7 +482,7 @@ const currentPlanHash = useMemo(
   const labels = {
     calendar: "Calendario DCS",
     stats: "Estadísticas",
-    editor: "Editor",
+    editor: "Personal",
     config: "Administración"
   };
   return (

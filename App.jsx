@@ -439,10 +439,7 @@ const currentPlanHash = useMemo(
 
       <header className="no-print glass-panel" style={{ margin: '14px 14px 0', padding: "14px 18px", display: 'flex', justifyContent: 'space-between', borderRadius: 22, alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
         <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
-          <div style={{ padding: '10px 14px', borderRadius: 14, background: t.accentSoft, border: `1px solid ${t.border}` }}>
-            <div style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.08em', color: t.sub }}>Panel</div>
-            <span style={{ fontWeight: 800, color: t.title, fontSize: 18, letterSpacing: '0.02em' }}>Sala de Control</span>
-          </div>
+          
          <button
   onClick={() => {
     setThemeMode(prev => {
@@ -478,13 +475,14 @@ const currentPlanHash = useMemo(
 
       <nav className="no-print glass-panel" style={{ display: 'flex', margin: '14px 14px 0', padding: 8, borderRadius: 18, justifyContent: 'center' }}>
         <div style={{ display: 'flex', width: '100%', maxWidth: 820, gap: 8, flexWrap: 'wrap' }}>
-          {["calendar", "stats", canSeeEditor && "editor", isAdmin && "config"].filter(Boolean).map(v => {
+          {["calendar", "security", "stats", canSeeEditor && "editor", isAdmin && "config"].filter(Boolean).map(v => {
   const labels = {
-    calendar: "Calendario DCS",
-    stats: "Estadísticas",
-    editor: "Personal",
-    config: "Administración"
-  };
+  calendar: "Calendario DCS",
+  security: "Calendario Seguridad",
+  stats: "Estadísticas",
+  editor: "Personal",
+  config: "Administración"
+};
   return (
     <button
       key={v}
@@ -713,7 +711,92 @@ const currentPlanHash = useMemo(
             statsItem={selectedPrintStats}
           />
         )}
+{view === "security" && (
+  <div className="glass-panel section-card" style={{ padding: 24 }}>
+    <div style={{ marginBottom: 22 }}>
+      <div
+        style={{
+          fontSize: 12,
+          textTransform: "uppercase",
+          letterSpacing: "0.08em",
+          color: t.sub,
+          marginBottom: 6
+        }}
+      >
+        Calendario Seguridad
+      </div>
 
+      <h2 style={{ margin: 0, color: t.title }}>
+        Roles de seguridad
+      </h2>
+
+      <p style={{ margin: "8px 0 0", color: t.sub, fontSize: 14 }}>
+        Vista inicial para organizar Brigada, DCS, Coordinador de Emergencias y Conteo.
+      </p>
+    </div>
+
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+        gap: 14
+      }}
+    >
+      {SECURITY_ROLES.map(role => {
+        const roleOps = ops.filter(op =>
+          Array.isArray(op.securityRoles) && op.securityRoles.includes(role.id)
+        );
+
+        return (
+          <div
+            key={role.id}
+            style={{
+              border: `1px solid ${t.border}`,
+              background: t.shell,
+              borderRadius: 18,
+              padding: 16
+            }}
+          >
+            <div
+              style={{
+                fontSize: 13,
+                fontWeight: 900,
+                color: t.title,
+                marginBottom: 10
+              }}
+            >
+              {role.label}
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {roleOps.length > 0 ? (
+                roleOps.map(op => (
+                  <div
+                    key={op.id}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                      color: t.text,
+                      fontSize: 13
+                    }}
+                  >
+                    <Av name={op.name} color={op.color} size={24} />
+                    <span>{op.name}</span>
+                  </div>
+                ))
+              ) : (
+                <div style={{ color: t.sub, fontSize: 13 }}>
+                  Sin operadores asignados
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  </div>
+)}
         {view === "stats" && (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 20 }}>
             {stats.sort((a,b) => b.nSC - a.nSC || b.hSC - a.hSC).map(s => (

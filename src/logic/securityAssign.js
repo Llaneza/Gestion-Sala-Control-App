@@ -7,6 +7,14 @@ const SECURITY_ROLE_IDS = {
 
 const BLOCKING_ABSENCE_CODES = ["VA", "BA", "EN"];
 
+const makeAppDateKey = (year, month, day) => {
+  return `${year}-${month}-${day}`;
+};
+
+const formatEuropeanDate = (year, month, day) => {
+  return `${String(day).padStart(2, "0")}/${String(month).padStart(2, "0")}/${year}`;
+};
+
 const hasSecurityRole = (operator, roleId) => {
   return Array.isArray(operator?.securityRoles) && operator.securityRoles.includes(roleId);
 };
@@ -31,6 +39,36 @@ const isOperatorWorking = (operator, dateKey, dcsPlan) => {
   const operatorDcsValue = dcsDayAssignments?.[operator.id];
 
   return Boolean(operatorDcsValue);
+};
+const getDcsOperatorsForDay = ({ operators, dateKey, dcsPlan }) => {
+  const dcsDayAssignments = dcsPlan?.[dateKey] || {};
+
+  return operators.filter(operator => {
+    const operatorAssignment = dcsDayAssignments?.[operator.id];
+
+    return (
+      operatorAssignment === "SC" &&
+      hasSecurityRole(operator, SECURITY_ROLE_IDS.DCS) &&
+      !isBlockedByAbsence(operator, dateKey)
+    );
+  });
+};
+
+const pickLeastAssignedOperator = ({ candidates, roleId, counters, usedOperatorIds }) => {
+  const availableCandidates = candidates.filter(operator => !usedOperatorIds.has(operator.id));
+
+  if (availableCandidates.length === 0) {
+    return null;
+  }
+
+  return [...availableCandidates].sort((a, b) => {
+    const aCount = counters?.[roleId]?.[a.id] || 0;
+    const bCount = counters?.[roleId]?.[b.id] || 0;
+
+    if (aCount !== bCount) return aCount - bCount;
+
+    return String(a.name || "").localeCompare(String(b.name || ""));
+  })[0];
 };
 
 const getAvailableOperatorsByRole = ({ operators, dateKey, roleId, dcsPlan }) => {
@@ -65,26 +103,62 @@ export function generateSecurityPlan({ operators = [], year, dcsPlan = {} }) {
   }
 
   const days = {};
+  const counters = {
+    BRIGADA: {},
+    DCS: {},
+    COORDINADOR_EMERGENCIAS: {},
+    CONTEO: {}
+  };
 
   for (let monthIndex = 0; monthIndex < 12; monthIndex++) {
     const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
 
     for (let day = 1; day <= daysInMonth; day++) {
-      const dateKey = `${year}-${String(monthIndex + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+      const monthNumber = monthIndex + 1;
+      const dateKey = makeAppDateKey(year, monthNumber, day);
+      const usedOperatorIds = new Set();
+      const warnings = [];
 
-      days[dateKey] = {
+      const securityDay = {
         BRIGADA: null,
         DCS: null,
         COORDINADOR_EMERGENCIAS: null,
         CONTEO: null,
-        warnings: []
+        warnings
       };
+
+      const dcsCandidates = getDcsOperatorsForDay({
+        operators,
+        dateKey,
+        dcsPlan
+      });
+
+      const selectedDcs = pickLeastAssignedOperator({
+        candidates: dcsCandidates,
+        roleId: SECURITY_ROLE_IDS.DCS,
+        counters,
+        usedOperatorIds
+      });
+
+      if (selectedDcs) {
+        securityDay.DCS = selectedDcs.id;
+        usedOperatorIds.add(selectedDcs.id);
+        counters.DCS[selectedDcs.id] = (counters.DCS[selectedDcs.id] || 0) + 1;
+      } else {
+        warnings.push("Sin DCS disponible");
+      }
+
+      days[dateKey] = {
+  ...securityDay,
+  dateLabel: formatEuropeanDate(year, monthNumber, day)
+};  
     }
   }
 
   return {
     year,
     days,
+    counters,
     meta: {
       generatedAt: new Date().toISOString(),
       status: "draft"

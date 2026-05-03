@@ -360,6 +360,9 @@ const currentPlanHash = useMemo(
   const activeSecurityDaysCount = activeSecurityPlan?.days
   ? Object.keys(activeSecurityPlan.days).length
   : 0;
+  const getOperatorNameById = (operatorId) => {
+  return ops.find(op => String(op.id) === String(operatorId))?.name || "Sin asignar";
+};
   const handleRecalculatePlan = async () => {
     if (!isAdmin) return;
 
@@ -855,6 +858,49 @@ const handleGenerateSecurityPlan = async () => {
         );
       })}
     </div>
+    {activeSecurityPlan?.counters?.DCS && (
+  <div
+    style={{
+      marginTop: 18,
+      borderTop: `1px solid ${t.border}`,
+      paddingTop: 18
+    }}
+  >
+    <h3 style={{ margin: "0 0 12px", color: t.title, fontSize: 16 }}>
+      Reparto DCS seguridad
+    </h3>
+
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+        gap: 10
+      }}
+    >
+      {Object.entries(activeSecurityPlan.counters.DCS).map(([operatorId, count]) => (
+        <div
+          key={operatorId}
+          style={{
+            border: `1px solid ${t.border}`,
+            background: t.shell,
+            borderRadius: 14,
+            padding: 12,
+            display: "flex",
+            justifyContent: "space-between",
+            gap: 10
+          }}
+        >
+          <span style={{ color: t.text, fontSize: 13 }}>
+            {getOperatorNameById(operatorId)}
+          </span>
+          <strong style={{ color: t.title }}>
+            {count}
+          </strong>
+        </div>
+      ))}
+    </div>
+  </div>
+)}
   </div>
 )}
         {view === "stats" && (

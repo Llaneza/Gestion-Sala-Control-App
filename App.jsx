@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { ref, onValue, set } from "firebase/database";
 import cortevaLogo from "./Corteva_VerColor_RGB.png";
-import { autoAssign } from "./src/logic/autoAssign.js";
+import { autoAssign, generateSecurityPlan } from "./src/logic";
 import { db } from "./src/services/firebase";
 import { ABSENCE, CALENDAR_LEGEND, DOW_S, EXTRA_VISUALS, MONTHS, SECURITY_ROLES, THEMES, TURNO_DEF } from "./src/config";
 import { Av, EyeIcon, LoginScreenComponent } from "./src/components";
@@ -215,17 +215,20 @@ function PrintableYearCalendar({ ops, year, asgn, off, generatedAt, generatedBy 
   const [printMode, setPrintMode] = useState("annual");
   const [printOpId, setPrintOpId] = useState("");
   const [plans, setPlans] = useState({});
+  const [securityPlan, setSecurityPlan] = useState(null);
   const [isRecalculating, setIsRecalculating] = useState(false);
 
-  useEffect(() => {
-    onValue(ref(db, 'ops'), (s) => { if (s.val()) setOps(s.val()); });
-    onValue(ref(db, 'admins'), (s) => { if (s.val()) setAdmins(s.val()); });
-    onValue(ref(db, 'offset'), (s) => { if (s.val() !== null) setOff(s.val()); });
-    onValue(ref(db, 'plans'), (s) => { setPlans(s.val() || {}); });
-  }, []);
-  useEffect(() => {
+useEffect(() => {
+  onValue(ref(db, 'ops'), (s) => { if (s.val()) setOps(s.val()); });
+  onValue(ref(db, 'admins'), (s) => { if (s.val()) setAdmins(s.val()); });
+  onValue(ref(db, 'offset'), (s) => { if (s.val() !== null) setOff(s.val()); });
+  onValue(ref(db, 'plans'), (s) => { setPlans(s.val() || {}); });
+  onValue(ref(db, 'securityPlans'), (s) => { setSecurityPlan(s.val() || {}); });
+}, []);
+
+useEffect(() => {
   const applyThemeBySchedule = () => {
-    setThemeMode(getThemeBySchedule());
+    setThemeMode(sessionStorage.getItem(themeSessionKey) || getThemeBySchedule());
   };
 
   applyThemeBySchedule();
@@ -233,7 +236,7 @@ function PrintableYearCalendar({ ops, year, asgn, off, generatedAt, generatedBy 
   const intervalId = setInterval(applyThemeBySchedule, 60 * 1000);
 
   return () => clearInterval(intervalId);
-  }, []);
+}, [themeSessionKey]);
 const saveOps = (n) => {
   setOps(n);
   set(ref(db, 'ops'), n).catch((error) => {
@@ -283,6 +286,14 @@ const saveOff = (n) => {
   set(ref(db, 'offset'), n).catch((error) => {
     console.error("Error guardando offset:", error);
     alert("No se ha podido guardar el offset. Revisa la conexión.");
+  });
+};
+const saveSecurityPlans = (nextSecurityPlans) => {
+  setSecurityPlan(nextSecurityPlans);
+
+  set(ref(db, 'securityPlans'), nextSecurityPlans).catch((error) => {
+    console.error("Error guardando planificación de seguridad:", error);
+    alert("No se ha podido guardar la planificación de seguridad. Revisa la conexión.");
   });
 };
 
@@ -345,12 +356,16 @@ const currentPlanHash = useMemo(
   const asgn = useMemo(() => savedPlanData?.assign || {}, [savedPlanData]);
   const stats = useMemo(() => computeStats(dcsOps, activeYear, asgn, off), [dcsOps, activeYear, asgn, off]);
 
+  const activeSecurityPlan = securityPlan?.[activeYear] || null;
+  const activeSecurityDaysCount = activeSecurityPlan?.days
+  ? Object.keys(activeSecurityPlan.days).length
+  : 0;
   const handleRecalculatePlan = async () => {
     if (!isAdmin) return;
 
     if (dcsOps.length === 0) {
   alert("No hay operadores con rol DCS para generar la planificación de Sala de Control.");
-  return;
+  return; 
 }
 
     const confirmMessage = hasSavedPlan
@@ -381,7 +396,28 @@ const currentPlanHash = useMemo(
       setIsRecalculating(false);
     }
   };
+const handleGenerateSecurityPlan = async () => {
+  if (!isAdmin) return;
 
+  const confirmed = window.confirm(
+    `Vas a generar la planificación de seguridad para ${activeYear}. Esta planificación es independiente del Calendario DCS. ¿Quieres continuar?`
+  );
+
+  if (!confirmed) return;
+
+  const newSecurityPlan = generateSecurityPlan({
+    operators: ops,
+    year: activeYear,
+    dcsPlan: asgn
+  });
+
+  const nextSecurityPlans = {
+    ...(securityPlan || {}),
+    [activeYear]: newSecurityPlan
+  };
+
+  saveSecurityPlans(nextSecurityPlans);
+};
   const currentMonthLabel = `${MONTHS[month]} ${activeYear}`;const selectedPrintOp = useMemo(() => dcsOps.find(op => String(op.id) === String(printOpId)) || dcsOps[0] || null, [dcsOps, printOpId]);
   
   const selectedPrintStats = useMemo(() => stats.find(op => String(op.id) === String(selectedPrintOp?.id)), [stats, selectedPrintOp]);
@@ -733,6 +769,30 @@ const currentPlanHash = useMemo(
       <p style={{ margin: "8px 0 0", color: t.sub, fontSize: 14 }}>
         Vista inicial para organizar Brigada, DCS, Coordinador de Emergencias y Conteo.
       </p>
+      {isAdmin && (
+  <div style={{ marginTop: 16, display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+    <button
+      onClick={handleGenerateSecurityPlan}
+      style={{
+        padding: "10px 14px",
+        borderRadius: 12,
+        border: `1px solid ${t.border}`,
+        background: t.accentSoft,
+        color: t.title,
+        fontWeight: 900,
+        cursor: "pointer"
+      }}
+    >
+      {activeSecurityPlan ? "Regenerar planificación seguridad" : "Generar planificación seguridad"}
+    </button>
+
+    {activeSecurityPlan?.meta?.generatedAt && (
+  <span style={{ color: t.sub, fontSize: 13 }}>
+    Planificación generada para {activeYear} · {activeSecurityDaysCount} días creados
+  </span>
+)}
+  </div>
+)}
     </div>
 
     <div

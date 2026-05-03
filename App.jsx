@@ -360,6 +360,51 @@ const currentPlanHash = useMemo(
   const activeSecurityDaysCount = activeSecurityPlan?.days
   ? Object.keys(activeSecurityPlan.days).length
   : 0;
+  const activeSecurityMonthSummary = useMemo(() => {
+  if (!activeSecurityPlan?.days) {
+    return {
+      totalDays: 0,
+      completeDays: 0,
+      warningDays: 0,
+      missingAssignments: 0
+    };
+  }
+
+  const roleIds = ["DCS", "BRIGADA", "COORDINADOR_EMERGENCIAS", "CONTEO"];
+  const totalDays = dim(activeYear, month);
+
+  return Array.from({ length: totalDays }).reduce(
+    (summary, _, index) => {
+      const dayNumber = index + 1;
+      const dateKey = `${activeYear}-${month + 1}-${dayNumber}`;
+      const dayPlan = activeSecurityPlan.days?.[dateKey] || {};
+
+      const assignedCount = roleIds.filter(roleId => Boolean(dayPlan?.[roleId])).length;
+      const missingCount = roleIds.length - assignedCount;
+      const hasWarnings = Array.isArray(dayPlan.warnings) && dayPlan.warnings.length > 0;
+
+      summary.totalDays += 1;
+
+      if (missingCount === 0) {
+        summary.completeDays += 1;
+      }
+
+      if (hasWarnings || missingCount > 0) {
+        summary.warningDays += 1;
+      }
+
+      summary.missingAssignments += missingCount;
+
+      return summary;
+    },
+    {
+      totalDays: 0,
+      completeDays: 0,
+      warningDays: 0,
+      missingAssignments: 0
+    }
+  );
+}, [activeSecurityPlan, activeYear, month]);
   const getOperatorNameById = (operatorId) => {
   return ops.find(op => String(op.id) === String(operatorId))?.name || "Sin asignar";
 };
@@ -882,7 +927,54 @@ const handleGenerateSecurityPlan = async () => {
   </button>
 </div>
     </div>
+<div
+  style={{
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
+    gap: 10,
+    marginBottom: 16
+  }}
+>
+  {[
+    ["Días del mes", activeSecurityMonthSummary.totalDays],
+    ["Días completos", activeSecurityMonthSummary.completeDays],
+    ["Días con avisos", activeSecurityMonthSummary.warningDays],
+    ["Puestos pendientes", activeSecurityMonthSummary.missingAssignments]
+  ].map(([label, value]) => (
+    <div
+      key={label}
+      style={{
+        border: `1px solid ${t.border}`,
+        background: t.card,
+        borderRadius: 16,
+        padding: 14
+      }}
+    >
+      <div
+        style={{
+          color: t.sub,
+          fontSize: 11,
+          textTransform: "uppercase",
+          letterSpacing: "0.08em",
+          marginBottom: 6,
+          fontWeight: 800
+        }}
+      >
+        {label}
+      </div>
 
+      <div
+        style={{
+          color: t.title,
+          fontSize: 24,
+          fontWeight: 900
+        }}
+      >
+        {value}
+      </div>
+    </div>
+  ))}
+</div>
     <div
       style={{
         display: "grid",

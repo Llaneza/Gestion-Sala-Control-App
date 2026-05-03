@@ -480,7 +480,7 @@ const currentPlanHash = useMemo(
         <div style={{ display: 'flex', width: '100%', maxWidth: 820, gap: 8, flexWrap: 'wrap' }}>
           {["calendar", "stats", canSeeEditor && "editor", isAdmin && "config"].filter(Boolean).map(v => {
   const labels = {
-    calendar: "Calendario",
+    calendar: "Calendario DCS",
     stats: "Estadísticas",
     editor: "Editor",
     config: "Administración"

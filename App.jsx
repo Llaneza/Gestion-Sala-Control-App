@@ -879,9 +879,11 @@ const handleGenerateSecurityPlan = async () => {
       }}
     >
       {[
-        ["DCS", "DCS seguridad"],
-        ["BRIGADA", "Brigada"]
-      ].map(([roleId, title]) => (
+  ["DCS", "DCS seguridad"],
+  ["BRIGADA", "Brigada"],
+  ["COORDINADOR_EMERGENCIAS", "Coordinador Emergencias"],
+  ["CONTEO", "Conteo"]
+].map(([roleId, title]) => (
         <div
           key={roleId}
           style={{

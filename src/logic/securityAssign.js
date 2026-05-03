@@ -165,6 +165,49 @@ const getAvailableOperatorsByRole = ({ operators, dateKey, roleId, shiftCode }) 
       } else {
         warnings.push("Sin Brigada disponible");
       }
+      const coordinadorCandidates = getAvailableOperatorsByRole({
+  operators,
+  dateKey,
+  roleId: SECURITY_ROLE_IDS.COORDINADOR_EMERGENCIAS,
+  shiftCode
+});
+
+const selectedCoordinador = pickLeastAssignedOperator({
+  candidates: coordinadorCandidates,
+  roleId: SECURITY_ROLE_IDS.COORDINADOR_EMERGENCIAS,
+  counters,
+  usedOperatorIds
+});
+
+if (selectedCoordinador) {
+  securityDay.COORDINADOR_EMERGENCIAS = selectedCoordinador.id;
+  usedOperatorIds.add(selectedCoordinador.id);
+  counters.COORDINADOR_EMERGENCIAS[selectedCoordinador.id] =
+    (counters.COORDINADOR_EMERGENCIAS[selectedCoordinador.id] || 0) + 1;
+} else {
+  warnings.push("Sin Coordinador de Emergencias disponible");
+}
+const conteoCandidates = getAvailableOperatorsByRole({
+  operators,
+  dateKey,
+  roleId: SECURITY_ROLE_IDS.CONTEO,
+  shiftCode
+});
+
+const selectedConteo = pickLeastAssignedOperator({
+  candidates: conteoCandidates,
+  roleId: SECURITY_ROLE_IDS.CONTEO,
+  counters,
+  usedOperatorIds
+});
+
+if (selectedConteo) {
+  securityDay.CONTEO = selectedConteo.id;
+  usedOperatorIds.add(selectedConteo.id);
+  counters.CONTEO[selectedConteo.id] = (counters.CONTEO[selectedConteo.id] || 0) + 1;
+} else {
+  warnings.push("Sin Conteo disponible");
+}
       days[dateKey] = {
   ...securityDay,
   dateLabel: formatEuropeanDate(year, monthNumber, day)

@@ -647,6 +647,18 @@ const dailySummary = [
       <main className="app-shell">
        {view === "daily" && (
   <div className="glass-panel section-card" style={{ padding: 28 }}>
+  
+    <div
+  style={{
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    gap: 20,
+    marginBottom: 28,
+    flexWrap: "wrap"
+  }}
+>
+  <div>
     <div
       style={{
         fontSize: 12,
@@ -660,13 +672,35 @@ const dailySummary = [
       Operativa diaria
     </div>
 
-    <h1 style={{ margin: 0, color: t.title, fontSize: 32 }}>
+    <h1 style={{ margin: 0, color: t.title, fontSize: 34 }}>
       Resumen del día
     </h1>
 
-    <p style={{ marginTop: 8, marginBottom: 28, color: t.sub, fontSize: 15 }}>
-      Vista rápida de los puestos asignados hoy. Para ver el detalle completo, usa los calendarios.
+    <p style={{ marginTop: 8, marginBottom: 0, color: t.sub, fontSize: 15 }}>
+      Vista rápida de los puestos asignados hoy.
     </p>
+  </div>
+
+  <div
+    style={{
+      padding: "14px 18px",
+      borderRadius: 18,
+      background: t.shell,
+      border: `1px solid ${t.border}`,
+      color: t.title,
+      fontWeight: 800,
+      minWidth: 190,
+      textAlign: "center"
+    }}
+  >
+    <div style={{ fontSize: 12, color: t.sub, marginBottom: 4 }}>
+      Fecha actual
+    </div>
+    <div style={{ fontSize: 18 }}>
+      {today.getDate()}/{today.getMonth() + 1}/{today.getFullYear()}
+    </div>
+  </div>
+</div>
 
     <div
       style={{

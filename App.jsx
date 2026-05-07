@@ -200,6 +200,7 @@ function PrintableYearCalendar({ ops, year, asgn, off, generatedAt, generatedBy 
 
  export default function App() {
   const today = new Date();
+  const todayKey = mk(today.getFullYear(), today.getMonth() + 1, today.getDate());
   const [session, setSession] = useState(null);
   const [admins, setAdmins] = useState(DEFAULT_ADMINS);
   const [ops, setOps] = useState([]);
@@ -347,6 +348,19 @@ const currentPlanHash = useMemo(
   const activeSecurityDaysCount = activeSecurityPlan?.days
   ? Object.keys(activeSecurityPlan.days).length
   : 0;
+  
+
+const todayLabel = today.toLocaleDateString("es-ES", {
+  weekday: "long",
+  day: "2-digit",
+  month: "long",
+  year: "numeric"
+});
+const todayDcsOperators = useMemo(() => {
+  const todayAssignments = savedPlanData?.assign?.[todayKey] || {};
+
+  return dcsOps.filter(op => todayAssignments?.[op.id] === "SC");
+}, [savedPlanData, todayKey, dcsOps]);
   const activeSecurityMonthSummary = useMemo(() => {
   if (!activeSecurityPlan?.days) {
     return {
@@ -458,7 +472,7 @@ const handleGenerateSecurityPlan = async () => {
   
   const selectedPrintStats = useMemo(() => stats.find(op => String(op.id) === String(selectedPrintOp?.id)), [stats, selectedPrintOp]);
   const generatedAt = formatDateTime(new Date());
-  const todayKey = mk(today.getFullYear(), today.getMonth() + 1, today.getDate());
+  
 
   useEffect(() => {
   if (!printOpId && dcsOps[0]?.id) {
@@ -469,7 +483,18 @@ const handleGenerateSecurityPlan = async () => {
   const handlePrevMonth = () => { if (month === 0) { setMonth(11); setAY(v => v - 1); } else setMonth(month - 1); };
   const handleNextMonth = () => { if (month === 11) { setMonth(0); setAY(v => v + 1); } else setMonth(month + 1); };
 
-  if (!session) return <LoginScreenComponent admins={admins} onLogin={setSession} theme={t} />;
+  if (!session) {
+  return (
+    <LoginScreenComponent
+      admins={admins}
+      onLogin={(newSession) => {
+        setSession(newSession);
+        setView("daily");
+      }}
+      theme={t}
+    />
+  );
+}
 
   return (
     <div style={{

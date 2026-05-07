@@ -204,13 +204,10 @@ function PrintableYearCalendar({ ops, year, asgn, off, generatedAt, generatedBy 
   const [admins, setAdmins] = useState(DEFAULT_ADMINS);
   const [ops, setOps] = useState([]);
   const [off, setOff] = useState(-11);
-  const [view, setView] = useState("calendar");
+  const [view, setView] = useState("daily");
   const [activeYear, setAY] = useState(today.getFullYear());
   const [month, setMonth] = useState(today.getMonth());
-  const themeSessionKey = "gestion-personal-theme-mode";
-  const [themeMode, setThemeMode] = useState(() => {
-  return sessionStorage.getItem(themeSessionKey) || getThemeBySchedule();
-});
+  const themeMode = "light";
   const [showConfigPass, setShowConfigPass] = useState(false);
   const [printMode, setPrintMode] = useState("annual");
   const [printOpId, setPrintOpId] = useState("");
@@ -226,17 +223,7 @@ useEffect(() => {
   onValue(ref(db, 'securityPlans'), (s) => { setSecurityPlan(s.val() || {}); });
 }, []);
 
-useEffect(() => {
-  const applyThemeBySchedule = () => {
-    setThemeMode(sessionStorage.getItem(themeSessionKey) || getThemeBySchedule());
-  };
 
-  applyThemeBySchedule();
-
-  const intervalId = setInterval(applyThemeBySchedule, 60 * 1000);
-
-  return () => clearInterval(intervalId);
-}, [themeSessionKey]);
 const saveOps = (n) => {
   setOps(n);
   set(ref(db, 'ops'), n).catch((error) => {
@@ -527,12 +514,8 @@ const handleGenerateSecurityPlan = async () => {
           
          <button
   onClick={() => {
-    setThemeMode(prev => {
-      const next = prev === "dark" ? "light" : "dark";
-      sessionStorage.setItem(themeSessionKey, next);
-      return next;
-    });
-  }}
+  setThemeMode(prev => (prev === "dark" ? "light" : "dark"));
+}}
   style={{
     background: t.shell,
     border: `1px solid ${t.border}`,
@@ -560,8 +543,9 @@ const handleGenerateSecurityPlan = async () => {
 
       <nav className="no-print glass-panel" style={{ display: 'flex', margin: '14px 14px 0', padding: 8, borderRadius: 18, justifyContent: 'center' }}>
         <div style={{ display: 'flex', width: '100%', maxWidth: 820, gap: 8, flexWrap: 'wrap' }}>
-          {["calendar", "security", "stats", canSeeEditor && "editor", isAdmin && "config"].filter(Boolean).map(v => {
+          {["daily","calendar", "security", "stats", canSeeEditor && "editor", isAdmin && "config"].filter(Boolean).map(v => {
   const labels = {
+  daily: "Operativa diaria",  
   calendar: "Calendario DCS",
   security: "Calendario Seguridad",
   stats: "Estadísticas",
@@ -592,7 +576,100 @@ const handleGenerateSecurityPlan = async () => {
       </nav>
 
       <main className="app-shell">
-       
+       {view === "daily" && (
+  <div className="glass-panel section-card" style={{ padding: 28 }}>
+    <div
+      style={{
+        fontSize: 12,
+        textTransform: "uppercase",
+        letterSpacing: "0.12em",
+        color: t.accent,
+        marginBottom: 10,
+        fontWeight: 800
+      }}
+    >
+      Operativa diaria
+    </div>
+
+    <h1 style={{ margin: 0, color: t.title, fontSize: 32 }}>
+      Resumen del día
+    </h1>
+
+    <p style={{ marginTop: 8, marginBottom: 28, color: t.sub, fontSize: 15 }}>
+      Vista rápida de los puestos asignados hoy. Para ver el detalle completo, usa los calendarios.
+    </p>
+
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+        gap: 16
+      }}
+    >
+      {[
+        ["DCS", "Pendiente de conectar"],
+        ["Brigada", "Pendiente de conectar"],
+        ["Coordinador Emergencias", "Pendiente de conectar"],
+        ["Conteo", "Pendiente de conectar"]
+      ].map(([title, value]) => (
+        <div
+          key={title}
+          style={{
+            background: t.shell,
+            border: `1px solid ${t.border}`,
+            borderRadius: 18,
+            padding: 20,
+            minHeight: 120
+          }}
+        >
+          <div
+            style={{
+              fontSize: 12,
+              textTransform: "uppercase",
+              letterSpacing: "0.08em",
+              color: t.sub,
+              marginBottom: 12,
+              fontWeight: 800
+            }}
+          >
+            {title}
+          </div>
+
+          <div style={{ fontSize: 22, fontWeight: 800, color: t.title }}>
+            {value}
+          </div>
+        </div>
+      ))}
+    </div>
+
+    <div
+      style={{
+        marginTop: 18,
+        background: t.shell,
+        border: `1px solid ${t.border}`,
+        borderRadius: 18,
+        padding: 20
+      }}
+    >
+      <div
+        style={{
+          fontSize: 12,
+          textTransform: "uppercase",
+          letterSpacing: "0.08em",
+          color: t.sub,
+          marginBottom: 10,
+          fontWeight: 800
+        }}
+      >
+        Ausencias
+      </div>
+
+      <div style={{ color: t.text, fontSize: 15 }}>
+        Pendiente de conectar con vacaciones, bajas y entrenamientos de hoy.
+      </div>
+    </div>
+  </div>
+)}
         {view === "calendar" && (
           <div>
             <div className="glass-panel section-card no-print" style={{ display: 'flex', justifyContent: 'space-between', gap: 12, marginBottom: 20, alignItems: 'center', padding: 18, flexWrap: 'wrap' }}>

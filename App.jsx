@@ -483,7 +483,63 @@ const handleGenerateSecurityPlan = async () => {
   const handlePrevMonth = () => { if (month === 0) { setMonth(11); setAY(v => v - 1); } else setMonth(month - 1); };
   const handleNextMonth = () => { if (month === 11) { setMonth(0); setAY(v => v + 1); } else setMonth(month + 1); };
 
-  if (!session) {
+
+
+const getTodayDcsOperators = () => {
+  return dcsOps
+    .filter(op => {
+      const abs = op.calendar?.[todayKey];
+      const rot = cshift(activeYear, month, today.getDate(), off);
+      const calcAsgn = asgn[todayKey]?.[op.id];
+      const finalCode = abs || calcAsgn || rot;
+
+      return finalCode === "SC";
+    })
+    .map(op => op.name);
+};
+
+const todaySecurityDay =
+  activeSecurityPlan?.days?.[todayKey] ||
+  activeSecurityPlan?.assignments?.[todayKey] ||
+  activeSecurityPlan?.assign?.[todayKey] ||
+  {};
+
+const getTodaySecurityRoleName = (roleId) => {
+  const value = todaySecurityDay?.[roleId];
+
+  if (!value) return "Sin asignar";
+
+  if (Array.isArray(value)) {
+    return value.map(id => getOperatorNameById(id)).join(", ");
+  }
+
+  if (typeof value === "object") {
+    return value.name || getOperatorNameById(value.id);
+  }
+
+  return getOperatorNameById(value);
+};
+
+const dailySummary = [
+  {
+    title: "DCS",
+    value: getTodayDcsOperators().join(", ") || "Sin asignar",
+  },
+  {
+    title: "Brigada",
+    value: getTodaySecurityRoleName("BRIGADA"),
+  },
+  {
+    title: "Coordinador de Emergencias",
+    value: getTodaySecurityRoleName("COORDINADOR_EMERGENCIAS"),
+  },
+  {
+    title: "Conteo",
+    value: getTodaySecurityRoleName("CONTEO"),
+  },
+];
+
+ if (!session) {
   return (
     <LoginScreenComponent
       admins={admins}
@@ -616,22 +672,22 @@ const handleGenerateSecurityPlan = async () => {
         gap: 16
       }}
     >
-      {[
-        ["DCS", "Pendiente de conectar"],
-        ["Brigada", "Pendiente de conectar"],
-        ["Coordinador Emergencias", "Pendiente de conectar"],
-        ["Conteo", "Pendiente de conectar"]
-      ].map(([title, value]) => (
-        <div
-          key={title}
-          style={{
-            background: t.shell,
-            border: `1px solid ${t.border}`,
-            borderRadius: 18,
-            padding: 20,
-            minHeight: 120
-          }}
-        >
+   {[
+  ["DCS", getOperatorNameById(todaySecurityDay?.DCS)],
+  ["Brigada", getOperatorNameById(todaySecurityDay?.Brigada)],
+  ["Coordinador Emergencias", getOperatorNameById(todaySecurityDay?.["Coordinador de Emergencias"])],
+  ["Conteo", getOperatorNameById(todaySecurityDay?.Conteo)]
+].map(([title, value]) => (
+  <div
+    key={title}
+    style={{
+      background: t.shell,
+      border: `1px solid ${t.border}`,
+      borderRadius: 18,
+      padding: 20,
+      minHeight: 120
+    }}
+  >
           <div
             style={{
               fontSize: 12,

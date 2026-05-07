@@ -709,24 +709,7 @@ const dailySummary = [
         gap: 16
       }}
     >
-   {[
-  {
-    title: "DCS",
-    value: getOperatorNameById(todaySecurityDay?.DCS) || "Sin asignar",
-  },
-  {
-    title: "Brigada",
-    value: getOperatorNameById(todaySecurityDay?.Brigada) || "Sin asignar",
-  },
-  {
-    title: "Coord. Emergencias",
-    value: getOperatorNameById(todaySecurityDay?.["Coordinador de Emergencias"]) || "Sin asignar",
-  },
-  {
-    title: "Conteo",
-    value: getOperatorNameById(todaySecurityDay?.Conteo) || "Sin asignar",
-  },
-].map(({ title, value }) => (
+   {dailySummary.map(({ title, value }) => (
   <div
     key={title}
     style={{
@@ -737,108 +720,50 @@ const dailySummary = [
       minHeight: 120
     }}
   >
-          <div
-            style={{
-              fontSize: 12,
-              textTransform: "uppercase",
-              letterSpacing: "0.08em",
-              color: t.sub,
-              marginBottom: 12,
-              fontWeight: 800
-            }}
-          >
-            {title}
-          </div>
-
-          <div style={{ fontSize: 22, fontWeight: 800, color: t.title }}>
-            {value}
-          </div>
-        </div>
-      ))}
-    </div>
-
-   {todayAbsences.length > 0 && (
-  <div
-    style={{
-      marginTop: 24,
-      paddingTop: 22,
-      borderTop: `1px solid ${t.border}`
-    }}
-  >
-    <h2 style={{ margin: 0, color: t.title, fontSize: 22 }}>
-      Ausencias de hoy
-    </h2>
-
-    <p style={{ marginTop: 6, marginBottom: 16, color: t.sub, fontSize: 14 }}>
-      Personal con vacaciones, entrenamiento o baja en el día actual.
-    </p>
-
     <div
       style={{
-        display: "grid",
-        gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-        gap: 12
+        fontSize: 12,
+        textTransform: "uppercase",
+        letterSpacing: "0.08em",
+        color: t.sub,
+        marginBottom: 12,
+        fontWeight: 800
       }}
     >
-      {ops
-  .filter(op => ["VA", "EN", "BA"].includes(op.calendar?.[todayKey]))
-  .map(op => {
-    const code = op.calendar?.[todayKey];
-    const label =
-      code === "VA"
-        ? "Vacaciones"
-        : code === "EN"
-        ? "Entrenamiento"
-        : "Baja";
+      {title}
+    </div>
 
-    return (
-      <div
-        key={op.id}
-        style={{
-          background: t.shell,
-          border: `1px solid ${t.border}`,
-          borderRadius: 18,
-          padding: 18,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: 12
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <Av name={op.name} color={op.color} size={28} />
-          <div>
-            <div style={{ fontWeight: 800, color: t.title }}>
-              {op.name}
-            </div>
-            <div style={{ fontSize: 13, color: t.sub }}>
-              {label}
-            </div>
-          </div>
-        </div>
+    <div style={{ fontSize: 22, fontWeight: 800, color: t.title }}>
+      {value}
+    </div>
+  </div>
+))}
+</div>
 
-        <strong style={{ color: t.accent }}>
-          {code}
-        </strong>
-      </div>
-    );
-  })}
+<div
+  style={{
+    marginTop: 24,
+    paddingTop: 22,
+    borderTop: `1px solid ${t.border}`
+  }}
+>
+  <h2 style={{ margin: 0, color: t.title, fontSize: 22 }}>
+    Ausencias de hoy
+  </h2>
 
-{ops.filter(op => ["VA", "EN", "BA"].includes(op.calendar?.[todayKey])).length === 0 && (
+  <p style={{ marginTop: 6, marginBottom: 16, color: t.sub, fontSize: 14 }}>
+    Personal con vacaciones, entrenamiento o baja en el día actual.
+  </p>
+
   <div
     style={{
-      background: t.shell,
-      border: `1px solid ${t.border}`,
-      borderRadius: 18,
-      padding: 18,
-      color: t.sub,
-      fontSize: 14
+      display: "grid",
+      gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+      gap: 12
     }}
   >
-    No hay ausencias registradas hoy.
-  </div>
-)}
-      {todayAbsences.map(op => {
+    {todayAbsences.length > 0 ? (
+      todayAbsences.map(op => {
         const code = op.calendar?.[todayKey];
 
         const label =
@@ -856,8 +781,8 @@ const dailySummary = [
             style={{
               background: t.shell,
               border: `1px solid ${t.border}`,
-              borderRadius: 16,
-              padding: 16,
+              borderRadius: 18,
+              padding: 18,
               display: "flex",
               alignItems: "center",
               justifyContent: "space-between",
@@ -866,13 +791,18 @@ const dailySummary = [
           >
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <Av name={op.name} color={op.color} size={28} />
-              <strong style={{ color: t.title }}>{op.name}</strong>
+              <div>
+                <div style={{ fontWeight: 800, color: t.title }}>
+                  {op.name}
+                </div>
+                <div style={{ fontSize: 13, color: t.sub }}>
+                  {label}
+                </div>
+              </div>
             </div>
 
-            <span
+            <strong
               style={{
-                fontSize: 13,
-                fontWeight: 800,
                 color:
                   code === "VA"
                     ? "#059669"
@@ -881,14 +811,27 @@ const dailySummary = [
                     : "#ef4444"
               }}
             >
-              {label}
-            </span>
+              {code}
+            </strong>
           </div>
         );
-      })}
-    </div>
+      })
+    ) : (
+      <div
+        style={{
+          background: t.shell,
+          border: `1px solid ${t.border}`,
+          borderRadius: 18,
+          padding: 18,
+          color: t.sub,
+          fontSize: 14
+        }}
+      >
+        No hay ausencias registradas hoy.
+      </div>
+    )}
   </div>
-)}
+</div>
   </div>
 )}
         {view === "calendar" && (

@@ -780,6 +780,64 @@ const dailySummary = [
         gap: 12
       }}
     >
+      {ops
+  .filter(op => ["VA", "EN", "BA"].includes(op.calendar?.[todayKey]))
+  .map(op => {
+    const code = op.calendar?.[todayKey];
+    const label =
+      code === "VA"
+        ? "Vacaciones"
+        : code === "EN"
+        ? "Entrenamiento"
+        : "Baja";
+
+    return (
+      <div
+        key={op.id}
+        style={{
+          background: t.shell,
+          border: `1px solid ${t.border}`,
+          borderRadius: 18,
+          padding: 18,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 12
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <Av name={op.name} color={op.color} size={28} />
+          <div>
+            <div style={{ fontWeight: 800, color: t.title }}>
+              {op.name}
+            </div>
+            <div style={{ fontSize: 13, color: t.sub }}>
+              {label}
+            </div>
+          </div>
+        </div>
+
+        <strong style={{ color: t.accent }}>
+          {code}
+        </strong>
+      </div>
+    );
+  })}
+
+{ops.filter(op => ["VA", "EN", "BA"].includes(op.calendar?.[todayKey])).length === 0 && (
+  <div
+    style={{
+      background: t.shell,
+      border: `1px solid ${t.border}`,
+      borderRadius: 18,
+      padding: 18,
+      color: t.sub,
+      fontSize: 14
+    }}
+  >
+    No hay ausencias registradas hoy.
+  </div>
+)}
       {todayAbsences.map(op => {
         const code = op.calendar?.[todayKey];
 

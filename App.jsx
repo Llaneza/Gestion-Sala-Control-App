@@ -673,11 +673,23 @@ const dailySummary = [
       }}
     >
    {[
-  ["DCS", getOperatorNameById(todaySecurityDay?.DCS)],
-  ["Brigada", getOperatorNameById(todaySecurityDay?.Brigada)],
-  ["Coordinador Emergencias", getOperatorNameById(todaySecurityDay?.["Coordinador de Emergencias"])],
-  ["Conteo", getOperatorNameById(todaySecurityDay?.Conteo)]
-].map(([title, value]) => (
+  {
+    title: "DCS",
+    value: getOperatorNameById(todaySecurityDay?.DCS) || "Sin asignar",
+  },
+  {
+    title: "Brigada",
+    value: getOperatorNameById(todaySecurityDay?.Brigada) || "Sin asignar",
+  },
+  {
+    title: "Coord. Emergencias",
+    value: getOperatorNameById(todaySecurityDay?.["Coordinador de Emergencias"]) || "Sin asignar",
+  },
+  {
+    title: "Conteo",
+    value: getOperatorNameById(todaySecurityDay?.Conteo) || "Sin asignar",
+  },
+].map(({ title, value }) => (
   <div
     key={title}
     style={{

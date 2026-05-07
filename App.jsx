@@ -512,22 +512,7 @@ const handleGenerateSecurityPlan = async () => {
       <header className="no-print glass-panel" style={{ margin: '14px 14px 0', padding: "14px 18px", display: 'flex', justifyContent: 'space-between', borderRadius: 22, alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
         <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
           
-         <button
-  onClick={() => {
-  setThemeMode(prev => (prev === "dark" ? "light" : "dark"));
-}}
-  style={{
-    background: t.shell,
-    border: `1px solid ${t.border}`,
-    borderRadius: 12,
-    padding: "9px 12px",
-    cursor: "pointer",
-    color: t.text,
-    fontWeight: 700
-  }}
->
-  {themeMode === "dark" ? "Modo claro" : "Modo oscuro"}
-</button>
+        
           <select value={activeYear} onChange={e => setAY(Number(e.target.value))} style={{ background: t.shell, color: t.text, border: `1px solid ${t.border}`, borderRadius: 12, padding: '9px 12px', fontSize: 13, minWidth: 110 }}>
             {[2024, 2025, 2026, 2027, 2028, 2029, 2030].map(y => <option key={y} value={y}>{y}</option>)}
           </select>

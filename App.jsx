@@ -723,32 +723,80 @@ const dailySummary = [
       ))}
     </div>
 
+   {todayAbsences.length > 0 && (
+  <div
+    style={{
+      marginTop: 24,
+      paddingTop: 22,
+      borderTop: `1px solid ${t.border}`
+    }}
+  >
+    <h2 style={{ margin: 0, color: t.title, fontSize: 22 }}>
+      Ausencias de hoy
+    </h2>
+
+    <p style={{ marginTop: 6, marginBottom: 16, color: t.sub, fontSize: 14 }}>
+      Personal con vacaciones, entrenamiento o baja en el día actual.
+    </p>
+
     <div
       style={{
-        marginTop: 18,
-        background: t.shell,
-        border: `1px solid ${t.border}`,
-        borderRadius: 18,
-        padding: 20
+        display: "grid",
+        gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+        gap: 12
       }}
     >
-      <div
-        style={{
-          fontSize: 12,
-          textTransform: "uppercase",
-          letterSpacing: "0.08em",
-          color: t.sub,
-          marginBottom: 10,
-          fontWeight: 800
-        }}
-      >
-        Ausencias
-      </div>
+      {todayAbsences.map(op => {
+        const code = op.calendar?.[todayKey];
 
-      <div style={{ color: t.text, fontSize: 15 }}>
-        Pendiente de conectar con vacaciones, bajas y entrenamientos de hoy.
-      </div>
+        const label =
+          code === "VA"
+            ? "Vacaciones"
+            : code === "EN"
+            ? "Entrenamiento"
+            : code === "BA"
+            ? "Baja"
+            : code;
+
+        return (
+          <div
+            key={op.id}
+            style={{
+              background: t.shell,
+              border: `1px solid ${t.border}`,
+              borderRadius: 16,
+              padding: 16,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 12
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <Av name={op.name} color={op.color} size={28} />
+              <strong style={{ color: t.title }}>{op.name}</strong>
+            </div>
+
+            <span
+              style={{
+                fontSize: 13,
+                fontWeight: 800,
+                color:
+                  code === "VA"
+                    ? "#059669"
+                    : code === "EN"
+                    ? "#6366f1"
+                    : "#ef4444"
+              }}
+            >
+              {label}
+            </span>
+          </div>
+        );
+      })}
     </div>
+  </div>
+)}
   </div>
 )}
         {view === "calendar" && (

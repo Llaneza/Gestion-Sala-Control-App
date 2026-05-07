@@ -503,7 +503,10 @@ const todaySecurityDay =
   activeSecurityPlan?.assignments?.[todayKey] ||
   activeSecurityPlan?.assign?.[todayKey] ||
   {};
-
+const todayAbsences = ops.filter(op => {
+  const code = op.calendar?.[todayKey];
+  return ["VA", "EN", "BA"].includes(code);
+});
 const getTodaySecurityRoleName = (roleId) => {
   const value = todaySecurityDay?.[roleId];
 

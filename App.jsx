@@ -717,35 +717,107 @@ const dailySummary = [
         gap: 16
       }}
     >
-   {dailySummary.map(({ title, value }) => (
-  <div
-    key={title}
-    style={{
-      background: t.shell,
-      border: `1px solid ${t.border}`,
-      borderRadius: 18,
-      padding: 20,
-      minHeight: 120
-    }}
-  >
+   {dailySummary.map(({ title, value }) => {
+  const assigned = value && value !== "Sin asignar";
+  const names = assigned
+    ? String(value).split(",").map(name => name.trim()).filter(Boolean)
+    : [];
+
+  return (
     <div
+      key={title}
       style={{
-        fontSize: 12,
-        textTransform: "uppercase",
-        letterSpacing: "0.08em",
-        color: t.sub,
-        marginBottom: 12,
-        fontWeight: 800
+        background: t.shell,
+        border: `1px solid ${assigned ? t.border : "rgba(245, 158, 11, 0.45)"}`,
+        borderRadius: 22,
+        padding: 20,
+        minHeight: 150,
+        boxShadow: "0 12px 28px rgba(15, 23, 42, 0.06)"
       }}
     >
-      {title}
-    </div>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "flex-start",
+          gap: 12,
+          marginBottom: 16
+        }}
+      >
+        <div
+          style={{
+            width: 42,
+            height: 42,
+            borderRadius: 14,
+            background: t.accentSoft,
+            color: t.accent,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontWeight: 900,
+            fontSize: 14
+          }}
+        >
+          {title.slice(0, 2).toUpperCase()}
+        </div>
 
-    <div style={{ fontSize: 22, fontWeight: 800, color: t.title }}>
-      {value}
+        <span
+          style={{
+            padding: "6px 10px",
+            borderRadius: 999,
+            background: assigned ? "rgba(22, 163, 74, 0.10)" : "rgba(245, 158, 11, 0.14)",
+            color: assigned ? "#15803d" : "#b45309",
+            fontSize: 11,
+            fontWeight: 900,
+            textTransform: "uppercase",
+            letterSpacing: "0.06em"
+          }}
+        >
+          {assigned ? "Asignado" : "Pendiente"}
+        </span>
+      </div>
+
+      <h2 style={{ margin: "0 0 12px", color: t.title, fontSize: 21, lineHeight: 1.15 }}>
+        {title}
+      </h2>
+
+      {assigned ? (
+        <div style={{ display: "grid", gap: 8 }}>
+          {names.map((name, index) => (
+            <div
+              key={`${title}-${name}-${index}`}
+              style={{
+                padding: "10px 12px",
+                borderRadius: 14,
+                background: "#ffffff",
+                border: `1px solid ${t.border}`,
+                color: t.title,
+                fontWeight: 800,
+                fontSize: 14
+              }}
+            >
+              {name}
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div
+          style={{
+            padding: "12px 14px",
+            borderRadius: 14,
+            background: "rgba(245, 158, 11, 0.10)",
+            border: "1px solid rgba(245, 158, 11, 0.26)",
+            color: "#92400e",
+            fontWeight: 800,
+            fontSize: 14
+          }}
+        >
+          Sin asignar
+        </div>
+      )}
     </div>
-  </div>
-))}
+  );
+})}
 </div>
 
 <div

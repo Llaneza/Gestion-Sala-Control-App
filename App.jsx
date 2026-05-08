@@ -672,13 +672,21 @@ const dailySummary = [
       Operativa diaria
     </div>
 
-    <h1 style={{ margin: 0, color: t.title, fontSize: 34 }}>
-      Resumen del día
-    </h1>
+    <h1
+  style={{
+    margin: 0,
+    color: t.title,
+    fontSize: 34,
+    letterSpacing: "-0.03em",
+    lineHeight: 1.05
+  }}
+>
+  Resumen operativo de hoy
+</h1>
 
-    <p style={{ marginTop: 8, marginBottom: 0, color: t.sub, fontSize: 15 }}>
-      Vista rápida de los puestos asignados hoy.
-    </p>
+<p style={{ marginTop: 10, marginBottom: 0, color: t.sub, fontSize: 15, lineHeight: 1.5 }}>
+  Puestos principales asignados para la jornada actual.
+</p>
   </div>
 
   <div
@@ -696,9 +704,9 @@ const dailySummary = [
     <div style={{ fontSize: 12, color: t.sub, marginBottom: 4 }}>
       Fecha actual
     </div>
-    <div style={{ fontSize: 18 }}>
-      {today.getDate()}/{today.getMonth() + 1}/{today.getFullYear()}
-    </div>
+    <div style={{ fontSize: 17, textTransform: "capitalize" }}>
+  {todayLabel}
+</div>
   </div>
 </div>
 

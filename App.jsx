@@ -1553,51 +1553,125 @@ const dailySummary = [
         )}
 {view === "security" && (
   <div className="glass-panel section-card" style={{ padding: 24 }}>
-    <div style={{ marginBottom: 22 }}>
+    <div
+  style={{
+    marginBottom: 24,
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "stretch",
+    gap: 18,
+    flexWrap: "wrap"
+  }}
+>
+  <div
+    style={{
+      flex: "1 1 320px",
+      padding: 20,
+      borderRadius: 22,
+      background: "rgba(248, 250, 252, 0.72)",
+      border: `1px solid ${t.border}`
+    }}
+  >
+    <div
+      style={{
+        fontSize: 12,
+        textTransform: "uppercase",
+        letterSpacing: "0.10em",
+        color: t.accent,
+        marginBottom: 8,
+        fontWeight: 900
+      }}
+    >
+      Calendario Seguridad
+    </div>
+
+    <h2
+      style={{
+        margin: 0,
+        color: t.title,
+        fontSize: 30,
+        letterSpacing: "-0.03em",
+        lineHeight: 1.05
+      }}
+    >
+      Planificación de roles de seguridad
+    </h2>
+
+    <p
+      style={{
+        margin: "10px 0 0",
+        color: t.sub,
+        fontSize: 14,
+        lineHeight: 1.5
+      }}
+    >
+      Vista mensual para Brigada, DCS, Coordinador de Emergencias y Conteo.
+    </p>
+  </div>
+
+  <div
+    style={{
+      flex: "1 1 300px",
+      display: "flex",
+      flexDirection: "column",
+      justifyContent: "space-between",
+      gap: 14,
+      padding: 20,
+      borderRadius: 22,
+      background: "#ffffff",
+      border: `1px solid ${t.border}`,
+      boxShadow: "0 12px 28px rgba(15, 23, 42, 0.06)"
+    }}
+  >
+    <div>
       <div
         style={{
-          fontSize: 12,
+          fontSize: 11,
+          color: t.sub,
+          fontWeight: 900,
           textTransform: "uppercase",
           letterSpacing: "0.08em",
-          color: t.sub,
           marginBottom: 6
         }}
       >
-        Calendario Seguridad
+        Estado de planificación
       </div>
 
-      <h2 style={{ margin: 0, color: t.title }}>
-        Roles de seguridad
-      </h2>
+      <div style={{ color: t.title, fontSize: 18, fontWeight: 900 }}>
+        {activeSecurityPlan ? `Plan activo ${activeYear}` : "Sin planificación generada"}
+      </div>
 
-      <p style={{ margin: "8px 0 0", color: t.sub, fontSize: 14 }}>
-        Vista inicial para organizar Brigada, DCS, Coordinador de Emergencias y Conteo.
-      </p>
-      {isAdmin && (
-  <div style={{ marginTop: 16, display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
-    <button
-      onClick={handleGenerateSecurityPlan}
-      style={{
-        padding: "10px 14px",
-        borderRadius: 12,
-        border: `1px solid ${t.border}`,
-        background: t.accentSoft,
-        color: t.title,
-        fontWeight: 900,
-        cursor: "pointer"
-      }}
-    >
-      {activeSecurityPlan ? "Regenerar planificación seguridad" : "Generar planificación seguridad"}
-    </button>
-
-    {activeSecurityPlan?.meta?.generatedAt && (
-  <span style={{ color: t.sub, fontSize: 13 }}>
-    Planificación generada para {activeYear} · {activeSecurityDaysCount} días creados
-  </span>
-)}
-  </div>
-)}
+      {activeSecurityPlan?.meta?.generatedAt && (
+        <div style={{ marginTop: 6, color: t.sub, fontSize: 13, fontWeight: 700 }}>
+          {activeSecurityDaysCount} días creados
+        </div>
+      )}
     </div>
+
+    {isAdmin && (
+      <button
+        onClick={handleGenerateSecurityPlan}
+        style={{
+          alignSelf: "flex-start",
+          padding: "11px 15px",
+          borderRadius: 14,
+          border: activeSecurityPlan
+            ? "1px solid rgba(8, 145, 118, 0.26)"
+            : "1px solid rgba(245, 158, 11, 0.50)",
+          background: activeSecurityPlan
+            ? "rgba(8, 145, 118, 0.12)"
+            : "rgba(245, 158, 11, 0.16)",
+          color: activeSecurityPlan ? t.title : "#92400e",
+          fontWeight: 900,
+          cursor: "pointer",
+          fontSize: 12
+        }}
+      >
+        {activeSecurityPlan ? "Regenerar planificación seguridad" : "Generar planificación seguridad"}
+      </button>
+    )}
+  </div>
+</div>
 {activeSecurityPlan?.days && (
   <div
     style={{

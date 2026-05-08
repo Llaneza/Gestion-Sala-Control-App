@@ -556,13 +556,13 @@ const dailySummary = [
 }
 
   return (
-    <div style={{
-      minHeight: "100vh",
-      background: `radial-gradient(circle at top left, ${t.accentSoft}, transparent 32%), radial-gradient(circle at top right, rgba(99, 102, 241, 0.10), transparent 24%), linear-gradient(180deg, ${t.shell} 0%, ${t.bg} 55%, ${t.bg} 100%)`,
-      color: t.text,
-      fontFamily: '"Segoe UI", Tahoma, Geneva, Verdana, sans-serif',
-      transition: 'background 0.3s'
-    }}>
+   <div style={{
+  minHeight: "100vh",
+  background: "linear-gradient(180deg, #f8fafc 0%, #eef7f3 46%, #f8fafc 100%)",
+  color: t.text,
+  fontFamily: '"Segoe UI", Tahoma, Geneva, Verdana, sans-serif',
+  transition: "background 0.3s"
+}}>
       <style>{`
         @media print {
           .no-print { display: none !important; }
@@ -573,14 +573,14 @@ const dailySummary = [
           @page { size: A4 landscape; margin: 12mm; }
         }
         .app-shell { max-width: 1440px; margin: 0 auto; padding: 24px 14px 40px; }
-        .glass-panel { background: ${t.card}; border: 1px solid ${t.border}; box-shadow: 0 18px 50px rgba(15, 23, 42, 0.16); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
-        .hero-grid { display: grid; grid-template-columns: minmax(0, 1.8fr) repeat(3, minmax(0, 1fr)); gap: 14px; margin-bottom: 24px; }
+        .glass-panel { background: rgba(255, 255, 255, 0.88); border: 1px solid rgba(203, 213, 225, 0.78); box-shadow: 0 14px 34px rgba(15, 23, 42, 0.08); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+        .hero-grid { display: grid; grid-template-columns: minmax(0, 1.8fr) repeat(3, minmax(0, 1fr)); gap: 14px; margin-bottom: 24px.glass-panel ; }
         .hero-card { border-radius: 22px; padding: 22px; }
         .hero-title { font-size: 28px; font-weight: 800; color: ${t.title}; margin: 0 0 8px; letter-spacing: -0.02em; }
         .hero-sub { color: ${t.sub}; font-size: 14px; line-height: 1.5; margin: 0; }
         .hero-kpi-label { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: ${t.sub}; margin-bottom: 8px; }
         .hero-kpi-value { font-size: 28px; font-weight: 800; color: ${t.title}; }
-        .section-card { border-radius: 20px; }
+        .section-card { border-radius: 24px; }
         .calendar-container { background: ${t.card}; border-radius: 20px; overflow-x: auto; border: 1px solid ${t.border}; margin-bottom: 40px; box-shadow: 0 18px 50px rgba(15, 23, 42, 0.12); position: relative; -webkit-overflow-scrolling: touch; }
         .calendar-grid { display: grid; grid-template-columns: 140px repeat(${dim(activeYear, month)}, minmax(46px, 1fr)); gap: 0px; width: max-content; min-width: 100%; }
         @media (min-width: 1024px) { .calendar-grid { width: 100%; grid-template-columns: 150px repeat(${dim(activeYear, month)}, 1fr); } .cell-day { min-width: 0 !important; } }
@@ -822,28 +822,70 @@ const dailySummary = [
 
 <div
   style={{
-    marginTop: 24,
-    paddingTop: 22,
-    borderTop: `1px solid ${t.border}`
+    marginTop: 26,
+    padding: 22,
+    borderRadius: 22,
+    background: "rgba(248, 250, 252, 0.72)",
+    border: `1px solid ${t.border}`
   }}
 >
-  <h2 style={{ margin: 0, color: t.title, fontSize: 22 }}>
-    Ausencias de hoy
-  </h2>
-
-  <p style={{ marginTop: 6, marginBottom: 16, color: t.sub, fontSize: 14 }}>
-    Personal con vacaciones, entrenamiento o baja en el día actual.
-  </p>
-
   <div
     style={{
-      display: "grid",
-      gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-      gap: 12
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "flex-start",
+      gap: 14,
+      marginBottom: 18,
+      flexWrap: "wrap"
     }}
   >
-    {todayAbsences.length > 0 ? (
-      todayAbsences.map(op => {
+    <div>
+      <div
+        style={{
+          fontSize: 12,
+          textTransform: "uppercase",
+          letterSpacing: "0.10em",
+          color: t.accent,
+          marginBottom: 8,
+          fontWeight: 900
+        }}
+      >
+        Bloque final
+      </div>
+
+      <h2 style={{ margin: 0, color: t.title, fontSize: 24 }}>
+        Ausencias de hoy
+      </h2>
+
+      <p style={{ marginTop: 7, marginBottom: 0, color: t.sub, fontSize: 14 }}>
+        Personal con vacaciones, entrenamiento o baja registrado en la jornada.
+      </p>
+    </div>
+
+    <div
+      style={{
+        padding: "10px 14px",
+        borderRadius: 999,
+        background: "#ffffff",
+        border: `1px solid ${t.border}`,
+        color: t.title,
+        fontWeight: 900,
+        fontSize: 13
+      }}
+    >
+      {todayAbsences.length} ausencias
+    </div>
+  </div>
+
+  {todayAbsences.length > 0 ? (
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+        gap: 12
+      }}
+    >
+      {todayAbsences.map(op => {
         const code = op.calendar?.[todayKey];
 
         const label =
@@ -855,11 +897,18 @@ const dailySummary = [
             ? "Baja"
             : code;
 
+        const absenceColor =
+          code === "VA"
+            ? "#059669"
+            : code === "EN"
+            ? "#6366f1"
+            : "#ef4444";
+
         return (
           <div
             key={op.id}
             style={{
-              background: t.shell,
+              background: "#ffffff",
               border: `1px solid ${t.border}`,
               borderRadius: 18,
               padding: 18,
@@ -869,12 +918,14 @@ const dailySummary = [
               gap: 12
             }}
           >
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <Av name={op.name} color={op.color} size={28} />
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <Av name={op.name} color={op.color} size={30} />
+
               <div>
-                <div style={{ fontWeight: 800, color: t.title }}>
+                <div style={{ fontWeight: 900, color: t.title, marginBottom: 2 }}>
                   {op.name}
                 </div>
+
                 <div style={{ fontSize: 13, color: t.sub }}>
                   {label}
                 </div>
@@ -883,34 +934,35 @@ const dailySummary = [
 
             <strong
               style={{
-                color:
-                  code === "VA"
-                    ? "#059669"
-                    : code === "EN"
-                    ? "#6366f1"
-                    : "#ef4444"
+                padding: "7px 10px",
+                borderRadius: 999,
+                background: `${absenceColor}18`,
+                color: absenceColor,
+                fontSize: 12,
+                letterSpacing: "0.04em"
               }}
             >
               {code}
             </strong>
           </div>
         );
-      })
-    ) : (
-      <div
-        style={{
-          background: t.shell,
-          border: `1px solid ${t.border}`,
-          borderRadius: 18,
-          padding: 18,
-          color: t.sub,
-          fontSize: 14
-        }}
-      >
-        No hay ausencias registradas hoy.
-      </div>
-    )}
-  </div>
+      })}
+    </div>
+  ) : (
+    <div
+      style={{
+        background: "#ffffff",
+        border: `1px dashed ${t.border}`,
+        borderRadius: 18,
+        padding: 20,
+        color: t.sub,
+        fontSize: 14,
+        fontWeight: 700
+      }}
+    >
+      No hay ausencias registradas hoy.
+    </div>
+  )}
 </div>
   </div>
 )}

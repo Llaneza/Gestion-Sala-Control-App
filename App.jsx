@@ -593,56 +593,235 @@ const dailySummary = [
         .print-only { display: none; }
       `}</style>
 
-      <header className="no-print glass-panel" style={{ margin: '14px 14px 0', padding: "14px 18px", display: 'flex', justifyContent: 'space-between', borderRadius: 22, alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-        <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
-          
-        
-          <select value={activeYear} onChange={e => setAY(Number(e.target.value))} style={{ background: t.shell, color: t.text, border: `1px solid ${t.border}`, borderRadius: 12, padding: '9px 12px', fontSize: 13, minWidth: 110 }}>
-            {[2024, 2025, 2026, 2027, 2028, 2029, 2030].map(y => <option key={y} value={y}>{y}</option>)}
-          </select>
-        </div>
-        <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
-                    <div style={{ padding: '10px 14px', borderRadius: 14, background: t.shell, border: `1px solid ${t.border}` }}>
-            <div style={{ fontSize: 11, color: t.sub, marginBottom: 3 }}>Sesión activa</div>
-<div style={{ fontSize: 13, fontWeight: 700, color: t.title }}>{sessionDisplayRole || sessionDisplayName}</div>
-          </div>
-          <button onClick={() => setSession(null)} style={{ background: t.dangerSoft, color: '#EF4444', border: `1px solid rgba(239, 68, 68, 0.24)`, padding: '10px 14px', borderRadius: 12, fontSize: 12, fontWeight: 'bold', cursor: 'pointer' }}>Cerrar sesión</button>
-        </div>
-      </header>
-
-      <nav className="no-print glass-panel" style={{ display: 'flex', margin: '14px 14px 0', padding: 8, borderRadius: 18, justifyContent: 'center' }}>
-        <div style={{ display: 'flex', width: '100%', maxWidth: 820, gap: 8, flexWrap: 'wrap' }}>
-          {["daily","calendar", "security", "stats", canSeeEditor && "editor", isAdmin && "config"].filter(Boolean).map(v => {
-  const labels = {
-  daily: "Operativa diaria",  
-  calendar: "Calendario DCS",
-  security: "Calendario Seguridad",
-  stats: "Estadísticas",
-  editor: "Personal",
-  config: "Administración"
-};
-  return (
-    <button
-      key={v}
-      onClick={() => setView(v)}
+    <header
+  className="no-print glass-panel"
+  style={{
+    margin: "14px 14px 0",
+    padding: "16px 18px",
+    display: "flex",
+    justifyContent: "space-between",
+    borderRadius: 24,
+    alignItems: "center",
+    gap: 16,
+    flexWrap: "wrap"
+  }}
+>
+  <div style={{ display: "flex", gap: 14, alignItems: "center", flexWrap: "wrap" }}>
+    <div
       style={{
-        flex: 1,
-        padding: '13px 12px',
-        color: view === v ? t.title : t.sub,
-        background: view === v ? t.accentSoft : 'transparent',
-        border: `1px solid ${view === v ? t.border : 'transparent'}`,
-        cursor: 'pointer',
-        fontWeight: 'bold',
-        borderRadius: 12,
-        fontSize: 12
+        width: 48,
+        height: 48,
+        borderRadius: 16,
+        background: "#ffffff",
+        border: `1px solid ${t.border}`,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        boxShadow: "0 10px 24px rgba(15, 23, 42, 0.06)"
       }}
     >
-      {labels[v]}
+      <img
+        src={cortevaLogo}
+        alt="Corteva"
+        style={{
+          width: 34,
+          height: "auto",
+          objectFit: "contain"
+        }}
+      />
+    </div>
+
+    <div>
+      <div
+        style={{
+          fontSize: 18,
+          fontWeight: 900,
+          color: t.title,
+          letterSpacing: "-0.02em",
+          lineHeight: 1.1
+        }}
+      >
+        Gestión de personal
+      </div>
+
+      <div
+        style={{
+          marginTop: 4,
+          fontSize: 12,
+          color: t.sub,
+          fontWeight: 700
+        }}
+      >
+        Sala de Control · Corteva
+      </div>
+    </div>
+
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 8,
+        padding: "8px 10px",
+        borderRadius: 14,
+        background: t.shell,
+        border: `1px solid ${t.border}`
+      }}
+    >
+      <span
+        style={{
+          fontSize: 11,
+          color: t.sub,
+          fontWeight: 900,
+          textTransform: "uppercase",
+          letterSpacing: "0.07em"
+        }}
+      >
+        Año
+      </span>
+
+      <select
+        value={activeYear}
+        onChange={e => setAY(Number(e.target.value))}
+        style={{
+          background: "#ffffff",
+          color: t.text,
+          border: `1px solid ${t.border}`,
+          borderRadius: 10,
+          padding: "8px 10px",
+          fontSize: 13,
+          fontWeight: 800,
+          minWidth: 96
+        }}
+      >
+        {[2024, 2025, 2026, 2027, 2028, 2029, 2030].map(y => (
+          <option key={y} value={y}>
+            {y}
+          </option>
+        ))}
+      </select>
+    </div>
+  </div>
+
+  <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+    <div
+      style={{
+        padding: "10px 14px",
+        borderRadius: 16,
+        background: t.shell,
+        border: `1px solid ${t.border}`
+      }}
+    >
+      <div style={{ fontSize: 11, color: t.sub, marginBottom: 3, fontWeight: 800 }}>
+        Sesión activa
+      </div>
+
+      <div style={{ fontSize: 13, fontWeight: 900, color: t.title }}>
+        {sessionDisplayRole || sessionDisplayName}
+      </div>
+    </div>
+
+    <button
+      onClick={() => setSession(null)}
+      style={{
+        background: "rgba(239, 68, 68, 0.08)",
+        color: "#dc2626",
+        border: "1px solid rgba(239, 68, 68, 0.22)",
+        padding: "11px 14px",
+        borderRadius: 14,
+        fontSize: 12,
+        fontWeight: 900,
+        cursor: "pointer"
+      }}
+    >
+      Cerrar sesión
     </button>
-  );
-})}
-        </div>
-      </nav>
+  </div>
+</header>
+
+      <nav
+  className="no-print glass-panel"
+  style={{
+    display: "flex",
+    margin: "14px 14px 0",
+    padding: 10,
+    borderRadius: 24,
+    justifyContent: "center"
+  }}
+>
+  <div
+    style={{
+      display: "grid",
+      gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
+      width: "100%",
+      maxWidth: 980,
+      gap: 8
+    }}
+  >
+    {[
+      { id: "daily", label: "Operativa diaria", short: "Hoy" },
+      { id: "calendar", label: "Calendario DCS", short: "Sala" },
+      { id: "security", label: "Calendario Seguridad", short: "Seguridad" },
+      { id: "stats", label: "Estadísticas", short: "Datos" },
+      canSeeEditor && { id: "editor", label: "Personal", short: "Equipo" },
+      isAdmin && { id: "config", label: "Administración", short: "Ajustes" }
+    ]
+      .filter(Boolean)
+      .map(item => {
+        const active = view === item.id;
+
+        return (
+          <button
+            key={item.id}
+            onClick={() => setView(item.id)}
+            style={{
+              padding: "12px 12px",
+              color: active ? t.title : t.sub,
+              background: active ? "rgba(8, 145, 118, 0.12)" : "transparent",
+              border: `1px solid ${active ? "rgba(8, 145, 118, 0.26)" : "transparent"}`,
+              cursor: "pointer",
+              borderRadius: 16,
+              fontSize: 12,
+              fontWeight: 900,
+              textAlign: "left",
+              transition: "all 0.18s ease",
+              boxShadow: active ? "0 8px 18px rgba(15, 23, 42, 0.06)" : "none"
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+              <span
+                style={{
+                  width: 8,
+                  height: 8,
+                  borderRadius: 999,
+                  background: active ? t.accent : "rgba(100, 116, 139, 0.28)",
+                  flex: "0 0 auto"
+                }}
+              />
+
+              <div>
+                <div style={{ lineHeight: 1.15 }}>
+                  {item.label}
+                </div>
+
+                <div
+                  style={{
+                    marginTop: 4,
+                    fontSize: 10,
+                    color: active ? t.accent : t.sub,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.07em",
+                    fontWeight: 900
+                  }}
+                >
+                  {item.short}
+                </div>
+              </div>
+            </div>
+          </button>
+        );
+      })}
+  </div>
+</nav>
 
       <main className="app-shell">
        {view === "daily" && (
@@ -968,53 +1147,194 @@ const dailySummary = [
 )}
         {view === "calendar" && (
           <div>
-            <div className="glass-panel section-card no-print" style={{ display: 'flex', justifyContent: 'space-between', gap: 12, marginBottom: 20, alignItems: 'center', padding: 18, flexWrap: 'wrap' }}>
-              <div>
-                <div style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.08em', color: t.sub, marginBottom: 6 }}>Calendario operativo</div>
-                <h2 style={{ margin: 0, minWidth: 120, textAlign: 'center', fontSize: 24, color: t.title, letterSpacing: '-0.02em' }}>{currentMonthLabel}</h2>
-                {isAdmin && (
-  <button
-    onClick={handleRecalculatePlan}
-    disabled={isRecalculating}
+          <div
+  className="glass-panel section-card no-print"
+  style={{
+    display: "flex",
+    justifyContent: "space-between",
+    gap: 18,
+    marginBottom: 20,
+    alignItems: "stretch",
+    padding: 20,
+    flexWrap: "wrap",
+    borderRadius: 24
+  }}
+>
+  <div
     style={{
-      marginTop: 12,
-      padding: '10px 14px',
-      borderRadius: 12,
-      border: `1px solid ${planHasPendingChanges || !hasSavedPlan ? 'rgba(245, 158, 11, 0.55)' : t.border}`,
-      background: planHasPendingChanges || !hasSavedPlan ? 'rgba(245, 158, 11, 0.16)' : t.accentSoft,
-      color: t.title,
-      cursor: isRecalculating ? 'not-allowed' : 'pointer',
-      fontSize: 12,
-      fontWeight: 800
+      display: "flex",
+      flexDirection: "column",
+      justifyContent: "space-between",
+      gap: 14,
+      minWidth: 260,
+      flex: "1 1 300px"
     }}
   >
-    {isRecalculating ? "Calculando..." : hasSavedPlan ? "Recalcular planificación" : "Generar planificación"}
-  </button>
-)}
-              </div>
-              <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                <button style={{ padding: '10px 14px', borderRadius: 12, border: `1px solid ${t.border}`, background: t.shell, color: t.text, cursor: 'pointer', fontSize: 12, fontWeight: 700 }} onClick={handlePrevMonth}>Mes anterior</button>
-                <button style={{ padding: '10px 14px', borderRadius: 12, border: `1px solid ${t.border}`, background: t.accentSoft, color: t.title, cursor: 'pointer', fontSize: 12, fontWeight: 700 }} onClick={handleNextMonth}>Mes siguiente</button>
-                <select value={printMode} onChange={e => setPrintMode(e.target.value)} style={{ padding: '10px 14px', borderRadius: 12, border: `1px solid ${t.border}`, background: t.shell, color: t.text, fontSize: 12, minWidth: 210 }}>
-                  <option value="annual">Exportación anual completa</option>
-                  <option value="individual">Calendario individual</option>
-                </select>
-                                {printMode === "individual" && (
-                  <select value={printOpId} onChange={e => setPrintOpId(e.target.value)} style={{ padding: '10px 14px', borderRadius: 12, border: `1px solid ${t.border}`, background: t.shell, color: t.text, fontSize: 12, minWidth: 220 }}>
-                    {dcsOps.map(op => <option key={op.id} value={String(op.id)}>{op.name}</option>)}
-                  </select>
-                )}
+    <div>
+      <div
+        style={{
+          fontSize: 12,
+          textTransform: "uppercase",
+          letterSpacing: "0.10em",
+          color: t.accent,
+          marginBottom: 8,
+          fontWeight: 900
+        }}
+      >
+        Calendario DCS
+      </div>
 
-               
+      <h2
+        style={{
+          margin: 0,
+          fontSize: 30,
+          color: t.title,
+          letterSpacing: "-0.03em",
+          lineHeight: 1.05,
+          textTransform: "capitalize"
+        }}
+      >
+        {currentMonthLabel}
+      </h2>
 
-                <button
-                  style={{ padding: '10px 14px', borderRadius: 12, border: `1px solid ${t.border}`, background: t.cardSolid, color: t.text, cursor: 'pointer', fontSize: 12, fontWeight: 700 }}
-                  onClick={() => window.print()}
-                >
-                  Exportar PDF / Imprimir
-                </button>
-              </div>
-            </div>
+      <p
+        style={{
+          marginTop: 10,
+          marginBottom: 0,
+          color: t.sub,
+          fontSize: 14,
+          lineHeight: 1.5
+        }}
+      >
+        Vista mensual de Sala de Control, turnos, ausencias y asignaciones SC.
+      </p>
+    </div>
+
+    {isAdmin && (
+      <button
+        onClick={handleRecalculatePlan}
+        disabled={isRecalculating}
+        style={{
+          alignSelf: "flex-start",
+          padding: "11px 15px",
+          borderRadius: 14,
+          border: `1px solid ${planHasPendingChanges || !hasSavedPlan ? "rgba(245, 158, 11, 0.55)" : "rgba(8, 145, 118, 0.26)"}`,
+          background: planHasPendingChanges || !hasSavedPlan ? "rgba(245, 158, 11, 0.16)" : "rgba(8, 145, 118, 0.12)",
+          color: planHasPendingChanges || !hasSavedPlan ? "#92400e" : t.title,
+          cursor: isRecalculating ? "not-allowed" : "pointer",
+          fontSize: 12,
+          fontWeight: 900
+        }}
+      >
+        {isRecalculating ? "Calculando..." : hasSavedPlan ? "Recalcular planificación" : "Generar planificación"}
+      </button>
+    )}
+  </div>
+
+  <div
+    style={{
+      display: "flex",
+      gap: 10,
+      alignItems: "center",
+      flexWrap: "wrap",
+      justifyContent: "flex-end",
+      flex: "1 1 420px",
+      padding: 14,
+      borderRadius: 20,
+      background: "rgba(248, 250, 252, 0.72)",
+      border: `1px solid ${t.border}`
+    }}
+  >
+    <button
+      style={{
+        padding: "10px 14px",
+        borderRadius: 14,
+        border: `1px solid ${t.border}`,
+        background: "#ffffff",
+        color: t.text,
+        cursor: "pointer",
+        fontSize: 12,
+        fontWeight: 900
+      }}
+      onClick={handlePrevMonth}
+    >
+      Mes anterior
+    </button>
+
+    <button
+      style={{
+        padding: "10px 14px",
+        borderRadius: 14,
+        border: "1px solid rgba(8, 145, 118, 0.26)",
+        background: "rgba(8, 145, 118, 0.12)",
+        color: t.title,
+        cursor: "pointer",
+        fontSize: 12,
+        fontWeight: 900
+      }}
+      onClick={handleNextMonth}
+    >
+      Mes siguiente
+    </button>
+
+    <select
+      value={printMode}
+      onChange={e => setPrintMode(e.target.value)}
+      style={{
+        padding: "10px 14px",
+        borderRadius: 14,
+        border: `1px solid ${t.border}`,
+        background: "#ffffff",
+        color: t.text,
+        fontSize: 12,
+        fontWeight: 800,
+        minWidth: 220
+      }}
+    >
+      <option value="annual">Exportación anual completa</option>
+      <option value="individual">Calendario individual</option>
+    </select>
+
+    {printMode === "individual" && (
+      <select
+        value={printOpId}
+        onChange={e => setPrintOpId(e.target.value)}
+        style={{
+          padding: "10px 14px",
+          borderRadius: 14,
+          border: `1px solid ${t.border}`,
+          background: "#ffffff",
+          color: t.text,
+          fontSize: 12,
+          fontWeight: 800,
+          minWidth: 220
+        }}
+      >
+        {dcsOps.map(op => (
+          <option key={op.id} value={String(op.id)}>
+            {op.name}
+          </option>
+        ))}
+      </select>
+    )}
+
+    <button
+      style={{
+        padding: "10px 14px",
+        borderRadius: 14,
+        border: `1px solid ${t.border}`,
+        background: "#ffffff",
+        color: t.text,
+        cursor: "pointer",
+        fontSize: 12,
+        fontWeight: 900
+      }}
+      onClick={() => window.print()}
+    >
+      Exportar PDF / Imprimir
+    </button>
+  </div>
+</div>
                         {!hasSavedPlan && (
               <div className="glass-panel section-card no-print" style={{ padding: 16, marginBottom: 16, border: '1px solid rgba(245, 158, 11, 0.45)', background: 'rgba(245, 158, 11, 0.12)' }}>
                 <div style={{ fontWeight: 800, color: t.title, marginBottom: 4 }}>No hay planificación oficial generada para {activeYear}</div>

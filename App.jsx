@@ -581,13 +581,14 @@ const dailySummary = [
         .hero-kpi-label { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: ${t.sub}; margin-bottom: 8px; }
         .hero-kpi-value { font-size: 28px; font-weight: 800; color: ${t.title}; }
         .section-card { border-radius: 24px; }
-        .calendar-container { background: ${t.card}; border-radius: 20px; overflow-x: auto; border: 1px solid ${t.border}; margin-bottom: 40px; box-shadow: 0 18px 50px rgba(15, 23, 42, 0.12); position: relative; -webkit-overflow-scrolling: touch; }
-        .calendar-grid { display: grid; grid-template-columns: 140px repeat(${dim(activeYear, month)}, minmax(46px, 1fr)); gap: 0px; width: max-content; min-width: 100%; }
-        @media (min-width: 1024px) { .calendar-grid { width: 100%; grid-template-columns: 150px repeat(${dim(activeYear, month)}, 1fr); } .cell-day { min-width: 0 !important; } }
-        @media (max-width: 980px) { .hero-grid { grid-template-columns: 1fr; } }
-        .sticky-col { position: sticky; left: 0; background: ${t.cardSolid} !important; z-index: 50; border-right: 1px solid ${t.border} !important; box-sizing: border-box; }
-        .cell-day { height: 40px; display: flex; align-items: center; justify-content: center; border-top: 1px solid ${t.border}; border-right: 1px solid ${t.border}; font-size: 11px; box-sizing: border-box; }
-        .header-day { height: 58px !important; flex-direction: column; gap: 2px; background: ${t.shell} !important; }
+        .calendar-container { background: rgba(255, 255, 255, 0.92); border-radius: 24px; overflow-x: auto; border: 1px solid rgba(203, 213, 225, 0.78); margin-bottom: 40px; box-shadow: 0 14px 34px rgba(15, 23, 42, 0.08); position: relative; -webkit-overflow-scrolling: touch; }
+.calendar-grid { display: grid; grid-template-columns: 150px repeat(${dim(activeYear, month)}, minmax(46px, 1fr)); gap: 0px; width: max-content; min-width: 100%; background: rgba(226, 232, 240, 0.55); }
+@media (min-width: 1024px) { .calendar-grid { width: 100%; grid-template-columns: 165px repeat(${dim(activeYear, month)}, 1fr); } .cell-day { min-width: 0 !important; } }
+@media (max-width: 980px) { .hero-grid { grid-template-columns: 1fr; } }
+.sticky-col { position: sticky; left: 0; background: #ffffff !important; z-index: 50; border-right: 1px solid rgba(203, 213, 225, 0.90) !important; box-sizing: border-box; }
+.cell-day { height: 42px; display: flex; align-items: center; justify-content: center; border-top: 1px solid rgba(203, 213, 225, 0.78); border-right: 1px solid rgba(203, 213, 225, 0.78); font-size: 11px; box-sizing: border-box; transition: transform 0.12s ease, box-shadow 0.12s ease; }
+.cell-day:hover { box-shadow: inset 0 0 0 2px rgba(8, 145, 118, 0.20); }
+.header-day { height: 62px !important; flex-direction: column; gap: 3px; background: #f8fafc !important; }
         .soft-button { background: ${t.card}; color: ${t.text}; border: 1px solid ${t.border}; border-radius: 12px; padding: 10px 14px; cursor: pointer; fontSize: 12px; }
         .soft-input { width: 100%; border-radius: 12px; border: 1px solid ${t.border}; background: ${t.shell}; color: ${t.text}; }
         .print-only { display: none; }
@@ -1419,50 +1420,111 @@ const dailySummary = [
                   </div>
                 ))}
               </div>
-                            <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 16,
-                  flexWrap: "wrap",
-                  padding: "16px 18px",
-                  borderTop: `1px solid ${t.border}`,
-                  color: t.sub,
-                  fontSize: 12
-                }}
-              >
-                {CALENDAR_LEGEND.map(item => (
-                  <div
-                    key={item.code}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 7,
-                      whiteSpace: "nowrap"
-                    }}
-                  >
-                    <span
-                      style={{
-                        width: 24,
-                        height: 24,
-                        borderRadius: 8,
-                        border: `1px solid ${t.border}`,
-                        background: item.color,
-                        color: item.textColor,
-                        display: "inline-flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        fontSize: 10,
-                        fontWeight: 900
-                      }}
-                    >
-                      {item.code}
-                    </span>
+<div
+  style={{
+    padding: "18px",
+    borderTop: `1px solid ${t.border}`,
+    background: "rgba(248, 250, 252, 0.72)"
+  }}
+>
+  <div
+    style={{
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "flex-start",
+      gap: 12,
+      marginBottom: 14,
+      flexWrap: "wrap"
+    }}
+  >
+    <div>
+      <div
+        style={{
+          fontSize: 11,
+          textTransform: "uppercase",
+          letterSpacing: "0.10em",
+          color: t.accent,
+          fontWeight: 900,
+          marginBottom: 5
+        }}
+      >
+        Leyenda
+      </div>
 
-                    <span>{item.label}</span>
-                  </div>
-                ))}
-              </div>
+      <div style={{ color: t.title, fontSize: 16, fontWeight: 900 }}>
+        Códigos del calendario
+      </div>
+    </div>
+
+    <div
+      style={{
+        color: t.sub,
+        fontSize: 12,
+        fontWeight: 700,
+        padding: "8px 11px",
+        borderRadius: 999,
+        background: "#ffffff",
+        border: `1px solid ${t.border}`
+      }}
+    >
+      Turnos · SC · Ausencias
+    </div>
+  </div>
+
+  <div
+    style={{
+      display: "grid",
+      gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
+      gap: 10
+    }}
+  >
+    {CALENDAR_LEGEND.map(item => (
+      <div
+        key={item.code}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+          padding: "10px 12px",
+          borderRadius: 14,
+          background: "#ffffff",
+          border: `1px solid ${t.border}`,
+          minHeight: 46
+        }}
+      >
+        <span
+          style={{
+            width: 28,
+            height: 28,
+            borderRadius: 10,
+            border: `1px solid ${t.border}`,
+            background: item.color,
+            color: item.textColor,
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: 10,
+            fontWeight: 900,
+            flex: "0 0 auto"
+          }}
+        >
+          {item.code}
+        </span>
+
+        <span
+          style={{
+            color: t.title,
+            fontSize: 12,
+            fontWeight: 800,
+            lineHeight: 1.2
+          }}
+        >
+          {item.label}
+        </span>
+      </div>
+    ))}
+  </div>
+</div>
             </div>
           </div>
         )}

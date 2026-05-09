@@ -1,9 +1,9 @@
 import { useState, useMemo, useEffect } from "react";
 import { ref, onValue, set } from "firebase/database";
 import cortevaLogo from "./Corteva_VerColor_RGB.png";
-import { autoAssign } from "./src/logic/autoAssign.js";
+import { autoAssign, generateSecurityPlan } from "./src/logic";
 import { db } from "./src/services/firebase";
-import { ABSENCE, CALENDAR_LEGEND, DOW_S, EXTRA_VISUALS, MONTHS, THEMES, TURNO_DEF } from "./src/config";
+import { ABSENCE, CALENDAR_LEGEND, DOW_S, EXTRA_VISUALS, MONTHS, SECURITY_ROLES, THEMES, TURNO_DEF } from "./src/config";
 import { Av, EyeIcon, LoginScreenComponent } from "./src/components";
 import { DEFAULT_ADMINS, simpleHash, cshift, dim, dow, formatDateTime, mk, stableStringify, countAbsencesForYear, computeStats, getThemeBySchedule } from "./src/utils";
 
@@ -200,40 +200,31 @@ function PrintableYearCalendar({ ops, year, asgn, off, generatedAt, generatedBy 
 
  export default function App() {
   const today = new Date();
+  const todayKey = mk(today.getFullYear(), today.getMonth() + 1, today.getDate());
   const [session, setSession] = useState(null);
   const [admins, setAdmins] = useState(DEFAULT_ADMINS);
   const [ops, setOps] = useState([]);
   const [off, setOff] = useState(-11);
-  const [view, setView] = useState("calendar");
+  const [view, setView] = useState("daily");
   const [activeYear, setAY] = useState(today.getFullYear());
   const [month, setMonth] = useState(today.getMonth());
-  const themeSessionKey = "gestion-personal-theme-mode";
-  const [themeMode, setThemeMode] = useState(() => {
-  return sessionStorage.getItem(themeSessionKey) || getThemeBySchedule();
-});
+  const themeMode = "light";
   const [showConfigPass, setShowConfigPass] = useState(false);
   const [printMode, setPrintMode] = useState("annual");
   const [printOpId, setPrintOpId] = useState("");
   const [plans, setPlans] = useState({});
+  const [securityPlan, setSecurityPlan] = useState(null);
   const [isRecalculating, setIsRecalculating] = useState(false);
 
-  useEffect(() => {
-    onValue(ref(db, 'ops'), (s) => { if (s.val()) setOps(s.val()); });
-    onValue(ref(db, 'admins'), (s) => { if (s.val()) setAdmins(s.val()); });
-    onValue(ref(db, 'offset'), (s) => { if (s.val() !== null) setOff(s.val()); });
-    onValue(ref(db, 'plans'), (s) => { setPlans(s.val() || {}); });
-  }, []);
-  useEffect(() => {
-  const applyThemeBySchedule = () => {
-    setThemeMode(getThemeBySchedule());
-  };
+useEffect(() => {
+  onValue(ref(db, 'ops'), (s) => { if (s.val()) setOps(s.val()); });
+  onValue(ref(db, 'admins'), (s) => { if (s.val()) setAdmins(s.val()); });
+  onValue(ref(db, 'offset'), (s) => { if (s.val() !== null) setOff(s.val()); });
+  onValue(ref(db, 'plans'), (s) => { setPlans(s.val() || {}); });
+  onValue(ref(db, 'securityPlans'), (s) => { setSecurityPlan(s.val() || {}); });
+}, []);
 
-  applyThemeBySchedule();
 
-  const intervalId = setInterval(applyThemeBySchedule, 60 * 1000);
-
-  return () => clearInterval(intervalId);
-  }, []);
 const saveOps = (n) => {
   setOps(n);
   set(ref(db, 'ops'), n).catch((error) => {
@@ -242,13 +233,55 @@ const saveOps = (n) => {
   });
 };
 
+
+const toggleSecurityRole = (operatorId, roleId) => {
+  const operator = ops.find(op => op.id === operatorId);
+  const currentRoles = Array.isArray(operator?.securityRoles) ? operator.securityRoles : [];
+  const hasRole = currentRoles.includes(roleId);
+
+  if (roleId === "DCS") {
+    const confirmed = window.confirm(
+      hasRole
+        ? "Vas a quitar el rol DCS a este operador. Dejará de aparecer en el calendario de Sala de Control y puede requerir recalcular la planificación. ¿Quieres continuar?"
+        : "Vas a añadir el rol DCS a este operador. Aparecerá en el calendario de Sala de Control y puede requerir recalcular la planificación. ¿Quieres continuar?"
+    );
+
+    if (!confirmed) return;
+  }
+
+  const updatedOps = ops.map(op => {
+    if (op.id !== operatorId) return op;
+
+    const roles = Array.isArray(op.securityRoles) ? op.securityRoles : [];
+    const active = roles.includes(roleId);
+
+    return {
+      ...op,
+      securityRoles: active
+        ? roles.filter(id => id !== roleId)
+        : [...roles, roleId]
+    };
+  });
+
+  saveOps(updatedOps);
+};
+
 const saveAdmins = (n) => set(ref(db, 'admins'), n);
+
 
 const saveOff = (n) => {
   setOff(n);
   set(ref(db, 'offset'), n).catch((error) => {
     console.error("Error guardando offset:", error);
     alert("No se ha podido guardar el offset. Revisa la conexión.");
+  });
+};
+const saveSecurityPlans = (nextSecurityPlans) => {
+  setSecurityPlan(nextSecurityPlans);
+
+  set(ref(db, 'securityPlans'), nextSecurityPlans).catch((error) => {
+    console.error("Error guardando planificación de seguridad:", error);
+    alert("No se ha podido guardar la planificación de seguridad. Revisa la conexión.");
   });
 };
 
@@ -288,21 +321,101 @@ const profileDisplayRole = session?.role === "guest" ? "Invitado" : (roleLabels[
 
  const needsPlanning = view === "calendar" || view === "stats";
 
-  const currentPlanHash = useMemo(() => stableStringify({ ops, off }), [ops, off]);
+ const dcsOps = useMemo(
+  () => ops.filter(op => Array.isArray(op.securityRoles) && op.securityRoles.includes("DCS")),
+  [ops]
+);
+
+  const dcsPlanningFingerprint = useMemo(() => {
+  return dcsOps.map(op => ({
+    id: op.id,
+    calendar: op.calendar || {}
+  }));
+}, [dcsOps]);
+
+const currentPlanHash = useMemo(
+  () => stableStringify({ ops: dcsPlanningFingerprint, off }),
+  [dcsPlanningFingerprint, off]
+);
   const savedPlanData = plans?.[activeYear] || null;
   const hasSavedPlan = !!savedPlanData?.assign && Object.keys(savedPlanData.assign).length > 0;
   const planHasPendingChanges = hasSavedPlan && savedPlanData.inputHash !== currentPlanHash;
 
   const asgn = useMemo(() => savedPlanData?.assign || {}, [savedPlanData]);
-  const stats = useMemo(() => computeStats(ops, activeYear, asgn, off), [ops, activeYear, asgn, off]);
+  const stats = useMemo(() => computeStats(dcsOps, activeYear, asgn, off), [dcsOps, activeYear, asgn, off]);
 
+  const activeSecurityPlan = securityPlan?.[activeYear] || null;
+  const activeSecurityDaysCount = activeSecurityPlan?.days
+  ? Object.keys(activeSecurityPlan.days).length
+  : 0;
+  
+
+const todayLabel = today.toLocaleDateString("es-ES", {
+  weekday: "long",
+  day: "2-digit",
+  month: "long",
+  year: "numeric"
+});
+const todayDcsOperators = useMemo(() => {
+  const todayAssignments = savedPlanData?.assign?.[todayKey] || {};
+
+  return dcsOps.filter(op => todayAssignments?.[op.id] === "SC");
+}, [savedPlanData, todayKey, dcsOps]);
+  const activeSecurityMonthSummary = useMemo(() => {
+  if (!activeSecurityPlan?.days) {
+    return {
+      totalDays: 0,
+      completeDays: 0,
+      warningDays: 0,
+      missingAssignments: 0
+    };
+  }
+
+  const roleIds = ["DCS", "BRIGADA", "COORDINADOR_EMERGENCIAS", "CONTEO"];
+  const totalDays = dim(activeYear, month);
+
+  return Array.from({ length: totalDays }).reduce(
+    (summary, _, index) => {
+      const dayNumber = index + 1;
+      const dateKey = `${activeYear}-${month + 1}-${dayNumber}`;
+      const dayPlan = activeSecurityPlan.days?.[dateKey] || {};
+
+      const assignedCount = roleIds.filter(roleId => Boolean(dayPlan?.[roleId])).length;
+      const missingCount = roleIds.length - assignedCount;
+      const hasWarnings = Array.isArray(dayPlan.warnings) && dayPlan.warnings.length > 0;
+
+      summary.totalDays += 1;
+
+      if (missingCount === 0) {
+        summary.completeDays += 1;
+      }
+
+      if (hasWarnings || missingCount > 0) {
+        summary.warningDays += 1;
+      }
+
+      summary.missingAssignments += missingCount;
+
+      return summary;
+    },
+    {
+      totalDays: 0,
+      completeDays: 0,
+      warningDays: 0,
+      missingAssignments: 0
+    }
+  );
+}, [activeSecurityPlan, activeYear, month]);
+  const getOperatorNameById = (operatorId) => {
+  return ops.find(op => String(op.id) === String(operatorId))?.name || "Sin asignar";
+};
   const handleRecalculatePlan = async () => {
     if (!isAdmin) return;
 
-    if (ops.length === 0) {
-      alert("No hay operadores cargados para generar la planificación.");
-      return;
-    }
+    if (dcsOps.length === 0) {
+  alert("No hay operadores con rol DCS para generar la planificación de Sala de Control.");
+  return; 
+}
 
     const confirmMessage = hasSavedPlan
       ? `Vas a recalcular la planificación oficial de ${activeYear}. Esto puede cambiar el calendario completo de ese año. ¿Quieres continuar?`
@@ -313,7 +426,7 @@ const profileDisplayRole = session?.role === "guest" ? "Invitado" : (roleLabels[
     setIsRecalculating(true);
 
     try {
-      const newPlan = autoAssign(ops, activeYear, off);
+      const newPlan = autoAssign(dcsOps, activeYear, off);
 
       const planPayload = {
         assign: newPlan,
@@ -332,32 +445,124 @@ const profileDisplayRole = session?.role === "guest" ? "Invitado" : (roleLabels[
       setIsRecalculating(false);
     }
   };
+const handleGenerateSecurityPlan = async () => {
+  if (!isAdmin) return;
 
-  const currentMonthLabel = `${MONTHS[month]} ${activeYear}`;
-  const selectedPrintOp = useMemo(() => ops.find(op => String(op.id) === String(printOpId)) || ops[0] || null, [ops, printOpId]);
+  const confirmed = window.confirm(
+    `Vas a generar la planificación de seguridad para ${activeYear}. Esta planificación es independiente del Calendario DCS. ¿Quieres continuar?`
+  );
+
+  if (!confirmed) return;
+
+  const newSecurityPlan = generateSecurityPlan({
+  operators: ops,
+  year: activeYear,
+  dcsPlan: asgn,
+  off
+});
+
+  const nextSecurityPlans = {
+    ...(securityPlan || {}),
+    [activeYear]: newSecurityPlan
+  };
+
+  saveSecurityPlans(nextSecurityPlans);
+};
+  const currentMonthLabel = `${MONTHS[month]} ${activeYear}`;const selectedPrintOp = useMemo(() => dcsOps.find(op => String(op.id) === String(printOpId)) || dcsOps[0] || null, [dcsOps, printOpId]);
+  
   const selectedPrintStats = useMemo(() => stats.find(op => String(op.id) === String(selectedPrintOp?.id)), [stats, selectedPrintOp]);
   const generatedAt = formatDateTime(new Date());
-  const todayKey = mk(today.getFullYear(), today.getMonth() + 1, today.getDate());
+  
 
   useEffect(() => {
-    if (!printOpId && ops[0]?.id) {
-      setPrintOpId(String(ops[0].id));
-    }
-  }, [ops, printOpId]);
+  if (!printOpId && dcsOps[0]?.id) {
+    setPrintOpId(String(dcsOps[0].id));
+  }
+}, [dcsOps, printOpId]);
 
   const handlePrevMonth = () => { if (month === 0) { setMonth(11); setAY(v => v - 1); } else setMonth(month - 1); };
   const handleNextMonth = () => { if (month === 11) { setMonth(0); setAY(v => v + 1); } else setMonth(month + 1); };
 
-  if (!session) return <LoginScreenComponent admins={admins} onLogin={setSession} theme={t} />;
+
+
+const getTodayDcsOperators = () => {
+  return dcsOps
+    .filter(op => {
+      const abs = op.calendar?.[todayKey];
+      const rot = cshift(activeYear, month, today.getDate(), off);
+      const calcAsgn = asgn[todayKey]?.[op.id];
+      const finalCode = abs || calcAsgn || rot;
+
+      return finalCode === "SC";
+    })
+    .map(op => op.name);
+};
+
+const todaySecurityDay =
+  activeSecurityPlan?.days?.[todayKey] ||
+  activeSecurityPlan?.assignments?.[todayKey] ||
+  activeSecurityPlan?.assign?.[todayKey] ||
+  {};
+const todayAbsences = ops.filter(op => {
+  const code = op.calendar?.[todayKey];
+  return ["VA", "EN", "BA"].includes(code);
+});
+const getTodaySecurityRoleName = (roleId) => {
+  const value = todaySecurityDay?.[roleId];
+
+  if (!value) return "Sin asignar";
+
+  if (Array.isArray(value)) {
+    return value.map(id => getOperatorNameById(id)).join(", ");
+  }
+
+  if (typeof value === "object") {
+    return value.name || getOperatorNameById(value.id);
+  }
+
+  return getOperatorNameById(value);
+};
+
+const dailySummary = [
+  {
+    title: "DCS",
+    value: getTodayDcsOperators().join(", ") || "Sin asignar",
+  },
+  {
+    title: "Brigada",
+    value: getTodaySecurityRoleName("BRIGADA"),
+  },
+  {
+    title: "Coordinador de Emergencias",
+    value: getTodaySecurityRoleName("COORDINADOR_EMERGENCIAS"),
+  },
+  {
+    title: "Conteo",
+    value: getTodaySecurityRoleName("CONTEO"),
+  },
+];
+
+ if (!session) {
+  return (
+    <LoginScreenComponent
+      admins={admins}
+      onLogin={(newSession) => {
+        setSession(newSession);
+        setView("daily");
+      }}
+      theme={t}
+    />
+  );
+}
 
   return (
-    <div style={{
-      minHeight: "100vh",
-      background: `radial-gradient(circle at top left, ${t.accentSoft}, transparent 32%), radial-gradient(circle at top right, rgba(99, 102, 241, 0.10), transparent 24%), linear-gradient(180deg, ${t.shell} 0%, ${t.bg} 55%, ${t.bg} 100%)`,
-      color: t.text,
-      fontFamily: '"Segoe UI", Tahoma, Geneva, Verdana, sans-serif',
-      transition: 'background 0.3s'
-    }}>
+   <div style={{
+  minHeight: "100vh",
+  background: "linear-gradient(180deg, #f8fafc 0%, #eef7f3 46%, #f8fafc 100%)",
+  color: t.text,
+  fontFamily: '"Segoe UI", Tahoma, Geneva, Verdana, sans-serif',
+  transition: "background 0.3s"
+}}>
       <style>{`
         @media print {
           .no-print { display: none !important; }
@@ -368,148 +573,769 @@ const profileDisplayRole = session?.role === "guest" ? "Invitado" : (roleLabels[
           @page { size: A4 landscape; margin: 12mm; }
         }
         .app-shell { max-width: 1440px; margin: 0 auto; padding: 24px 14px 40px; }
-        .glass-panel { background: ${t.card}; border: 1px solid ${t.border}; box-shadow: 0 18px 50px rgba(15, 23, 42, 0.16); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
-        .hero-grid { display: grid; grid-template-columns: minmax(0, 1.8fr) repeat(3, minmax(0, 1fr)); gap: 14px; margin-bottom: 24px; }
+        .glass-panel { background: rgba(255, 255, 255, 0.88); border: 1px solid rgba(203, 213, 225, 0.78); box-shadow: 0 14px 34px rgba(15, 23, 42, 0.08); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+        .hero-grid { display: grid; grid-template-columns: minmax(0, 1.8fr) repeat(3, minmax(0, 1fr)); gap: 14px; margin-bottom: 24px.glass-panel ; }
         .hero-card { border-radius: 22px; padding: 22px; }
         .hero-title { font-size: 28px; font-weight: 800; color: ${t.title}; margin: 0 0 8px; letter-spacing: -0.02em; }
         .hero-sub { color: ${t.sub}; font-size: 14px; line-height: 1.5; margin: 0; }
         .hero-kpi-label { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: ${t.sub}; margin-bottom: 8px; }
         .hero-kpi-value { font-size: 28px; font-weight: 800; color: ${t.title}; }
-        .section-card { border-radius: 20px; }
-        .calendar-container { background: ${t.card}; border-radius: 20px; overflow-x: auto; border: 1px solid ${t.border}; margin-bottom: 40px; box-shadow: 0 18px 50px rgba(15, 23, 42, 0.12); position: relative; -webkit-overflow-scrolling: touch; }
-        .calendar-grid { display: grid; grid-template-columns: 140px repeat(${dim(activeYear, month)}, minmax(46px, 1fr)); gap: 0px; width: max-content; min-width: 100%; }
-        @media (min-width: 1024px) { .calendar-grid { width: 100%; grid-template-columns: 150px repeat(${dim(activeYear, month)}, 1fr); } .cell-day { min-width: 0 !important; } }
-        @media (max-width: 980px) { .hero-grid { grid-template-columns: 1fr; } }
-        .sticky-col { position: sticky; left: 0; background: ${t.cardSolid} !important; z-index: 50; border-right: 1px solid ${t.border} !important; box-sizing: border-box; }
-        .cell-day { height: 40px; display: flex; align-items: center; justify-content: center; border-top: 1px solid ${t.border}; border-right: 1px solid ${t.border}; font-size: 11px; box-sizing: border-box; }
-        .header-day { height: 58px !important; flex-direction: column; gap: 2px; background: ${t.shell} !important; }
+        .section-card { border-radius: 24px; }
+        .calendar-container { background: rgba(255, 255, 255, 0.92); border-radius: 24px; overflow-x: auto; border: 1px solid rgba(203, 213, 225, 0.78); margin-bottom: 40px; box-shadow: 0 14px 34px rgba(15, 23, 42, 0.08); position: relative; -webkit-overflow-scrolling: touch; }
+.calendar-grid { display: grid; grid-template-columns: 150px repeat(${dim(activeYear, month)}, minmax(46px, 1fr)); gap: 0px; width: max-content; min-width: 100%; background: rgba(226, 232, 240, 0.55); }
+@media (min-width: 1024px) { .calendar-grid { width: 100%; grid-template-columns: 165px repeat(${dim(activeYear, month)}, 1fr); } .cell-day { min-width: 0 !important; } }
+@media (max-width: 980px) { .hero-grid { grid-template-columns: 1fr; } }
+.sticky-col { position: sticky; left: 0; background: #ffffff !important; z-index: 50; border-right: 1px solid rgba(203, 213, 225, 0.90) !important; box-sizing: border-box; }
+.cell-day { height: 42px; display: flex; align-items: center; justify-content: center; border-top: 1px solid rgba(203, 213, 225, 0.78); border-right: 1px solid rgba(203, 213, 225, 0.78); font-size: 11px; box-sizing: border-box; transition: transform 0.12s ease, box-shadow 0.12s ease; }
+.cell-day:hover { box-shadow: inset 0 0 0 2px rgba(8, 145, 118, 0.20); }
+.header-day { height: 62px !important; flex-direction: column; gap: 3px; background: #f8fafc !important; }
         .soft-button { background: ${t.card}; color: ${t.text}; border: 1px solid ${t.border}; border-radius: 12px; padding: 10px 14px; cursor: pointer; fontSize: 12px; }
         .soft-input { width: 100%; border-radius: 12px; border: 1px solid ${t.border}; background: ${t.shell}; color: ${t.text}; }
         .print-only { display: none; }
       `}</style>
 
-      <header className="no-print glass-panel" style={{ margin: '14px 14px 0', padding: "14px 18px", display: 'flex', justifyContent: 'space-between', borderRadius: 22, alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-        <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
-          <div style={{ padding: '10px 14px', borderRadius: 14, background: t.accentSoft, border: `1px solid ${t.border}` }}>
-            <div style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.08em', color: t.sub }}>Panel</div>
-            <span style={{ fontWeight: 800, color: t.title, fontSize: 18, letterSpacing: '0.02em' }}>Sala de Control</span>
-          </div>
-         <button
-  onClick={() => {
-    setThemeMode(prev => {
-      const next = prev === "dark" ? "light" : "dark";
-      sessionStorage.setItem(themeSessionKey, next);
-      return next;
-    });
-  }}
+    <header
+  className="no-print glass-panel"
   style={{
-    background: t.shell,
-    border: `1px solid ${t.border}`,
-    borderRadius: 12,
-    padding: "9px 12px",
-    cursor: "pointer",
-    color: t.text,
-    fontWeight: 700
+    margin: "14px 14px 0",
+    padding: "16px 18px",
+    display: "flex",
+    justifyContent: "space-between",
+    borderRadius: 24,
+    alignItems: "center",
+    gap: 16,
+    flexWrap: "wrap"
   }}
 >
-  {themeMode === "dark" ? "Modo claro" : "Modo oscuro"}
-</button>
-          <select value={activeYear} onChange={e => setAY(Number(e.target.value))} style={{ background: t.shell, color: t.text, border: `1px solid ${t.border}`, borderRadius: 12, padding: '9px 12px', fontSize: 13, minWidth: 110 }}>
-            {[2024, 2025, 2026, 2027, 2028, 2029, 2030].map(y => <option key={y} value={y}>{y}</option>)}
-          </select>
-        </div>
-        <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
-                    <div style={{ padding: '10px 14px', borderRadius: 14, background: t.shell, border: `1px solid ${t.border}` }}>
-            <div style={{ fontSize: 11, color: t.sub, marginBottom: 3 }}>Sesión activa</div>
-<div style={{ fontSize: 13, fontWeight: 700, color: t.title }}>{sessionDisplayRole || sessionDisplayName}</div>
-          </div>
-          <button onClick={() => setSession(null)} style={{ background: t.dangerSoft, color: '#EF4444', border: `1px solid rgba(239, 68, 68, 0.24)`, padding: '10px 14px', borderRadius: 12, fontSize: 12, fontWeight: 'bold', cursor: 'pointer' }}>Cerrar sesión</button>
-        </div>
-      </header>
-
-      <nav className="no-print glass-panel" style={{ display: 'flex', margin: '14px 14px 0', padding: 8, borderRadius: 18, justifyContent: 'center' }}>
-        <div style={{ display: 'flex', width: '100%', maxWidth: 820, gap: 8, flexWrap: 'wrap' }}>
-          {["calendar", "stats", canSeeEditor && "editor", isAdmin && "config"].filter(Boolean).map(v => {
-  const labels = {
-    calendar: "Calendario",
-    stats: "Estadísticas",
-    editor: "Editor",
-    config: "Administración"
-  };
-  return (
-    <button
-      key={v}
-      onClick={() => setView(v)}
+  <div style={{ display: "flex", gap: 14, alignItems: "center", flexWrap: "wrap" }}>
+    <div
       style={{
-        flex: 1,
-        padding: '13px 12px',
-        color: view === v ? t.title : t.sub,
-        background: view === v ? t.accentSoft : 'transparent',
-        border: `1px solid ${view === v ? t.border : 'transparent'}`,
-        cursor: 'pointer',
-        fontWeight: 'bold',
-        borderRadius: 12,
-        fontSize: 12
+        width: 48,
+        height: 48,
+        borderRadius: 16,
+        background: "#ffffff",
+        border: `1px solid ${t.border}`,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        boxShadow: "0 10px 24px rgba(15, 23, 42, 0.06)"
       }}
     >
-      {labels[v]}
-    </button>
-  );
-})}
-        </div>
-      </nav>
+      <img
+        src={cortevaLogo}
+        alt="Corteva"
+        style={{
+          width: 34,
+          height: "auto",
+          objectFit: "contain"
+        }}
+      />
+    </div>
 
-      <main className="app-shell">
-       
-        {view === "calendar" && (
-          <div>
-            <div className="glass-panel section-card no-print" style={{ display: 'flex', justifyContent: 'space-between', gap: 12, marginBottom: 20, alignItems: 'center', padding: 18, flexWrap: 'wrap' }}>
-              <div>
-                <div style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.08em', color: t.sub, marginBottom: 6 }}>Calendario operativo</div>
-                <h2 style={{ margin: 0, minWidth: 120, textAlign: 'center', fontSize: 24, color: t.title, letterSpacing: '-0.02em' }}>{currentMonthLabel}</h2>
-                {isAdmin && (
-  <button
-    onClick={handleRecalculatePlan}
-    disabled={isRecalculating}
+    <div>
+      <div
+        style={{
+          fontSize: 18,
+          fontWeight: 900,
+          color: t.title,
+          letterSpacing: "-0.02em",
+          lineHeight: 1.1
+        }}
+      >
+        Gestión de personal
+      </div>
+
+      <div
+        style={{
+          marginTop: 4,
+          fontSize: 12,
+          color: t.sub,
+          fontWeight: 700
+        }}
+      >
+        Sala de Control · Corteva
+      </div>
+    </div>
+
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 8,
+        padding: "8px 10px",
+        borderRadius: 14,
+        background: t.shell,
+        border: `1px solid ${t.border}`
+      }}
+    >
+      <span
+        style={{
+          fontSize: 11,
+          color: t.sub,
+          fontWeight: 900,
+          textTransform: "uppercase",
+          letterSpacing: "0.07em"
+        }}
+      >
+        Año
+      </span>
+
+      <select
+        value={activeYear}
+        onChange={e => setAY(Number(e.target.value))}
+        style={{
+          background: "#ffffff",
+          color: t.text,
+          border: `1px solid ${t.border}`,
+          borderRadius: 10,
+          padding: "8px 10px",
+          fontSize: 13,
+          fontWeight: 800,
+          minWidth: 96
+        }}
+      >
+        {[2024, 2025, 2026, 2027, 2028, 2029, 2030].map(y => (
+          <option key={y} value={y}>
+            {y}
+          </option>
+        ))}
+      </select>
+    </div>
+  </div>
+
+  <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+    <div
+      style={{
+        padding: "10px 14px",
+        borderRadius: 16,
+        background: t.shell,
+        border: `1px solid ${t.border}`
+      }}
+    >
+      <div style={{ fontSize: 11, color: t.sub, marginBottom: 3, fontWeight: 800 }}>
+        Sesión activa
+      </div>
+
+      <div style={{ fontSize: 13, fontWeight: 900, color: t.title }}>
+        {sessionDisplayRole || sessionDisplayName}
+      </div>
+    </div>
+
+    <button
+      onClick={() => setSession(null)}
+      style={{
+        background: "rgba(239, 68, 68, 0.08)",
+        color: "#dc2626",
+        border: "1px solid rgba(239, 68, 68, 0.22)",
+        padding: "11px 14px",
+        borderRadius: 14,
+        fontSize: 12,
+        fontWeight: 900,
+        cursor: "pointer"
+      }}
+    >
+      Cerrar sesión
+    </button>
+  </div>
+</header>
+
+      <nav
+  className="no-print glass-panel"
+  style={{
+    display: "flex",
+    margin: "14px 14px 0",
+    padding: 10,
+    borderRadius: 24,
+    justifyContent: "center"
+  }}
+>
+  <div
     style={{
-      marginTop: 12,
-      padding: '10px 14px',
-      borderRadius: 12,
-      border: `1px solid ${planHasPendingChanges || !hasSavedPlan ? 'rgba(245, 158, 11, 0.55)' : t.border}`,
-      background: planHasPendingChanges || !hasSavedPlan ? 'rgba(245, 158, 11, 0.16)' : t.accentSoft,
-      color: t.title,
-      cursor: isRecalculating ? 'not-allowed' : 'pointer',
-      fontSize: 12,
-      fontWeight: 800
+      display: "grid",
+      gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
+      width: "100%",
+      maxWidth: 980,
+      gap: 8
     }}
   >
-    {isRecalculating ? "Calculando..." : hasSavedPlan ? "Recalcular planificación" : "Generar planificación"}
-  </button>
-)}
-              </div>
-              <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                <button style={{ padding: '10px 14px', borderRadius: 12, border: `1px solid ${t.border}`, background: t.shell, color: t.text, cursor: 'pointer', fontSize: 12, fontWeight: 700 }} onClick={handlePrevMonth}>Mes anterior</button>
-                <button style={{ padding: '10px 14px', borderRadius: 12, border: `1px solid ${t.border}`, background: t.accentSoft, color: t.title, cursor: 'pointer', fontSize: 12, fontWeight: 700 }} onClick={handleNextMonth}>Mes siguiente</button>
-                <select value={printMode} onChange={e => setPrintMode(e.target.value)} style={{ padding: '10px 14px', borderRadius: 12, border: `1px solid ${t.border}`, background: t.shell, color: t.text, fontSize: 12, minWidth: 210 }}>
-                  <option value="annual">Exportación anual completa</option>
-                  <option value="individual">Calendario individual</option>
-                </select>
-                                {printMode === "individual" && (
-                  <select value={printOpId} onChange={e => setPrintOpId(e.target.value)} style={{ padding: '10px 14px', borderRadius: 12, border: `1px solid ${t.border}`, background: t.shell, color: t.text, fontSize: 12, minWidth: 220 }}>
-                    {ops.map(op => <option key={op.id} value={String(op.id)}>{op.name}</option>)}
-                  </select>
-                )}
+    {[
+      { id: "daily", label: "Operativa diaria", short: "Hoy" },
+      { id: "calendar", label: "Calendario DCS", short: "Sala" },
+      { id: "security", label: "Calendario Seguridad", short: "Seguridad" },
+      { id: "stats", label: "Estadísticas", short: "Datos" },
+      canSeeEditor && { id: "editor", label: "Personal", short: "Equipo" },
+      isAdmin && { id: "config", label: "Administración", short: "Ajustes" }
+    ]
+      .filter(Boolean)
+      .map(item => {
+        const active = view === item.id;
 
-               
+        return (
+          <button
+            key={item.id}
+            onClick={() => setView(item.id)}
+            style={{
+              padding: "12px 12px",
+              color: active ? t.title : t.sub,
+              background: active ? "rgba(8, 145, 118, 0.12)" : "transparent",
+              border: `1px solid ${active ? "rgba(8, 145, 118, 0.26)" : "transparent"}`,
+              cursor: "pointer",
+              borderRadius: 16,
+              fontSize: 12,
+              fontWeight: 900,
+              textAlign: "left",
+              transition: "all 0.18s ease",
+              boxShadow: active ? "0 8px 18px rgba(15, 23, 42, 0.06)" : "none"
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+              <span
+                style={{
+                  width: 8,
+                  height: 8,
+                  borderRadius: 999,
+                  background: active ? t.accent : "rgba(100, 116, 139, 0.28)",
+                  flex: "0 0 auto"
+                }}
+              />
 
-                <button
-                  style={{ padding: '10px 14px', borderRadius: 12, border: `1px solid ${t.border}`, background: t.cardSolid, color: t.text, cursor: 'pointer', fontSize: 12, fontWeight: 700 }}
-                  onClick={() => window.print()}
+              <div>
+                <div style={{ lineHeight: 1.15 }}>
+                  {item.label}
+                </div>
+
+                <div
+                  style={{
+                    marginTop: 4,
+                    fontSize: 10,
+                    color: active ? t.accent : t.sub,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.07em",
+                    fontWeight: 900
+                  }}
                 >
-                  Exportar PDF / Imprimir
-                </button>
+                  {item.short}
+                </div>
               </div>
             </div>
+          </button>
+        );
+      })}
+  </div>
+</nav>
+
+      <main className="app-shell">
+       {view === "daily" && (
+  <div className="glass-panel section-card" style={{ padding: 28 }}>
+  
+    <div
+  style={{
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    gap: 20,
+    marginBottom: 28,
+    flexWrap: "wrap"
+  }}
+>
+  <div>
+    <div
+      style={{
+        fontSize: 12,
+        textTransform: "uppercase",
+        letterSpacing: "0.12em",
+        color: t.accent,
+        marginBottom: 10,
+        fontWeight: 800
+      }}
+    >
+      Operativa diaria
+    </div>
+
+    <h1
+  style={{
+    margin: 0,
+    color: t.title,
+    fontSize: 34,
+    letterSpacing: "-0.03em",
+    lineHeight: 1.05
+  }}
+>
+  Resumen operativo de hoy
+</h1>
+
+<p style={{ marginTop: 10, marginBottom: 0, color: t.sub, fontSize: 15, lineHeight: 1.5 }}>
+  Puestos principales asignados para la jornada actual.
+</p>
+  </div>
+
+  <div
+    style={{
+      padding: "14px 18px",
+      borderRadius: 18,
+      background: t.shell,
+      border: `1px solid ${t.border}`,
+      color: t.title,
+      fontWeight: 800,
+      minWidth: 190,
+      textAlign: "center"
+    }}
+  >
+    <div style={{ fontSize: 12, color: t.sub, marginBottom: 4 }}>
+      Fecha actual
+    </div>
+    <div style={{ fontSize: 17, textTransform: "capitalize" }}>
+  {todayLabel}
+</div>
+  </div>
+</div>
+
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+        gap: 16
+      }}
+    >
+   {dailySummary.map(({ title, value }) => {
+  const assigned = value && value !== "Sin asignar";
+  const names = assigned
+    ? String(value).split(",").map(name => name.trim()).filter(Boolean)
+    : [];
+
+  return (
+    <div
+      key={title}
+      style={{
+        background: t.shell,
+        border: `1px solid ${assigned ? t.border : "rgba(245, 158, 11, 0.45)"}`,
+        borderRadius: 22,
+        padding: 20,
+        minHeight: 150,
+        boxShadow: "0 12px 28px rgba(15, 23, 42, 0.06)"
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "flex-start",
+          gap: 12,
+          marginBottom: 16
+        }}
+      >
+        <div
+          style={{
+            width: 42,
+            height: 42,
+            borderRadius: 14,
+            background: t.accentSoft,
+            color: t.accent,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontWeight: 900,
+            fontSize: 14
+          }}
+        >
+          {title.slice(0, 2).toUpperCase()}
+        </div>
+
+        <span
+          style={{
+            padding: "6px 10px",
+            borderRadius: 999,
+            background: assigned ? "rgba(22, 163, 74, 0.10)" : "rgba(245, 158, 11, 0.14)",
+            color: assigned ? "#15803d" : "#b45309",
+            fontSize: 11,
+            fontWeight: 900,
+            textTransform: "uppercase",
+            letterSpacing: "0.06em"
+          }}
+        >
+          {assigned ? "Asignado" : "Pendiente"}
+        </span>
+      </div>
+
+      <h2 style={{ margin: "0 0 12px", color: t.title, fontSize: 21, lineHeight: 1.15 }}>
+        {title}
+      </h2>
+
+      {assigned ? (
+        <div style={{ display: "grid", gap: 8 }}>
+          {names.map((name, index) => (
+            <div
+              key={`${title}-${name}-${index}`}
+              style={{
+                padding: "10px 12px",
+                borderRadius: 14,
+                background: "#ffffff",
+                border: `1px solid ${t.border}`,
+                color: t.title,
+                fontWeight: 800,
+                fontSize: 14
+              }}
+            >
+              {name}
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div
+          style={{
+            padding: "12px 14px",
+            borderRadius: 14,
+            background: "rgba(245, 158, 11, 0.10)",
+            border: "1px solid rgba(245, 158, 11, 0.26)",
+            color: "#92400e",
+            fontWeight: 800,
+            fontSize: 14
+          }}
+        >
+          Sin asignar
+        </div>
+      )}
+    </div>
+  );
+})}
+</div>
+
+<div
+  style={{
+    marginTop: 26,
+    padding: 22,
+    borderRadius: 22,
+    background: "rgba(248, 250, 252, 0.72)",
+    border: `1px solid ${t.border}`
+  }}
+>
+  <div
+    style={{
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "flex-start",
+      gap: 14,
+      marginBottom: 18,
+      flexWrap: "wrap"
+    }}
+  >
+    <div>
+      <div
+        style={{
+          fontSize: 12,
+          textTransform: "uppercase",
+          letterSpacing: "0.10em",
+          color: t.accent,
+          marginBottom: 8,
+          fontWeight: 900
+        }}
+      >
+        Bloque final
+      </div>
+
+      <h2 style={{ margin: 0, color: t.title, fontSize: 24 }}>
+        Ausencias de hoy
+      </h2>
+
+      <p style={{ marginTop: 7, marginBottom: 0, color: t.sub, fontSize: 14 }}>
+        Personal con vacaciones, entrenamiento o baja registrado en la jornada.
+      </p>
+    </div>
+
+    <div
+      style={{
+        padding: "10px 14px",
+        borderRadius: 999,
+        background: "#ffffff",
+        border: `1px solid ${t.border}`,
+        color: t.title,
+        fontWeight: 900,
+        fontSize: 13
+      }}
+    >
+      {todayAbsences.length} ausencias
+    </div>
+  </div>
+
+  {todayAbsences.length > 0 ? (
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+        gap: 12
+      }}
+    >
+      {todayAbsences.map(op => {
+        const code = op.calendar?.[todayKey];
+
+        const label =
+          code === "VA"
+            ? "Vacaciones"
+            : code === "EN"
+            ? "Entrenamiento"
+            : code === "BA"
+            ? "Baja"
+            : code;
+
+        const absenceColor =
+          code === "VA"
+            ? "#059669"
+            : code === "EN"
+            ? "#6366f1"
+            : "#ef4444";
+
+        return (
+          <div
+            key={op.id}
+            style={{
+              background: "#ffffff",
+              border: `1px solid ${t.border}`,
+              borderRadius: 18,
+              padding: 18,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 12
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <Av name={op.name} color={op.color} size={30} />
+
+              <div>
+                <div style={{ fontWeight: 900, color: t.title, marginBottom: 2 }}>
+                  {op.name}
+                </div>
+
+                <div style={{ fontSize: 13, color: t.sub }}>
+                  {label}
+                </div>
+              </div>
+            </div>
+
+            <strong
+              style={{
+                padding: "7px 10px",
+                borderRadius: 999,
+                background: `${absenceColor}18`,
+                color: absenceColor,
+                fontSize: 12,
+                letterSpacing: "0.04em"
+              }}
+            >
+              {code}
+            </strong>
+          </div>
+        );
+      })}
+    </div>
+  ) : (
+    <div
+      style={{
+        background: "#ffffff",
+        border: `1px dashed ${t.border}`,
+        borderRadius: 18,
+        padding: 20,
+        color: t.sub,
+        fontSize: 14,
+        fontWeight: 700
+      }}
+    >
+      No hay ausencias registradas hoy.
+    </div>
+  )}
+</div>
+  </div>
+)}
+        {view === "calendar" && (
+          <div>
+          <div
+  className="glass-panel section-card no-print"
+  style={{
+    display: "flex",
+    justifyContent: "space-between",
+    gap: 18,
+    marginBottom: 20,
+    alignItems: "stretch",
+    padding: 20,
+    flexWrap: "wrap",
+    borderRadius: 24
+  }}
+>
+  <div
+    style={{
+      display: "flex",
+      flexDirection: "column",
+      justifyContent: "space-between",
+      gap: 14,
+      minWidth: 260,
+      flex: "1 1 300px"
+    }}
+  >
+    <div>
+      <div
+        style={{
+          fontSize: 12,
+          textTransform: "uppercase",
+          letterSpacing: "0.10em",
+          color: t.accent,
+          marginBottom: 8,
+          fontWeight: 900
+        }}
+      >
+        Calendario DCS
+      </div>
+
+      <h2
+        style={{
+          margin: 0,
+          fontSize: 30,
+          color: t.title,
+          letterSpacing: "-0.03em",
+          lineHeight: 1.05,
+          textTransform: "capitalize"
+        }}
+      >
+        {currentMonthLabel}
+      </h2>
+
+      <p
+        style={{
+          marginTop: 10,
+          marginBottom: 0,
+          color: t.sub,
+          fontSize: 14,
+          lineHeight: 1.5
+        }}
+      >
+        Vista mensual de Sala de Control, turnos, ausencias y asignaciones SC.
+      </p>
+    </div>
+
+    {isAdmin && (
+      <button
+        onClick={handleRecalculatePlan}
+        disabled={isRecalculating}
+        style={{
+          alignSelf: "flex-start",
+          padding: "11px 15px",
+          borderRadius: 14,
+          border: `1px solid ${planHasPendingChanges || !hasSavedPlan ? "rgba(245, 158, 11, 0.55)" : "rgba(8, 145, 118, 0.26)"}`,
+          background: planHasPendingChanges || !hasSavedPlan ? "rgba(245, 158, 11, 0.16)" : "rgba(8, 145, 118, 0.12)",
+          color: planHasPendingChanges || !hasSavedPlan ? "#92400e" : t.title,
+          cursor: isRecalculating ? "not-allowed" : "pointer",
+          fontSize: 12,
+          fontWeight: 900
+        }}
+      >
+        {isRecalculating ? "Calculando..." : hasSavedPlan ? "Recalcular planificación" : "Generar planificación"}
+      </button>
+    )}
+  </div>
+
+  <div
+    style={{
+      display: "flex",
+      gap: 10,
+      alignItems: "center",
+      flexWrap: "wrap",
+      justifyContent: "flex-end",
+      flex: "1 1 420px",
+      padding: 14,
+      borderRadius: 20,
+      background: "rgba(248, 250, 252, 0.72)",
+      border: `1px solid ${t.border}`
+    }}
+  >
+    <button
+      style={{
+        padding: "10px 14px",
+        borderRadius: 14,
+        border: `1px solid ${t.border}`,
+        background: "#ffffff",
+        color: t.text,
+        cursor: "pointer",
+        fontSize: 12,
+        fontWeight: 900
+      }}
+      onClick={handlePrevMonth}
+    >
+      Mes anterior
+    </button>
+
+    <button
+      style={{
+        padding: "10px 14px",
+        borderRadius: 14,
+        border: "1px solid rgba(8, 145, 118, 0.26)",
+        background: "rgba(8, 145, 118, 0.12)",
+        color: t.title,
+        cursor: "pointer",
+        fontSize: 12,
+        fontWeight: 900
+      }}
+      onClick={handleNextMonth}
+    >
+      Mes siguiente
+    </button>
+
+    <select
+      value={printMode}
+      onChange={e => setPrintMode(e.target.value)}
+      style={{
+        padding: "10px 14px",
+        borderRadius: 14,
+        border: `1px solid ${t.border}`,
+        background: "#ffffff",
+        color: t.text,
+        fontSize: 12,
+        fontWeight: 800,
+        minWidth: 220
+      }}
+    >
+      <option value="annual">Exportación anual completa</option>
+      <option value="individual">Calendario individual</option>
+    </select>
+
+    {printMode === "individual" && (
+      <select
+        value={printOpId}
+        onChange={e => setPrintOpId(e.target.value)}
+        style={{
+          padding: "10px 14px",
+          borderRadius: 14,
+          border: `1px solid ${t.border}`,
+          background: "#ffffff",
+          color: t.text,
+          fontSize: 12,
+          fontWeight: 800,
+          minWidth: 220
+        }}
+      >
+        {dcsOps.map(op => (
+          <option key={op.id} value={String(op.id)}>
+            {op.name}
+          </option>
+        ))}
+      </select>
+    )}
+
+    <button
+      style={{
+        padding: "10px 14px",
+        borderRadius: 14,
+        border: `1px solid ${t.border}`,
+        background: "#ffffff",
+        color: t.text,
+        cursor: "pointer",
+        fontSize: 12,
+        fontWeight: 900
+      }}
+      onClick={() => window.print()}
+    >
+      Exportar PDF / Imprimir
+    </button>
+  </div>
+</div>
                         {!hasSavedPlan && (
               <div className="glass-panel section-card no-print" style={{ padding: 16, marginBottom: 16, border: '1px solid rgba(245, 158, 11, 0.45)', background: 'rgba(245, 158, 11, 0.12)' }}>
                 <div style={{ fontWeight: 800, color: t.title, marginBottom: 4 }}>No hay planificación oficial generada para {activeYear}</div>
@@ -556,7 +1382,7 @@ const profileDisplayRole = session?.role === "guest" ? "Invitado" : (roleLabels[
     </div>
   );
 })}
-                {ops.map(op => (
+                {dcsOps.map(op => (
                   <div key={op.id} style={{ display: 'contents' }}>
                     <div className="sticky-col" style={{ padding: '10px 12px', fontSize: 12, borderTop: `1px solid ${t.border}`, display: 'flex', alignItems: 'center', gap: 6 }}>
                       <Av name={op.name} color={op.color} size={18} />
@@ -594,50 +1420,111 @@ const profileDisplayRole = session?.role === "guest" ? "Invitado" : (roleLabels[
                   </div>
                 ))}
               </div>
-                            <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 16,
-                  flexWrap: "wrap",
-                  padding: "16px 18px",
-                  borderTop: `1px solid ${t.border}`,
-                  color: t.sub,
-                  fontSize: 12
-                }}
-              >
-                {CALENDAR_LEGEND.map(item => (
-                  <div
-                    key={item.code}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 7,
-                      whiteSpace: "nowrap"
-                    }}
-                  >
-                    <span
-                      style={{
-                        width: 24,
-                        height: 24,
-                        borderRadius: 8,
-                        border: `1px solid ${t.border}`,
-                        background: item.color,
-                        color: item.textColor,
-                        display: "inline-flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        fontSize: 10,
-                        fontWeight: 900
-                      }}
-                    >
-                      {item.code}
-                    </span>
+<div
+  style={{
+    padding: "18px",
+    borderTop: `1px solid ${t.border}`,
+    background: "rgba(248, 250, 252, 0.72)"
+  }}
+>
+  <div
+    style={{
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "flex-start",
+      gap: 12,
+      marginBottom: 14,
+      flexWrap: "wrap"
+    }}
+  >
+    <div>
+      <div
+        style={{
+          fontSize: 11,
+          textTransform: "uppercase",
+          letterSpacing: "0.10em",
+          color: t.accent,
+          fontWeight: 900,
+          marginBottom: 5
+        }}
+      >
+        Leyenda
+      </div>
 
-                    <span>{item.label}</span>
-                  </div>
-                ))}
-              </div>
+      <div style={{ color: t.title, fontSize: 16, fontWeight: 900 }}>
+        Códigos del calendario
+      </div>
+    </div>
+
+    <div
+      style={{
+        color: t.sub,
+        fontSize: 12,
+        fontWeight: 700,
+        padding: "8px 11px",
+        borderRadius: 999,
+        background: "#ffffff",
+        border: `1px solid ${t.border}`
+      }}
+    >
+      Turnos · SC · Ausencias
+    </div>
+  </div>
+
+  <div
+    style={{
+      display: "grid",
+      gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
+      gap: 10
+    }}
+  >
+    {CALENDAR_LEGEND.map(item => (
+      <div
+        key={item.code}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+          padding: "10px 12px",
+          borderRadius: 14,
+          background: "#ffffff",
+          border: `1px solid ${t.border}`,
+          minHeight: 46
+        }}
+      >
+        <span
+          style={{
+            width: 28,
+            height: 28,
+            borderRadius: 10,
+            border: `1px solid ${t.border}`,
+            background: item.color,
+            color: item.textColor,
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: 10,
+            fontWeight: 900,
+            flex: "0 0 auto"
+          }}
+        >
+          {item.code}
+        </span>
+
+        <span
+          style={{
+            color: t.title,
+            fontSize: 12,
+            fontWeight: 800,
+            lineHeight: 1.2
+          }}
+        >
+          {item.label}
+        </span>
+      </div>
+    ))}
+  </div>
+</div>
             </div>
           </div>
         )}
@@ -664,7 +1551,488 @@ const profileDisplayRole = session?.role === "guest" ? "Invitado" : (roleLabels[
             statsItem={selectedPrintStats}
           />
         )}
+{view === "security" && (
+  <div className="glass-panel section-card" style={{ padding: 24 }}>
+    <div
+  style={{
+    marginBottom: 24,
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "stretch",
+    gap: 18,
+    flexWrap: "wrap"
+  }}
+>
+  <div
+    style={{
+      flex: "1 1 320px",
+      padding: 20,
+      borderRadius: 22,
+      background: "rgba(248, 250, 252, 0.72)",
+      border: `1px solid ${t.border}`
+    }}
+  >
+    <div
+      style={{
+        fontSize: 12,
+        textTransform: "uppercase",
+        letterSpacing: "0.10em",
+        color: t.accent,
+        marginBottom: 8,
+        fontWeight: 900
+      }}
+    >
+      Calendario Seguridad
+    </div>
 
+    <h2
+      style={{
+        margin: 0,
+        color: t.title,
+        fontSize: 30,
+        letterSpacing: "-0.03em",
+        lineHeight: 1.05
+      }}
+    >
+      Planificación de roles de seguridad
+    </h2>
+
+    <p
+      style={{
+        margin: "10px 0 0",
+        color: t.sub,
+        fontSize: 14,
+        lineHeight: 1.5
+      }}
+    >
+      Vista mensual para Brigada, DCS, Coordinador de Emergencias y Conteo.
+    </p>
+  </div>
+
+  <div
+    style={{
+      flex: "1 1 300px",
+      display: "flex",
+      flexDirection: "column",
+      justifyContent: "space-between",
+      gap: 14,
+      padding: 20,
+      borderRadius: 22,
+      background: "#ffffff",
+      border: `1px solid ${t.border}`,
+      boxShadow: "0 12px 28px rgba(15, 23, 42, 0.06)"
+    }}
+  >
+    <div>
+      <div
+        style={{
+          fontSize: 11,
+          color: t.sub,
+          fontWeight: 900,
+          textTransform: "uppercase",
+          letterSpacing: "0.08em",
+          marginBottom: 6
+        }}
+      >
+        Estado de planificación
+      </div>
+
+      <div style={{ color: t.title, fontSize: 18, fontWeight: 900 }}>
+        {activeSecurityPlan ? `Plan activo ${activeYear}` : "Sin planificación generada"}
+      </div>
+
+      {activeSecurityPlan?.meta?.generatedAt && (
+        <div style={{ marginTop: 6, color: t.sub, fontSize: 13, fontWeight: 700 }}>
+          {activeSecurityDaysCount} días creados
+        </div>
+      )}
+    </div>
+
+    {isAdmin && (
+      <button
+        onClick={handleGenerateSecurityPlan}
+        style={{
+          alignSelf: "flex-start",
+          padding: "11px 15px",
+          borderRadius: 14,
+          border: activeSecurityPlan
+            ? "1px solid rgba(8, 145, 118, 0.26)"
+            : "1px solid rgba(245, 158, 11, 0.50)",
+          background: activeSecurityPlan
+            ? "rgba(8, 145, 118, 0.12)"
+            : "rgba(245, 158, 11, 0.16)",
+          color: activeSecurityPlan ? t.title : "#92400e",
+          fontWeight: 900,
+          cursor: "pointer",
+          fontSize: 12
+        }}
+      >
+        {activeSecurityPlan ? "Regenerar planificación seguridad" : "Generar planificación seguridad"}
+      </button>
+    )}
+  </div>
+</div>
+{activeSecurityPlan?.days && (
+  <div
+    style={{
+      marginTop: 26,
+      border: `1px solid ${t.border}`,
+      background: t.shell,
+      borderRadius: 22,
+      padding: 18
+    }}
+  >
+    <div
+      style={{
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        gap: 12,
+        marginBottom: 16,
+        flexWrap: "wrap"
+      }}
+    >
+      <div>
+        <div
+          style={{
+            fontSize: 12,
+            textTransform: "uppercase",
+            letterSpacing: "0.12em",
+            color: t.sub,
+            marginBottom: 4
+          }}
+        >
+          Calendario mensual de seguridad
+        </div>
+
+        <h3 style={{ margin: 0, color: t.title, fontSize: 24 }}>
+          {MONTHS[month]} {activeYear}
+        </h3>
+      </div>
+
+      <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+  <button
+    onClick={() => {
+      if (month === 0) {
+        setAY(activeYear - 1);
+        setMonth(11);
+      } else {
+        setMonth(month - 1);
+      }
+    }}
+    style={{
+      padding: "10px 14px",
+      borderRadius: 12,
+      border: `1px solid ${t.border}`,
+      background: t.card,
+      color: t.text,
+      cursor: "pointer",
+      fontWeight: 700
+    }}
+  >
+    Mes anterior
+  </button>
+
+  <button
+    onClick={() => {
+      if (month === 11) {
+        setAY(activeYear + 1);
+        setMonth(0);
+      } else {
+        setMonth(month + 1);
+      }
+    }}
+    style={{
+      padding: "10px 14px",
+      borderRadius: 12,
+      border: `1px solid ${t.border}`,
+      background: t.accentSoft,
+      color: t.title,
+      cursor: "pointer",
+      fontWeight: 800
+    }}
+  >
+    Mes siguiente
+  </button>
+</div>
+    </div>
+<div
+  style={{
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
+    gap: 10,
+    marginBottom: 16
+  }}
+>
+  {[
+    ["Días del mes", activeSecurityMonthSummary.totalDays],
+    ["Días completos", activeSecurityMonthSummary.completeDays],
+    ["Días con avisos", activeSecurityMonthSummary.warningDays],
+    ["Puestos pendientes", activeSecurityMonthSummary.missingAssignments]
+  ].map(([label, value]) => (
+    <div
+      key={label}
+      style={{
+        border: `1px solid ${t.border}`,
+        background: t.card,
+        borderRadius: 16,
+        padding: 14
+      }}
+    >
+      <div
+        style={{
+          color: t.sub,
+          fontSize: 11,
+          textTransform: "uppercase",
+          letterSpacing: "0.08em",
+          marginBottom: 6,
+          fontWeight: 800
+        }}
+      >
+        {label}
+      </div>
+
+      <div
+        style={{
+          color: t.title,
+          fontSize: 24,
+          fontWeight: 900
+        }}
+      >
+        {value}
+      </div>
+    </div>
+  ))}
+</div>
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))",
+        gap: 10
+      }}
+    >
+      {Array.from({ length: dim(activeYear, month) }).map((_, i) => {
+        const dayNumber = i + 1;
+        const dateKey = `${activeYear}-${month + 1}-${dayNumber}`;
+        const dayPlan = activeSecurityPlan.days?.[dateKey] || {};
+        const isToday =
+          today.getFullYear() === activeYear &&
+          today.getMonth() === month &&
+          today.getDate() === dayNumber;
+
+        const roleRows = [
+          ["DCS", "DCS"],
+          ["BRIGADA", "Brigada"],
+          ["COORDINADOR_EMERGENCIAS", "Coord."],
+          ["CONTEO", "Conteo"]
+        ];
+
+        return (
+          <div
+            key={dateKey}
+            style={{
+              border: `1px solid ${isToday ? t.accent : t.border}`,
+              background: isToday ? t.accentSoft : t.card,
+              borderRadius: 16,
+              padding: 12,
+              boxShadow: isToday ? `inset 0 0 0 2px ${t.accent}` : undefined
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: 10
+              }}
+            >
+              <strong style={{ color: t.title, fontSize: 16 }}>
+                {dayNumber}
+              </strong>
+
+              <span style={{ color: t.sub, fontSize: 11 }}>
+                {dayPlan.dateLabel || `${String(dayNumber).padStart(2, "0")}/${String(month + 1).padStart(2, "0")}/${activeYear}`}
+              </span>
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              {roleRows.map(([roleId, label]) => {
+                const operatorId = dayPlan?.[roleId];
+
+                return (
+                  <div
+                    key={roleId}
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      gap: 8,
+                      fontSize: 12,
+                      color: t.text
+                    }}
+                  >
+                    <span style={{ color: t.sub }}>
+                      {label}
+                    </span>
+
+                    <strong
+                      style={{
+                        color: operatorId ? t.title : t.sub,
+                        textAlign: "right"
+                      }}
+                    >
+                      {operatorId ? getOperatorNameById(operatorId) : "—"}
+                    </strong>
+                  </div>
+                );
+              })}
+            </div>
+
+            {dayPlan.warnings?.length > 0 && (
+              <div
+                style={{
+                  marginTop: 8,
+                  color: "#ef4444",
+                  fontSize: 11,
+                  fontWeight: 800
+                }}
+              >
+                {dayPlan.warnings.length} aviso/s
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  </div>
+)}
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+        gap: 14
+      }}
+    >
+      {SECURITY_ROLES.map(role => {
+        const roleOps = ops.filter(op =>
+          Array.isArray(op.securityRoles) && op.securityRoles.includes(role.id)
+        );
+
+        return (
+          <div
+            key={role.id}
+            style={{
+              border: `1px solid ${t.border}`,
+              background: t.shell,
+              borderRadius: 18,
+              padding: 16
+            }}
+          >
+            <div
+              style={{
+                fontSize: 13,
+                fontWeight: 900,
+                color: t.title,
+                marginBottom: 10
+              }}
+            >
+              {role.label}
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {roleOps.length > 0 ? (
+                roleOps.map(op => (
+                  <div
+                    key={op.id}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                      color: t.text,
+                      fontSize: 13
+                    }}
+                  >
+                    <Av name={op.name} color={op.color} size={24} />
+                    <span>{op.name}</span>
+                  </div>
+                ))
+              ) : (
+                <div style={{ color: t.sub, fontSize: 13 }}>
+                  Sin operadores asignados
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+{activeSecurityPlan?.counters && (
+  <div
+    style={{
+      marginTop: 18,
+      borderTop: `1px solid ${t.border}`,
+      paddingTop: 18
+    }}
+  >
+    <h3 style={{ margin: "0 0 12px", color: t.title, fontSize: 16 }}>
+      Reparto de seguridad
+    </h3>
+
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+        gap: 14
+      }}
+    >
+      {[
+  ["DCS", "DCS seguridad"],
+  ["BRIGADA", "Brigada"],
+  ["COORDINADOR_EMERGENCIAS", "Coordinador Emergencias"],
+  ["CONTEO", "Conteo"]
+].map(([roleId, title]) => (
+        <div
+          key={roleId}
+          style={{
+            border: `1px solid ${t.border}`,
+            background: t.shell,
+            borderRadius: 16,
+            padding: 14
+          }}
+        >
+          <h4 style={{ margin: "0 0 10px", color: t.title, fontSize: 14 }}>
+            {title}
+          </h4>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {Object.entries(activeSecurityPlan.counters?.[roleId] || {}).length > 0 ? (
+              Object.entries(activeSecurityPlan.counters?.[roleId] || {}).map(([operatorId, count]) => (
+                <div
+                  key={operatorId}
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    gap: 10,
+                    color: t.text,
+                    fontSize: 13
+                  }}
+                >
+                  <span>{getOperatorNameById(operatorId)}</span>
+                  <strong style={{ color: t.title }}>{count}</strong>
+                </div>
+              ))
+            ) : (
+              <span style={{ color: t.sub, fontSize: 13 }}>
+                Sin asignaciones
+              </span>
+            )}
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+)}
+  </div>
+)}
         {view === "stats" && (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 20 }}>
             {stats.sort((a,b) => b.nSC - a.nSC || b.hSC - a.hSC).map(s => (
@@ -690,9 +2058,95 @@ const profileDisplayRole = session?.role === "guest" ? "Invitado" : (roleLabels[
               <p style={{ color: t.sub, fontSize: 13, marginTop: 0, marginBottom: 18 }}>Alta y baja de personal operativo disponible en el sistema.</p>
               <div style={{ display: 'flex', gap: 10, marginBottom: 20 }}>
                 <input id="newOpN" placeholder="Nombre..." style={{ flex: 1, padding: 12, borderRadius: 12, border: `1px solid ${t.border}`, background: t.shell, color: t.text }} />
-                <button onClick={() => { const n = document.getElementById('newOpN').value; if(n) { saveOps([...ops, { id: Date.now(), name: n, color: '#'+Math.random().toString(16).slice(2,8), calendar: {} }]); document.getElementById('newOpN').value = ''; } }} style={{ padding: '0 20px', background: t.accentSoft, color: t.title, border: `1px solid ${t.border}`, borderRadius: 12, fontWeight: 'bold', cursor: 'pointer' }}>AÑADIR</button>
+               <button onClick={() => { const n = document.getElementById('newOpN').value; if(n) { saveOps([...ops, { id: Date.now(), name: n, color: '#'+Math.random().toString(16).slice(2,8), calendar: {}, securityRoles: [] }]); document.getElementById('newOpN').value = ''; } }} style={{ padding: '0 20px', background: t.accentSoft, color: t.title, border: `1px solid ${t.border}`, borderRadius: 12, fontWeight: 'bold', cursor: 'pointer' }}>AÑADIR</button>
               </div>
-              {ops.map(o => <div key={o.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderTop: `1px solid ${t.border}`, alignItems: 'center' }}><span style={{ fontWeight: 600 }}>{o.name}</span><button onClick={() => saveOps(ops.filter(x => x.id !== o.id))} style={{ color: '#EF4444', border: 'none', background: 'none', cursor: 'pointer', fontSize: 18 }}>×</button></div>)}
+              {ops.map(o => {
+  const selectedRoles = Array.isArray(o.securityRoles) ? o.securityRoles : [];
+
+  return (
+    <div
+      key={o.id}
+      style={{
+        padding: "14px 0",
+        borderTop: `1px solid ${t.border}`,
+        display: "flex",
+        flexDirection: "column",
+        gap: 12
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          gap: 12
+        }}
+      >
+        <span style={{ fontWeight: 700, color: t.title }}>{o.name}</span>
+
+        <button
+          onClick={() => saveOps(ops.filter(x => x.id !== o.id))}
+          style={{
+            color: "#EF4444",
+            border: "none",
+            background: "none",
+            cursor: "pointer",
+            fontSize: 18
+          }}
+        >
+          ×
+        </button>
+      </div>
+
+      <div>
+        <div
+          style={{
+            fontSize: 11,
+            color: t.sub,
+            marginBottom: 8,
+            textTransform: "uppercase",
+            letterSpacing: "0.08em",
+            fontWeight: 800
+          }}
+        >
+          Roles de seguridad
+        </div>
+
+        <div
+          style={{
+            display: "flex",
+            gap: 8,
+            flexWrap: "wrap"
+          }}
+        >
+          {SECURITY_ROLES.map(role => {
+            const active = selectedRoles.includes(role.id);
+
+            return (
+              <button
+                key={role.id}
+                type="button"
+                onClick={() => toggleSecurityRole(o.id, role.id)}
+                style={{
+                  padding: "7px 10px",
+                  borderRadius: 999,
+                  border: `1px solid ${active ? t.accent : t.border}`,
+                  background: active ? t.accentSoft : t.shell,
+                  color: active ? t.title : t.sub,
+                  cursor: "pointer",
+                  fontSize: 11,
+                  fontWeight: 800
+                }}
+              >
+                {role.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+})}
             </div>
 
             <div className="glass-panel section-card" style={{ padding: 25 }}>

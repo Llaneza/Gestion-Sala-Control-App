@@ -4,6 +4,7 @@ export {
   DOW_S,
   EXTRA_VISUALS,
   MONTHS,
+  SECURITY_ROLES,
   THEMES,
   TURNO_DEF
 } from "./constants";

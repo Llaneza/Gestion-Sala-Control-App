@@ -2456,20 +2456,279 @@ boxShadow: isToday
   </div>
 )}
         {view === "stats" && (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 20 }}>
-            {stats.sort((a,b) => b.nSC - a.nSC || b.hSC - a.hSC).map(s => (
-              <div key={s.id} className="glass-panel section-card" style={{ padding: 25 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18 }}><Av name={s.name} color={s.color} size={36} /><div><div style={{ fontWeight: 'bold', color: t.title, fontSize: 18 }}>{s.name}</div><div style={{ fontSize: 12, color: t.sub }}>Resumen anual de servicio</div></div></div>
-                <div style={{ fontSize: 34, fontWeight: 800, color: t.title, marginBottom: 6 }}>{s.sc} SC</div>
-                <div style={{ fontSize: 14, color: t.sub, marginBottom: 16 }}>{s.hSC} horas totales asignadas</div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center', paddingTop: 14, borderTop: `1px solid ${t.border}` }}>
-                  <span style={{ fontSize: 12, color: t.sub }}>Noches</span>
-                  <strong style={{ color: t.accent, fontSize: 18 }}>{s.nSC}</strong>
+  <div style={{ display: "grid", gap: 20 }}>
+    {(() => {
+      const sortedStats = [...stats].sort((a, b) => b.nSC - a.nSC || b.hSC - a.hSC);
+      const totalSC = sortedStats.reduce((sum, item) => sum + Number(item.sc || 0), 0);
+      const totalHoras = sortedStats.reduce((sum, item) => sum + Number(item.hSC || 0), 0);
+      const totalNoches = sortedStats.reduce((sum, item) => sum + Number(item.nSC || 0), 0);
+      const maxSC = Math.max(1, ...sortedStats.map(item => Number(item.sc || 0)));
+
+      return (
+        <>
+          <section
+            className="glass-panel section-card"
+            style={{
+              padding: 24,
+              borderRadius: 24
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "flex-start",
+                gap: 16,
+                flexWrap: "wrap",
+                marginBottom: 20
+              }}
+            >
+              <div>
+                <div
+                  style={{
+                    fontSize: 12,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.12em",
+                    color: t.accent,
+                    marginBottom: 8,
+                    fontWeight: 900
+                  }}
+                >
+                  Estadísticas
                 </div>
+
+                <h2
+                  style={{
+                    margin: 0,
+                    color: t.title,
+                    fontSize: 30,
+                    letterSpacing: "-0.03em",
+                    lineHeight: 1.05
+                  }}
+                >
+                  Resumen anual de Sala de Control
+                </h2>
+
+                <p style={{ marginTop: 10, marginBottom: 0, color: t.sub, fontSize: 14, lineHeight: 1.5 }}>
+                  Reparto acumulado de servicios SC, horas asignadas y noches por operador.
+                </p>
               </div>
-            ))}
+
+              <div
+                style={{
+                  padding: "10px 14px",
+                  borderRadius: 999,
+                  background: "#ffffff",
+                  border: `1px solid ${t.border}`,
+                  color: t.title,
+                  fontWeight: 900,
+                  fontSize: 13
+                }}
+              >
+                Año {activeYear}
+              </div>
+            </div>
+
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+                gap: 12
+              }}
+            >
+              {[
+                ["Servicios SC", totalSC, "Total anual"],
+                ["Horas SC", totalHoras, "Horas asignadas"],
+                ["Noches SC", totalNoches, "Turnos nocturnos"],
+                ["Operadores", sortedStats.length, "Personal DCS"]
+              ].map(([label, value, subtitle]) => (
+                <div
+                  key={label}
+                  style={{
+                    background: "#ffffff",
+                    border: `1px solid ${t.border}`,
+                    borderRadius: 18,
+                    padding: 16,
+                    boxShadow: "0 10px 24px rgba(15, 23, 42, 0.05)"
+                  }}
+                >
+                  <div
+                    style={{
+                      color: t.sub,
+                      fontSize: 11,
+                      textTransform: "uppercase",
+                      letterSpacing: "0.08em",
+                      fontWeight: 900,
+                      marginBottom: 10
+                    }}
+                  >
+                    {label}
+                  </div>
+
+                  <div style={{ color: t.title, fontSize: 28, fontWeight: 900, lineHeight: 1 }}>
+                    {value}
+                  </div>
+
+                  <div style={{ marginTop: 8, color: t.sub, fontSize: 12, fontWeight: 700 }}>
+                    {subtitle}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
+              gap: 16
+            }}
+          >
+            {sortedStats.map((s, index) => {
+              const scCount = Number(s.sc || 0);
+              const progressWidth = `${Math.max(8, Math.round((scCount / maxSC) * 100))}%`;
+
+              return (
+                <article
+                  key={s.id}
+                  className="glass-panel section-card"
+                  style={{
+                    padding: 20,
+                    borderRadius: 22,
+                    boxShadow: "0 12px 28px rgba(15, 23, 42, 0.06)"
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "flex-start",
+                      gap: 12,
+                      marginBottom: 18
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
+                      <Av name={s.name} color={s.color} size={38} />
+
+                      <div style={{ minWidth: 0 }}>
+                        <div
+                          style={{
+                            fontWeight: 900,
+                            color: t.title,
+                            fontSize: 17,
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap"
+                          }}
+                        >
+                          {s.name}
+                        </div>
+
+                        <div style={{ fontSize: 12, color: t.sub, fontWeight: 700, marginTop: 3 }}>
+                          Resumen anual de servicio
+                        </div>
+                      </div>
+                    </div>
+
+                    <span
+                      style={{
+                        padding: "6px 10px",
+                        borderRadius: 999,
+                        background: index === 0 ? "rgba(8, 145, 118, 0.12)" : "rgba(100, 116, 139, 0.10)",
+                        color: index === 0 ? "#15803d" : "#475569",
+                        fontSize: 11,
+                        fontWeight: 900,
+                        textTransform: "uppercase",
+                        letterSpacing: "0.05em"
+                      }}
+                    >
+                      #{index + 1}
+                    </span>
+                  </div>
+
+                  <div style={{ marginBottom: 16 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12 }}>
+                      <div style={{ fontSize: 34, fontWeight: 900, color: t.title, lineHeight: 1 }}>
+                        {s.sc}
+                      </div>
+
+                      <div style={{ color: t.sub, fontSize: 13, fontWeight: 800 }}>
+                        servicios SC
+                      </div>
+                    </div>
+
+                    <div
+                      style={{
+                        marginTop: 12,
+                        height: 8,
+                        borderRadius: 999,
+                        background: "rgba(226, 232, 240, 0.90)",
+                        overflow: "hidden"
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: progressWidth,
+                          height: "100%",
+                          borderRadius: 999,
+                          background: "rgba(8, 145, 118, 0.65)"
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "1fr 1fr",
+                      gap: 10,
+                      paddingTop: 14,
+                      borderTop: `1px solid ${t.border}`
+                    }}
+                  >
+                    <div
+                      style={{
+                        padding: "11px 12px",
+                        borderRadius: 14,
+                        background: "rgba(248, 250, 252, 0.95)",
+                        border: "1px solid rgba(226, 232, 240, 0.90)"
+                      }}
+                    >
+                      <div style={{ color: t.sub, fontSize: 11, fontWeight: 900, marginBottom: 5 }}>
+                        Horas
+                      </div>
+
+                      <strong style={{ color: t.title, fontSize: 18 }}>
+                        {s.hSC}
+                      </strong>
+                    </div>
+
+                    <div
+                      style={{
+                        padding: "11px 12px",
+                        borderRadius: 14,
+                        background: "rgba(248, 250, 252, 0.95)",
+                        border: "1px solid rgba(226, 232, 240, 0.90)"
+                      }}
+                    >
+                      <div style={{ color: t.sub, fontSize: 11, fontWeight: 900, marginBottom: 5 }}>
+                        Noches
+                      </div>
+
+                      <strong style={{ color: t.accent, fontSize: 18 }}>
+                        {s.nSC}
+                      </strong>
+                    </div>
+                  </div>
+                </article>
+              );
+            })}
           </div>
-        )}
+        </>
+      );
+    })()}
+  </div>
+)}
 
         {view === "editor" && <EditorComponent ops={ops} saveOps={saveOps} activeYear={activeYear} theme={t} off={off} canEdit={canEdit} />}
 

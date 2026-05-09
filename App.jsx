@@ -2240,66 +2240,216 @@ boxShadow: isToday
 {activeSecurityPlan?.counters && (
   <div
     style={{
-      marginTop: 18,
-      borderTop: `1px solid ${t.border}`,
-      paddingTop: 18
+      marginTop: 24,
+      padding: 20,
+      borderRadius: 24,
+      background: "rgba(248, 250, 252, 0.72)",
+      border: `1px solid ${t.border}`
     }}
   >
-    <h3 style={{ margin: "0 0 12px", color: t.title, fontSize: 16 }}>
-      Reparto de seguridad
-    </h3>
+    <div
+      style={{
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "flex-start",
+        gap: 14,
+        marginBottom: 18,
+        flexWrap: "wrap"
+      }}
+    >
+      <div>
+        <div
+          style={{
+            fontSize: 12,
+            textTransform: "uppercase",
+            letterSpacing: "0.10em",
+            color: t.accent,
+            marginBottom: 8,
+            fontWeight: 900
+          }}
+        >
+          Resumen anual
+        </div>
+
+        <h3 style={{ margin: 0, color: t.title, fontSize: 24 }}>
+          Reparto de seguridad
+        </h3>
+
+        <p style={{ marginTop: 7, marginBottom: 0, color: t.sub, fontSize: 14 }}>
+          Número de asignaciones acumuladas por operador en cada rol.
+        </p>
+      </div>
+
+      <div
+        style={{
+          padding: "10px 14px",
+          borderRadius: 999,
+          background: "#ffffff",
+          border: `1px solid ${t.border}`,
+          color: t.title,
+          fontWeight: 900,
+          fontSize: 13
+        }}
+      >
+        Año {activeYear}
+      </div>
+    </div>
 
     <div
       style={{
         display: "grid",
-        gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+        gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
         gap: 14
       }}
     >
       {[
-  ["DCS", "DCS seguridad"],
-  ["BRIGADA", "Brigada"],
-  ["COORDINADOR_EMERGENCIAS", "Coordinador Emergencias"],
-  ["CONTEO", "Conteo"]
-].map(([roleId, title]) => (
-        <div
-          key={roleId}
-          style={{
-            border: `1px solid ${t.border}`,
-            background: t.shell,
-            borderRadius: 16,
-            padding: 14
-          }}
-        >
-          <h4 style={{ margin: "0 0 10px", color: t.title, fontSize: 14 }}>
-            {title}
-          </h4>
+        ["DCS", "DCS seguridad"],
+        ["BRIGADA", "Brigada"],
+        ["COORDINADOR_EMERGENCIAS", "Coordinador Emergencias"],
+        ["CONTEO", "Conteo"]
+      ].map(([roleId, title]) => {
+        const entries = Object.entries(activeSecurityPlan.counters?.[roleId] || {});
+        const sortedEntries = [...entries].sort((a, b) => Number(b[1]) - Number(a[1]));
+        const totalAssignments = entries.reduce((sum, [, count]) => sum + Number(count || 0), 0);
+        const maxCount = Math.max(1, ...entries.map(([, count]) => Number(count || 0)));
 
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {Object.entries(activeSecurityPlan.counters?.[roleId] || {}).length > 0 ? (
-              Object.entries(activeSecurityPlan.counters?.[roleId] || {}).map(([operatorId, count]) => (
+        return (
+          <div
+            key={roleId}
+            style={{
+              border: `1px solid ${t.border}`,
+              background: "#ffffff",
+              borderRadius: 20,
+              padding: 18,
+              boxShadow: "0 10px 24px rgba(15, 23, 42, 0.05)"
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "flex-start",
+                gap: 12,
+                marginBottom: 14
+              }}
+            >
+              <div>
+                <h4 style={{ margin: 0, color: t.title, fontSize: 16 }}>
+                  {title}
+                </h4>
+
+                <div style={{ marginTop: 4, color: t.sub, fontSize: 12, fontWeight: 700 }}>
+                  Reparto acumulado
+                </div>
+              </div>
+
+              <span
+                style={{
+                  padding: "6px 10px",
+                  borderRadius: 999,
+                  background: totalAssignments > 0 ? "rgba(8, 145, 118, 0.10)" : "rgba(100, 116, 139, 0.10)",
+                  color: totalAssignments > 0 ? "#15803d" : "#475569",
+                  fontSize: 11,
+                  fontWeight: 900,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.05em"
+                }}
+              >
+                {totalAssignments} total
+              </span>
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
+              {sortedEntries.length > 0 ? (
+                sortedEntries.map(([operatorId, count]) => {
+                  const op = ops.find(item => String(item.id) === String(operatorId));
+                  const numericCount = Number(count || 0);
+                  const width = `${Math.max(8, Math.round((numericCount / maxCount) * 100))}%`;
+
+                  return (
+                    <div
+                      key={operatorId}
+                      style={{
+                        padding: "10px 11px",
+                        borderRadius: 15,
+                        background: "rgba(248, 250, 252, 0.95)",
+                        border: "1px solid rgba(226, 232, 240, 0.90)"
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          gap: 10,
+                          marginBottom: 8
+                        }}
+                      >
+                        <div style={{ display: "flex", alignItems: "center", gap: 9, minWidth: 0 }}>
+                          <Av
+                            name={op?.name || getOperatorNameById(operatorId)}
+                            color={op?.color}
+                            size={24}
+                          />
+
+                          <span
+                            style={{
+                              color: t.title,
+                              fontSize: 13,
+                              fontWeight: 800,
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              whiteSpace: "nowrap"
+                            }}
+                          >
+                            {op?.name || getOperatorNameById(operatorId)}
+                          </span>
+                        </div>
+
+                        <strong style={{ color: t.title, fontSize: 14 }}>
+                          {numericCount}
+                        </strong>
+                      </div>
+
+                      <div
+                        style={{
+                          height: 7,
+                          borderRadius: 999,
+                          background: "rgba(226, 232, 240, 0.90)",
+                          overflow: "hidden"
+                        }}
+                      >
+                        <div
+                          style={{
+                            width,
+                            height: "100%",
+                            borderRadius: 999,
+                            background: "rgba(8, 145, 118, 0.65)"
+                          }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
                 <div
-                  key={operatorId}
                   style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    gap: 10,
-                    color: t.text,
-                    fontSize: 13
+                    color: "#475569",
+                    fontSize: 13,
+                    fontWeight: 800,
+                    padding: "12px 14px",
+                    borderRadius: 14,
+                    background: "rgba(100, 116, 139, 0.08)",
+                    border: "1px solid rgba(100, 116, 139, 0.18)"
                   }}
                 >
-                  <span>{getOperatorNameById(operatorId)}</span>
-                  <strong style={{ color: t.title }}>{count}</strong>
+                  Sin asignaciones registradas
                 </div>
-              ))
-            ) : (
-              <span style={{ color: t.sub, fontSize: 13 }}>
-                Sin asignaciones
-              </span>
-            )}
+              )}
+            </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   </div>
 )}

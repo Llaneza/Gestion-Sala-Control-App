@@ -2883,11 +2883,79 @@ function EditorComponent({ ops, saveOps, activeYear, theme: t, off, canEdit }) {
   };
 
   return (
-    <div className="glass-panel section-card" style={{ padding: 25 }}>
-      {!canEdit && <p style={{ color: '#EF4444', fontSize: 12, marginBottom: 15, fontWeight: 'bold' }}>MODO LECTURA</p>}
-      <div style={{ marginBottom: 18 }}>
-        <h3 style={{ margin: '0 0 8px', color: t.title }}>Editor de ausencias</h3>
-        <p style={{ margin: 0, color: t.sub, fontSize: 13 }}>Selecciona un operador y marca vacaciones, entrenamiento o baja sin afectar a la lógica base del calendario.</p>
+        <div
+      className="glass-panel section-card"
+      style={{
+        padding: 24,
+        borderRadius: 24
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "flex-start",
+          gap: 16,
+          flexWrap: "wrap",
+          marginBottom: 22
+        }}
+      >
+        <div>
+          <div
+            style={{
+              fontSize: 12,
+              textTransform: "uppercase",
+              letterSpacing: "0.12em",
+              color: t.accent,
+              marginBottom: 8,
+              fontWeight: 900
+            }}
+          >
+            Personal
+          </div>
+
+          <h3
+            style={{
+              margin: 0,
+              color: t.title,
+              fontSize: 30,
+              letterSpacing: "-0.03em",
+              lineHeight: 1.05
+            }}
+          >
+            Editor de ausencias
+          </h3>
+
+          <p
+            style={{
+              marginTop: 10,
+              marginBottom: 0,
+              color: t.sub,
+              fontSize: 14,
+              lineHeight: 1.5
+            }}
+          >
+            Selecciona un operador y marca vacaciones, entrenamiento o baja sin afectar a la lógica base del calendario.
+          </p>
+        </div>
+
+        {!canEdit && (
+          <div
+            style={{
+              padding: "10px 14px",
+              borderRadius: 999,
+              background: "rgba(239, 68, 68, 0.08)",
+              border: "1px solid rgba(239, 68, 68, 0.22)",
+              color: "#dc2626",
+              fontSize: 12,
+              fontWeight: 900,
+              textTransform: "uppercase",
+              letterSpacing: "0.06em"
+            }}
+          >
+            Modo lectura
+          </div>
+        )}
       </div>
       <select value={selOp} onChange={e => setSelOp(Number(e.target.value))} style={{ padding: 12, width: '100%', background: t.shell, color: t.text, border: `1px solid ${t.border}`, borderRadius: 12, marginBottom: 20 }}>
         {ops.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}

@@ -2733,7 +2733,85 @@ boxShadow: isToday
         {view === "editor" && <EditorComponent ops={ops} saveOps={saveOps} activeYear={activeYear} theme={t} off={off} canEdit={canEdit} />}
 
         {view === "config" && isAdmin && (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 30 }}>
+                    <div style={{ display: "grid", gap: 20 }}>
+            <section
+              className="glass-panel section-card"
+              style={{
+                padding: 24,
+                borderRadius: 24
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "flex-start",
+                  gap: 16,
+                  flexWrap: "wrap"
+                }}
+              >
+                <div>
+                  <div
+                    style={{
+                      fontSize: 12,
+                      textTransform: "uppercase",
+                      letterSpacing: "0.12em",
+                      color: t.accent,
+                      marginBottom: 8,
+                      fontWeight: 900
+                    }}
+                  >
+                    Administración
+                  </div>
+
+                  <h2
+                    style={{
+                      margin: 0,
+                      color: t.title,
+                      fontSize: 30,
+                      letterSpacing: "-0.03em",
+                      lineHeight: 1.05
+                    }}
+                  >
+                    Configuración del sistema
+                  </h2>
+
+                  <p
+                    style={{
+                      marginTop: 10,
+                      marginBottom: 0,
+                      color: t.sub,
+                      fontSize: 14,
+                      lineHeight: 1.5
+                    }}
+                  >
+                    Gestión de operadores, desfase del ciclo y accesos administrativos.
+                  </p>
+                </div>
+
+                <div
+                  style={{
+                    padding: "10px 14px",
+                    borderRadius: 999,
+                    background: "#ffffff",
+                    border: `1px solid ${t.border}`,
+                    color: t.title,
+                    fontWeight: 900,
+                    fontSize: 13
+                  }}
+                >
+                  Modo administrador
+                </div>
+              </div>
+            </section>
+
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
+                gap: 20
+              }}
+            ></div>
             <div className="glass-panel section-card" style={{ padding: 25 }}>
               <h3 style={{ color: t.title, marginTop: 0 }}>OPERADORES</h3>
               <p style={{ color: t.sub, fontSize: 13, marginTop: 0, marginBottom: 18 }}>Alta y baja de personal operativo disponible en el sistema.</p>

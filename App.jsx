@@ -361,7 +361,7 @@ const todayDcsOperators = useMemo(() => {
 
   return dcsOps.filter(op => todayAssignments?.[op.id] === "SC");
 }, [savedPlanData, todayKey, dcsOps]);
-  const activeSecurityMonthSummary = useMemo(() => {
+ const activeSecurityMonthSummary = useMemo(() => {
   if (!activeSecurityPlan?.days) {
     return {
       totalDays: 0,
@@ -384,9 +384,15 @@ const todayDcsOperators = useMemo(() => {
       const missingCount = roleIds.length - assignedCount;
       const hasWarnings = Array.isArray(dayPlan.warnings) && dayPlan.warnings.length > 0;
 
+      const isRestDay = assignedCount === 0;
+
       summary.totalDays += 1;
 
-      if (missingCount === 0) {
+      if (isRestDay) {
+        return summary;
+      }
+
+      if (assignedCount === roleIds.length && !hasWarnings) {
         summary.completeDays += 1;
       }
 

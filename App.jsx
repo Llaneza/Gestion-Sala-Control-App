@@ -2068,65 +2068,174 @@ boxShadow: isToday
     </div>
   </div>
 )}
-    <div
+        <div
       style={{
-        display: "grid",
-        gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-        gap: 14
+        marginTop: 24,
+        padding: 20,
+        borderRadius: 24,
+        background: "rgba(248, 250, 252, 0.72)",
+        border: `1px solid ${t.border}`
       }}
     >
-      {SECURITY_ROLES.map(role => {
-        const roleOps = ops.filter(op =>
-          Array.isArray(op.securityRoles) && op.securityRoles.includes(role.id)
-        );
-
-        return (
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "flex-start",
+          gap: 14,
+          marginBottom: 18,
+          flexWrap: "wrap"
+        }}
+      >
+        <div>
           <div
-            key={role.id}
             style={{
-              border: `1px solid ${t.border}`,
-              background: t.shell,
-              borderRadius: 18,
-              padding: 16
+              fontSize: 12,
+              textTransform: "uppercase",
+              letterSpacing: "0.10em",
+              color: t.accent,
+              marginBottom: 8,
+              fontWeight: 900
             }}
           >
+            Equipo disponible
+          </div>
+
+          <h3 style={{ margin: 0, color: t.title, fontSize: 24 }}>
+            Operadores por rol de seguridad
+          </h3>
+
+          <p style={{ marginTop: 7, marginBottom: 0, color: t.sub, fontSize: 14 }}>
+            Personal configurado para Brigada, DCS, Coordinador de Emergencias y Conteo.
+          </p>
+        </div>
+
+        <div
+          style={{
+            padding: "10px 14px",
+            borderRadius: 999,
+            background: "#ffffff",
+            border: `1px solid ${t.border}`,
+            color: t.title,
+            fontWeight: 900,
+            fontSize: 13
+          }}
+        >
+          {SECURITY_ROLES.length} roles
+        </div>
+      </div>
+
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+          gap: 14
+        }}
+      >
+        {SECURITY_ROLES.map(role => {
+          const roleOps = ops.filter(op =>
+            Array.isArray(op.securityRoles) && op.securityRoles.includes(role.id)
+          );
+
+          return (
             <div
+              key={role.id}
               style={{
-                fontSize: 13,
-                fontWeight: 900,
-                color: t.title,
-                marginBottom: 10
+                border: `1px solid ${t.border}`,
+                background: "#ffffff",
+                borderRadius: 20,
+                padding: 18,
+                boxShadow: "0 10px 24px rgba(15, 23, 42, 0.05)"
               }}
             >
-              {role.label}
-            </div>
-
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {roleOps.length > 0 ? (
-                roleOps.map(op => (
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "flex-start",
+                  gap: 12,
+                  marginBottom: 14
+                }}
+              >
+                <div>
                   <div
-                    key={op.id}
                     style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 8,
-                      color: t.text,
-                      fontSize: 13
+                      fontSize: 16,
+                      fontWeight: 900,
+                      color: t.title,
+                      marginBottom: 4
                     }}
                   >
-                    <Av name={op.name} color={op.color} size={24} />
-                    <span>{op.name}</span>
+                    {role.label}
                   </div>
-                ))
-              ) : (
-                <div style={{ color: t.sub, fontSize: 13 }}>
-                  Sin operadores asignados
+
+                  <div style={{ color: t.sub, fontSize: 12, fontWeight: 700 }}>
+                    Personal habilitado
+                  </div>
                 </div>
-              )}
+
+                <span
+                  style={{
+                    padding: "6px 10px",
+                    borderRadius: 999,
+                    background: roleOps.length > 0
+                      ? "rgba(8, 145, 118, 0.10)"
+                      : "rgba(245, 158, 11, 0.14)",
+                    color: roleOps.length > 0 ? "#15803d" : "#92400e",
+                    fontSize: 11,
+                    fontWeight: 900,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.05em"
+                  }}
+                >
+                  {roleOps.length} operadores
+                </span>
+              </div>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {roleOps.length > 0 ? (
+                  roleOps.map(op => (
+                    <div
+                      key={op.id}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 10,
+                        color: t.text,
+                        fontSize: 13,
+                        padding: "9px 10px",
+                        borderRadius: 14,
+                        background: "rgba(248, 250, 252, 0.95)",
+                        border: "1px solid rgba(226, 232, 240, 0.90)"
+                      }}
+                    >
+                      <Av name={op.name} color={op.color} size={26} />
+
+                      <span style={{ fontWeight: 800, color: t.title }}>
+                        {op.name}
+                      </span>
+                    </div>
+                  ))
+                ) : (
+                  <div
+                    style={{
+                      color: "#92400e",
+                      fontSize: 13,
+                      fontWeight: 800,
+                      padding: "12px 14px",
+                      borderRadius: 14,
+                      background: "rgba(245, 158, 11, 0.10)",
+                      border: "1px solid rgba(245, 158, 11, 0.20)"
+                    }}
+                  >
+                    Sin operadores asignados
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
     </div>
 {activeSecurityPlan?.counters && (
   <div

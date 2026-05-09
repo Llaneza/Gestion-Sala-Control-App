@@ -2957,9 +2957,79 @@ function EditorComponent({ ops, saveOps, activeYear, theme: t, off, canEdit }) {
           </div>
         )}
       </div>
-      <select value={selOp} onChange={e => setSelOp(Number(e.target.value))} style={{ padding: 12, width: '100%', background: t.shell, color: t.text, border: `1px solid ${t.border}`, borderRadius: 12, marginBottom: 20 }}>
-        {ops.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
-      </select>
+            <div
+        style={{
+          padding: 16,
+          borderRadius: 20,
+          background: "rgba(248, 250, 252, 0.72)",
+          border: `1px solid ${t.border}`,
+          marginBottom: 18
+        }}
+      >
+        <div
+          style={{
+            fontSize: 11,
+            color: t.sub,
+            fontWeight: 900,
+            textTransform: "uppercase",
+            letterSpacing: "0.08em",
+            marginBottom: 9
+          }}
+        >
+          Operador seleccionado
+        </div>
+
+        <select
+          value={selOp}
+          onChange={e => setSelOp(Number(e.target.value))}
+          style={{
+            padding: "11px 12px",
+            width: "100%",
+            background: "#ffffff",
+            color: t.text,
+            border: `1px solid ${t.border}`,
+            borderRadius: 14,
+            fontWeight: 800
+          }}
+        >
+          {ops.map(o => (
+            <option key={o.id} value={o.id}>
+              {o.name}
+            </option>
+          ))}
+        </select>
+
+        {ops.find(o => o.id === selOp) && (
+          <div
+            style={{
+              marginTop: 12,
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              padding: "10px 12px",
+              borderRadius: 14,
+              background: "#ffffff",
+              border: `1px solid ${t.border}`
+            }}
+          >
+            <Av
+              name={ops.find(o => o.id === selOp)?.name}
+              color={ops.find(o => o.id === selOp)?.color}
+              size={30}
+            />
+
+            <div>
+              <div style={{ color: t.title, fontWeight: 900, fontSize: 14 }}>
+                {ops.find(o => o.id === selOp)?.name}
+              </div>
+
+              <div style={{ color: t.sub, fontSize: 12, fontWeight: 700 }}>
+                Calendario {activeYear}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
       <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap' }}>
         {Object.keys(ABSENCE).map(k => (
           <button key={k} onClick={() => setSelAb(k)} style={{ background: selAb === k ? ABSENCE[k].color : 'transparent', border: `2px solid ${ABSENCE[k].color}`, color: selAb === k ? '#000' : ABSENCE[k].color, padding: '10px 14px', borderRadius: 12, cursor: 'pointer', fontWeight: 'bold' }}>{ABSENCE[k].icon} {ABSENCE[k].label}</button>

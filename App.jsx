@@ -1677,18 +1677,18 @@ const dailySummary = [
     style={{
       marginTop: 26,
       border: `1px solid ${t.border}`,
-      background: t.shell,
-      borderRadius: 22,
-      padding: 18
+      background: "rgba(248, 250, 252, 0.72)",
+      borderRadius: 24,
+      padding: 20
     }}
   >
     <div
       style={{
         display: "flex",
         justifyContent: "space-between",
-        alignItems: "center",
-        gap: 12,
-        marginBottom: 16,
+        alignItems: "stretch",
+        gap: 16,
+        marginBottom: 18,
         flexWrap: "wrap"
       }}
     >
@@ -1698,117 +1698,173 @@ const dailySummary = [
             fontSize: 12,
             textTransform: "uppercase",
             letterSpacing: "0.12em",
-            color: t.sub,
-            marginBottom: 4
+            color: t.accent,
+            marginBottom: 6,
+            fontWeight: 900
           }}
         >
           Calendario mensual de seguridad
         </div>
 
-        <h3 style={{ margin: 0, color: t.title, fontSize: 24 }}>
+        <h3
+          style={{
+            margin: 0,
+            color: t.title,
+            fontSize: 26,
+            letterSpacing: "-0.03em",
+            lineHeight: 1.1
+          }}
+        >
           {MONTHS[month]} {activeYear}
         </h3>
-      </div>
 
-      <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-  <button
-    onClick={() => {
-      if (month === 0) {
-        setAY(activeYear - 1);
-        setMonth(11);
-      } else {
-        setMonth(month - 1);
-      }
-    }}
-    style={{
-      padding: "10px 14px",
-      borderRadius: 12,
-      border: `1px solid ${t.border}`,
-      background: t.card,
-      color: t.text,
-      cursor: "pointer",
-      fontWeight: 700
-    }}
-  >
-    Mes anterior
-  </button>
-
-  <button
-    onClick={() => {
-      if (month === 11) {
-        setAY(activeYear + 1);
-        setMonth(0);
-      } else {
-        setMonth(month + 1);
-      }
-    }}
-    style={{
-      padding: "10px 14px",
-      borderRadius: 12,
-      border: `1px solid ${t.border}`,
-      background: t.accentSoft,
-      color: t.title,
-      cursor: "pointer",
-      fontWeight: 800
-    }}
-  >
-    Mes siguiente
-  </button>
-</div>
-    </div>
-<div
-  style={{
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
-    gap: 10,
-    marginBottom: 16
-  }}
->
-  {[
-    ["Días del mes", activeSecurityMonthSummary.totalDays],
-    ["Días completos", activeSecurityMonthSummary.completeDays],
-    ["Días con avisos", activeSecurityMonthSummary.warningDays],
-    ["Puestos pendientes", activeSecurityMonthSummary.missingAssignments]
-  ].map(([label, value]) => (
-    <div
-      key={label}
-      style={{
-        border: `1px solid ${t.border}`,
-        background: t.card,
-        borderRadius: 16,
-        padding: 14
-      }}
-    >
-      <div
-        style={{
-          color: t.sub,
-          fontSize: 11,
-          textTransform: "uppercase",
-          letterSpacing: "0.08em",
-          marginBottom: 6,
-          fontWeight: 800
-        }}
-      >
-        {label}
+        <p style={{ margin: "8px 0 0", color: t.sub, fontSize: 14, lineHeight: 1.45 }}>
+          Revisión mensual de roles asignados y posibles avisos de cobertura.
+        </p>
       </div>
 
       <div
         style={{
-          color: t.title,
-          fontSize: 24,
-          fontWeight: 900
+          display: "flex",
+          gap: 10,
+          alignItems: "center",
+          flexWrap: "wrap",
+          justifyContent: "flex-end"
         }}
       >
-        {value}
+        <button
+          onClick={() => {
+            if (month === 0) {
+              setAY(activeYear - 1);
+              setMonth(11);
+            } else {
+              setMonth(month - 1);
+            }
+          }}
+          style={{
+            padding: "10px 14px",
+            borderRadius: 14,
+            border: `1px solid ${t.border}`,
+            background: "#ffffff",
+            color: t.text,
+            cursor: "pointer",
+            fontWeight: 900,
+            fontSize: 12
+          }}
+        >
+          Mes anterior
+        </button>
+
+        <button
+          onClick={() => {
+            if (month === 11) {
+              setAY(activeYear + 1);
+              setMonth(0);
+            } else {
+              setMonth(month + 1);
+            }
+          }}
+          style={{
+            padding: "10px 14px",
+            borderRadius: 14,
+            border: "1px solid rgba(8, 145, 118, 0.26)",
+            background: "rgba(8, 145, 118, 0.12)",
+            color: t.title,
+            cursor: "pointer",
+            fontWeight: 900,
+            fontSize: 12
+          }}
+        >
+          Mes siguiente
+        </button>
       </div>
     </div>
-  ))}
-</div>
+
     <div
       style={{
         display: "grid",
-        gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))",
-        gap: 10
+        gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))",
+        gap: 12,
+        marginBottom: 18
+      }}
+    >
+      {[
+        ["Días del mes", activeSecurityMonthSummary.totalDays, "Total"],
+        ["Días completos", activeSecurityMonthSummary.completeDays, "OK"],
+        ["Días con avisos", activeSecurityMonthSummary.warningDays, "Revisar"],
+        ["Puestos pendientes", activeSecurityMonthSummary.missingAssignments, "Pendiente"]
+      ].map(([label, value, tag]) => {
+        const isWarning = label === "Días con avisos" || label === "Puestos pendientes";
+        const hasValue = Number(value) > 0;
+
+        return (
+          <div
+            key={label}
+            style={{
+              border: `1px solid ${isWarning && hasValue ? "rgba(245, 158, 11, 0.40)" : t.border}`,
+              background: "#ffffff",
+              borderRadius: 18,
+              padding: 16,
+              boxShadow: "0 10px 24px rgba(15, 23, 42, 0.05)"
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                gap: 8,
+                alignItems: "center",
+                marginBottom: 10
+              }}
+            >
+              <div
+                style={{
+                  color: t.sub,
+                  fontSize: 11,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.08em",
+                  fontWeight: 900
+                }}
+              >
+                {label}
+              </div>
+
+              <span
+                style={{
+                  padding: "5px 8px",
+                  borderRadius: 999,
+                  background: isWarning && hasValue ? "rgba(245, 158, 11, 0.14)" : "rgba(8, 145, 118, 0.10)",
+                  color: isWarning && hasValue ? "#92400e" : "#15803d",
+                  fontSize: 10,
+                  fontWeight: 900,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.05em"
+                }}
+              >
+                {tag}
+              </span>
+            </div>
+
+            <div
+              style={{
+                color: t.title,
+                fontSize: 28,
+                fontWeight: 900,
+                lineHeight: 1
+              }}
+            >
+              {value}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))",
+        gap: 12
       }}
     >
       {Array.from({ length: dim(activeYear, month) }).map((_, i) => {
@@ -1827,76 +1883,177 @@ const dailySummary = [
           ["CONTEO", "Conteo"]
         ];
 
+const dayWarnings = dayPlan.warnings || [];
+const assignedRolesCount = roleRows.filter(([roleId]) => dayPlan?.[roleId]).length;
+const isRestDay = assignedRolesCount === 0;
+const hasWarnings = !isRestDay && dayWarnings.length > 0;
+const isComplete = !isRestDay && assignedRolesCount === roleRows.length;
+
+const statusText = hasWarnings
+  ? "Aviso"
+  : isRestDay
+  ? "Descanso"
+  : isComplete
+  ? "Completo"
+  : "Pendiente";
+
+const statusColor = hasWarnings
+  ? "#dc2626"
+  : isRestDay
+  ? "#475569"
+  : isComplete
+  ? "#15803d"
+  : "#b45309";
+
+const statusBg = hasWarnings
+  ? "rgba(239, 68, 68, 0.10)"
+  : isRestDay
+  ? "rgba(100, 116, 139, 0.12)"
+  : isComplete
+  ? "rgba(22, 163, 74, 0.10)"
+  : "rgba(245, 158, 11, 0.14)";
+
         return (
           <div
             key={dateKey}
             style={{
-              border: `1px solid ${isToday ? t.accent : t.border}`,
-              background: isToday ? t.accentSoft : t.card,
-              borderRadius: 16,
-              padding: 12,
-              boxShadow: isToday ? `inset 0 0 0 2px ${t.accent}` : undefined
+              border: `1px solid ${
+  isToday
+    ? "rgba(8, 145, 118, 0.55)"
+    : isRestDay
+    ? "rgba(148, 163, 184, 0.45)"
+    : t.border
+}`,
+background: isRestDay
+  ? "rgba(241, 245, 249, 0.72)"
+  : isToday
+  ? "rgba(8, 145, 118, 0.08)"
+  : "#ffffff",
+borderRadius: 18,
+padding: 14,
+boxShadow: isToday
+  ? "0 12px 26px rgba(8, 145, 118, 0.12)"
+  : isRestDay
+  ? "none"
+  : "0 10px 22px rgba(15, 23, 42, 0.05)"
             }}
           >
             <div
               style={{
                 display: "flex",
                 justifyContent: "space-between",
-                alignItems: "center",
-                marginBottom: 10
+                alignItems: "flex-start",
+                gap: 10,
+                marginBottom: 12
               }}
             >
-              <strong style={{ color: t.title, fontSize: 16 }}>
-                {dayNumber}
-              </strong>
+              <div>
+                <strong style={{ color: t.title, fontSize: 20, lineHeight: 1 }}>
+                  {dayNumber}
+                </strong>
 
-              <span style={{ color: t.sub, fontSize: 11 }}>
-                {dayPlan.dateLabel || `${String(dayNumber).padStart(2, "0")}/${String(month + 1).padStart(2, "0")}/${activeYear}`}
+                <div style={{ color: t.sub, fontSize: 11, marginTop: 4, fontWeight: 700 }}>
+                  {dayPlan.dateLabel || `${String(dayNumber).padStart(2, "0")}/${String(month + 1).padStart(2, "0")}/${activeYear}`}
+                </div>
+              </div>
+
+              <span
+                style={{
+                  padding: "5px 8px",
+                  borderRadius: 999,
+                  background: statusBg,
+                  color: statusColor,
+                  fontSize: 10,
+                  fontWeight: 900,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.05em"
+                }}
+              >
+                {isToday ? `Hoy · ${statusText}` : statusText}
               </span>
             </div>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              {roleRows.map(([roleId, label]) => {
-                const operatorId = dayPlan?.[roleId];
+            {isRestDay ? (
+  <div
+    style={{
+      padding: "14px 12px",
+      borderRadius: 14,
+      background: "rgba(100, 116, 139, 0.08)",
+      border: "1px solid rgba(100, 116, 139, 0.18)",
+      color: "#475569",
+      fontWeight: 900,
+      fontSize: 13,
+      display: "flex",
+      flexDirection: "column",
+      gap: 4
+    }}
+  >
+    <span>Descanso del turno</span>
+    <small style={{ color: t.sub, fontWeight: 700 }}>
+      Sin roles de seguridad asignados para esta jornada.
+    </small>
+  </div>
+) : (
+  <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+    {roleRows.map(([roleId, label]) => {
+      const operatorId = dayPlan?.[roleId];
+      const assigned = Boolean(operatorId);
 
-                return (
-                  <div
-                    key={roleId}
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      gap: 8,
-                      fontSize: 12,
-                      color: t.text
-                    }}
-                  >
-                    <span style={{ color: t.sub }}>
-                      {label}
-                    </span>
+      return (
+        <div
+          key={roleId}
+          style={{
+            display: "grid",
+            gridTemplateColumns: "58px 1fr",
+            gap: 8,
+            alignItems: "center",
+            fontSize: 12,
+            padding: "7px 8px",
+            borderRadius: 12,
+            background: assigned ? "rgba(248, 250, 252, 0.95)" : "rgba(245, 158, 11, 0.08)",
+            border: `1px solid ${assigned ? "rgba(226, 232, 240, 0.9)" : "rgba(245, 158, 11, 0.18)"}`
+          }}
+        >
+          <span
+            style={{
+              color: assigned ? t.sub : "#92400e",
+              fontWeight: 900
+            }}
+          >
+            {label}
+          </span>
 
-                    <strong
-                      style={{
-                        color: operatorId ? t.title : t.sub,
-                        textAlign: "right"
-                      }}
-                    >
-                      {operatorId ? getOperatorNameById(operatorId) : "—"}
-                    </strong>
-                  </div>
-                );
-              })}
-            </div>
+          <strong
+            style={{
+              color: assigned ? t.title : "#92400e",
+              textAlign: "right",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap"
+            }}
+          >
+            {assigned ? getOperatorNameById(operatorId) : "Sin asignar"}
+          </strong>
+        </div>
+      );
+    })}
+  </div>
+)}
 
-            {dayPlan.warnings?.length > 0 && (
+            {hasWarnings && (
               <div
                 style={{
-                  marginTop: 8,
-                  color: "#ef4444",
+                  marginTop: 10,
+                  padding: "8px 10px",
+                  borderRadius: 12,
+                  background: "rgba(239, 68, 68, 0.08)",
+                  color: "#dc2626",
                   fontSize: 11,
-                  fontWeight: 800
+                  fontWeight: 900,
+                  border: "1px solid rgba(239, 68, 68, 0.16)"
                 }}
               >
-                {dayPlan.warnings.length} aviso/s
+                {dayWarnings.length} aviso/s
               </div>
             )}
           </div>

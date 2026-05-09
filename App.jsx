@@ -3096,18 +3096,109 @@ function EditorComponent({ ops, saveOps, activeYear, theme: t, off, canEdit }) {
           </strong>
         </div>
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 15 }}>
-        {MONTHS.map((m, mi) => (
-          <div key={m} style={{ background: t.shell, padding: 14, borderRadius: 16, border: `1px solid ${t.border}` }}>
-            <div style={{ fontSize: 11, fontWeight: 'bold', marginBottom: 10, textAlign: 'center' }}>{m.toUpperCase()}</div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4 }}>
-              {Array.from({ length: dim(activeYear, mi) }).map((_, di) => {
-                const k = mk(activeYear, mi + 1, di + 1), status = ops.find(o => o.id === selOp)?.calendar?.[k], rot = cshift(activeYear, mi, di + 1, off);
-                return <div key={di} onClick={() => toggleAbsence(k)} style={{ height: 32, background: status ? ABSENCE[status].color : t.card, borderBottom: `3px solid ${TURNO_DEF[rot]?.color || 'transparent'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, cursor: canEdit ? 'pointer' : 'default', borderRadius: 4, color: status ? '#000' : t.text }}>{di+1}</div>;
-              })}
+            <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))",
+          gap: 15
+        }}
+      >
+        {MONTHS.map((m, mi) => {
+          const currentOp = ops.find(o => o.id === selOp);
+          const monthAbsences = Array.from({ length: dim(activeYear, mi) }).filter((_, di) => {
+            const k = mk(activeYear, mi + 1, di + 1);
+            return Boolean(currentOp?.calendar?.[k]);
+          }).length;
+
+          return (
+            <div
+              key={m}
+              style={{
+                background: "#ffffff",
+                padding: 15,
+                borderRadius: 20,
+                border: `1px solid ${t.border}`,
+                boxShadow: "0 10px 24px rgba(15, 23, 42, 0.05)"
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  gap: 10,
+                  marginBottom: 12
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: 12,
+                    fontWeight: 900,
+                    color: t.title,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.07em"
+                  }}
+                >
+                  {m}
+                </div>
+
+                <span
+                  style={{
+                    padding: "5px 8px",
+                    borderRadius: 999,
+                    background: monthAbsences > 0
+                      ? "rgba(8, 145, 118, 0.10)"
+                      : "rgba(100, 116, 139, 0.10)",
+                    color: monthAbsences > 0 ? "#15803d" : "#475569",
+                    fontSize: 10,
+                    fontWeight: 900
+                  }}
+                >
+                  {monthAbsences} aus.
+                </span>
+              </div>
+
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(7, 1fr)",
+                  gap: 5
+                }}
+              >
+                {Array.from({ length: dim(activeYear, mi) }).map((_, di) => {
+                  const k = mk(activeYear, mi + 1, di + 1);
+                  const status = currentOp?.calendar?.[k];
+                  const rot = cshift(activeYear, mi, di + 1, off);
+                  const absenceDef = status ? ABSENCE[status] : null;
+
+                  return (
+                    <div
+                      key={di}
+                      onClick={() => toggleAbsence(k)}
+                      title={status ? absenceDef?.label : TURNO_DEF[rot]?.label}
+                      style={{
+                        height: 34,
+                        background: status ? absenceDef?.color : "rgba(248, 250, 252, 0.95)",
+                        border: `1px solid ${status ? "rgba(15, 23, 42, 0.10)" : "rgba(226, 232, 240, 0.90)"}`,
+                        borderBottom: `3px solid ${TURNO_DEF[rot]?.color || "transparent"}`,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: 10,
+                        cursor: canEdit ? "pointer" : "default",
+                        borderRadius: 8,
+                        color: status ? "#111827" : t.text,
+                        fontWeight: status ? 900 : 700
+                      }}
+                    >
+                      {di + 1}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

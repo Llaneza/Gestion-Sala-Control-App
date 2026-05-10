@@ -2805,13 +2805,7 @@ boxShadow: isToday
               </div>
             </section>
 
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
-                gap: 20
-              }}
-            ></div>
+            
             <div className="glass-panel section-card" style={{ padding: 25 }}>
               <h3 style={{ color: t.title, marginTop: 0 }}>OPERADORES</h3>
               <p style={{ color: t.sub, fontSize: 13, marginTop: 0, marginBottom: 18 }}>Alta y baja de personal operativo disponible en el sistema.</p>

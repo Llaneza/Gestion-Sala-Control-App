@@ -792,7 +792,7 @@ if (!session) {
   >
     {[
       { id: "daily", label: "Operativa diaria", short: "" },
-      { id: "calendar", label: "Calendario DCS", short: "Sala" },
+      { id: "calendar", label: "Calendario DCS", short: "" },
       { id: "security", label: "Calendario Seguridad", short: "Seguridad" },
       { id: "stats", label: "Estadísticas", short: "Datos" },
       canSeeEditor && { id: "editor", label: "Personal", short: "Equipo" },
@@ -1131,19 +1131,7 @@ if (!session) {
     }}
   >
     <div>
-      <div
-        style={{
-          fontSize: 12,
-          textTransform: "uppercase",
-          letterSpacing: "0.10em",
-          color: t.accent,
-          marginBottom: 8,
-          fontWeight: 900
-        }}
-      >
-        Calendario DCS
-      </div>
-
+      
       <h2
         style={{
           margin: 0,
@@ -1464,20 +1452,7 @@ if (!session) {
         Códigos del calendario
       </div>
     </div>
-
-    <div
-      style={{
-        color: t.sub,
-        fontSize: 12,
-        fontWeight: 700,
-        padding: "8px 11px",
-        borderRadius: 999,
-        background: "#ffffff",
-        border: `1px solid ${t.border}`
-      }}
-    >
-      Turnos · SC · Ausencias
-    </div>
+  
   </div>
 
   <div

@@ -793,7 +793,7 @@ if (!session) {
     {[
       { id: "daily", label: "Operativa diaria", short: "" },
       { id: "calendar", label: "Calendario DCS", short: "" },
-      { id: "security", label: "Calendario Seguridad", short: "Seguridad" },
+      { id: "security", label: "Calendario Seguridad", short: "" },
       { id: "stats", label: "Estadísticas", short: "Datos" },
       canSeeEditor && { id: "editor", label: "Personal", short: "Equipo" },
       isAdmin && { id: "config", label: "Administración", short: "Ajustes" }
@@ -1556,19 +1556,7 @@ if (!session) {
       border: `1px solid ${t.border}`
     }}
   >
-    <div
-      style={{
-        fontSize: 12,
-        textTransform: "uppercase",
-        letterSpacing: "0.10em",
-        color: t.accent,
-        marginBottom: 8,
-        fontWeight: 900
-      }}
-    >
-      Calendario Seguridad
-    </div>
-
+    
     <h2
       style={{
         margin: 0,

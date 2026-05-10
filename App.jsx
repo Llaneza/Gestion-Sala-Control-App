@@ -2806,12 +2806,125 @@ boxShadow: isToday
             </section>
 
             
-            <div className="glass-panel section-card" style={{ padding: 25 }}>
-              <h3 style={{ color: t.title, marginTop: 0 }}>OPERADORES</h3>
-              <p style={{ color: t.sub, fontSize: 13, marginTop: 0, marginBottom: 18 }}>Alta y baja de personal operativo disponible en el sistema.</p>
-              <div style={{ display: 'flex', gap: 10, marginBottom: 20 }}>
-                <input id="newOpN" placeholder="Nombre..." style={{ flex: 1, padding: 12, borderRadius: 12, border: `1px solid ${t.border}`, background: t.shell, color: t.text }} />
-               <button onClick={() => { const n = document.getElementById('newOpN').value; if(n) { saveOps([...ops, { id: Date.now(), name: n, color: '#'+Math.random().toString(16).slice(2,8), calendar: {}, securityRoles: [] }]); document.getElementById('newOpN').value = ''; } }} style={{ padding: '0 20px', background: t.accentSoft, color: t.title, border: `1px solid ${t.border}`, borderRadius: 12, fontWeight: 'bold', cursor: 'pointer' }}>AÑADIR</button>
+                        <div
+              className="glass-panel section-card"
+              style={{
+                padding: 24,
+                borderRadius: 24
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "flex-start",
+                  gap: 14,
+                  marginBottom: 18,
+                  flexWrap: "wrap"
+                }}
+              >
+                <div>
+                  <div
+                    style={{
+                      fontSize: 12,
+                      textTransform: "uppercase",
+                      letterSpacing: "0.10em",
+                      color: t.accent,
+                      marginBottom: 8,
+                      fontWeight: 900
+                    }}
+                  >
+                    Personal operativo
+                  </div>
+
+                  <h3 style={{ color: t.title, margin: 0, fontSize: 24 }}>
+                    Operadores
+                  </h3>
+
+                  <p
+                    style={{
+                      color: t.sub,
+                      fontSize: 14,
+                      marginTop: 7,
+                      marginBottom: 0,
+                      lineHeight: 1.5
+                    }}
+                  >
+                    Alta, baja y roles de seguridad del personal disponible en el sistema.
+                  </p>
+                </div>
+
+                <div
+                  style={{
+                    padding: "10px 14px",
+                    borderRadius: 999,
+                    background: "#ffffff",
+                    border: `1px solid ${t.border}`,
+                    color: t.title,
+                    fontWeight: 900,
+                    fontSize: 13
+                  }}
+                >
+                  {ops.length} operadores
+                </div>
+              </div>
+
+              <div
+                style={{
+                  display: "flex",
+                  gap: 10,
+                  marginBottom: 20,
+                  padding: 14,
+                  borderRadius: 18,
+                  background: "rgba(248, 250, 252, 0.72)",
+                  border: `1px solid ${t.border}`,
+                  flexWrap: "wrap"
+                }}
+              >
+                <input
+                  id="newOpN"
+                  placeholder="Nombre del operador..."
+                  style={{
+                    flex: "1 1 220px",
+                    padding: "11px 12px",
+                    borderRadius: 14,
+                    border: `1px solid ${t.border}`,
+                    background: "#ffffff",
+                    color: t.text,
+                    fontWeight: 700
+                  }}
+                />
+
+                <button
+                  onClick={() => {
+                    const n = document.getElementById("newOpN").value;
+                    if (n) {
+                      saveOps([
+                        ...ops,
+                        {
+                          id: Date.now(),
+                          name: n,
+                          color: "#" + Math.random().toString(16).slice(2, 8),
+                          calendar: {},
+                          securityRoles: []
+                        }
+                      ]);
+                      document.getElementById("newOpN").value = "";
+                    }
+                  }}
+                  style={{
+                    padding: "11px 16px",
+                    background: "rgba(8, 145, 118, 0.12)",
+                    color: t.title,
+                    border: "1px solid rgba(8, 145, 118, 0.26)",
+                    borderRadius: 14,
+                    fontWeight: 900,
+                    cursor: "pointer",
+                    fontSize: 12
+                  }}
+                >
+                  Añadir operador
+                </button>
               </div>
               {ops.map(o => {
   const selectedRoles = Array.isArray(o.securityRoles) ? o.securityRoles : [];

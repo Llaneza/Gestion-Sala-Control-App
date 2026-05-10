@@ -77,23 +77,76 @@ const getAvailableOperatorsByRole = ({ operators, dateKey, roleId, shiftCode }) 
   });
 };
 
-/**
- * Genera la planificación de seguridad.
- *
- * IMPORTANTE:
- * Este algoritmo es independiente del algoritmo de Sala/DCS.
- * No modifica ni depende internamente de src/logic/autoAssign.js.
- *
- * Reglas previstas:
- * - Cada día debe tener 1 Brigada, 1 DCS, 1 Coordinador de Emergencias y 1 Conteo.
- * - Solo pueden asignarse operadores con el rol correspondiente.
- * - Solo cuentan operadores que estén trabajando ese día.
- * - Vacaciones, bajas y entrenamientos bloquean al operador.
- * - El DCS de seguridad debe salir de los operadores que estén en DCS ese día.
- * - Un operador no debe ocupar dos roles de seguridad el mismo día.
- * - El reparto debe ser lo más equitativo posible durante el año.
- */
- export function generateSecurityPlan({ operators = [], year, dcsPlan = {}, off = 0 }) {
+const getDayOfYearIndex = ({ year, monthIndex, day }) => {
+  const currentDate = Date.UTC(year, monthIndex, day);
+  const firstDayOfYear = Date.UTC(year, 0, 1);
+
+  return Math.floor((currentDate - firstDayOfYear) / 86400000);
+};
+
+const getSecurityBlockIndex = ({ year, monthIndex, day }) => {
+  const dayOfYearIndex = getDayOfYearIndex({ year, monthIndex, day });
+
+  return Math.floor(dayOfYearIndex / 15);
+};
+
+const FIXED_BRIGADA_ORDER = ["Pablo", "Carlos", "Manuga", "Toni"];
+
+const FIXED_COORDINADOR_ORDER = ["Alejandro", "Claudia", "Rosa", "Kao", "Florentino"];
+
+const normalizeOperatorName = name => {
+  return String(name || "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+};
+
+const findOperatorByNameAndRole = ({ operators, name, roleId }) => {
+  const normalizedName = normalizeOperatorName(name);
+
+  return operators.find(operator => {
+    return (
+      normalizeOperatorName(operator?.name) === normalizedName &&
+      hasSecurityRole(operator, roleId)
+    );
+  });
+};
+
+const getFixedOrderCandidatesForBlock = ({ operators, roleId, orderedNames, blockIndex }) => {
+  if (!Array.isArray(orderedNames) || orderedNames.length === 0) {
+    return [];
+  }
+
+  const startIndex = blockIndex % orderedNames.length;
+  const orderedCycleNames = [
+    ...orderedNames.slice(startIndex),
+    ...orderedNames.slice(0, startIndex)
+  ];
+
+  return orderedCycleNames
+    .map(name => findOperatorByNameAndRole({ operators, name, roleId }))
+    .filter(Boolean);
+};
+
+const pickFirstAvailableFixedOrderOperator = ({ candidates, dateKey, usedOperatorIds }) => {
+  return (
+    candidates.find(operator => {
+      return !isBlockedByAbsence(operator, dateKey) && !usedOperatorIds.has(operator.id);
+    }) || null
+  );
+};
+
+const getFixedOrderWarning = ({ roleLabel, candidates }) => {
+  if (!candidates || candidates.length === 0) {
+    return `Sin ${roleLabel} configurado`;
+  }
+
+  return `Sin ${roleLabel} disponible`;
+};
+
+
+export function generateSecurityPlan({ operators = [], year, dcsPlan = {}, off = 0 }) {
   if (!year) {
     return {};
   }
@@ -113,6 +166,8 @@ const getAvailableOperatorsByRole = ({ operators, dateKey, roleId, shiftCode }) 
       const monthNumber = monthIndex + 1;
       const dateKey = makeAppDateKey(year, monthNumber, day);
       const shiftCode = cshift(year, monthIndex, day, off);
+      const blockIndex = getSecurityBlockIndex({ year, monthIndex, day });
+
       const usedOperatorIds = new Set();
       const warnings = [];
 
@@ -123,6 +178,66 @@ const getAvailableOperatorsByRole = ({ operators, dateKey, roleId, shiftCode }) 
         CONTEO: null,
         warnings
       };
+      if (shiftCode === "D") {
+        days[dateKey] = {
+          ...securityDay,
+          dateLabel: formatEuropeanDate(year, monthNumber, day)
+        };
+
+        continue;
+      }
+            const brigadaCandidates = getFixedOrderCandidatesForBlock({
+        operators,
+        roleId: SECURITY_ROLE_IDS.BRIGADA,
+        orderedNames: FIXED_BRIGADA_ORDER,
+        blockIndex
+      });
+
+      const selectedBrigada = pickFirstAvailableFixedOrderOperator({
+        candidates: brigadaCandidates,
+        dateKey,
+        usedOperatorIds
+      });
+
+      if (selectedBrigada) {
+        securityDay.BRIGADA = selectedBrigada.id;
+        usedOperatorIds.add(selectedBrigada.id);
+        counters.BRIGADA[selectedBrigada.id] = (counters.BRIGADA[selectedBrigada.id] || 0) + 1;
+      } else {
+        warnings.push(
+          getFixedOrderWarning({
+            roleLabel: "Brigada",
+            candidates: brigadaCandidates
+          })
+        );
+      }
+
+      const coordinadorCandidates = getFixedOrderCandidatesForBlock({
+        operators,
+        roleId: SECURITY_ROLE_IDS.COORDINADOR_EMERGENCIAS,
+        orderedNames: FIXED_COORDINADOR_ORDER,
+        blockIndex
+      });
+
+      const selectedCoordinador = pickFirstAvailableFixedOrderOperator({
+        candidates: coordinadorCandidates,
+        dateKey,
+        usedOperatorIds
+      });
+
+      if (selectedCoordinador) {
+        securityDay.COORDINADOR_EMERGENCIAS = selectedCoordinador.id;
+        usedOperatorIds.add(selectedCoordinador.id);
+        counters.COORDINADOR_EMERGENCIAS[selectedCoordinador.id] =
+          (counters.COORDINADOR_EMERGENCIAS[selectedCoordinador.id] || 0) + 1;
+      } else {
+        warnings.push(
+          getFixedOrderWarning({
+            roleLabel: "Coordinador de Emergencias",
+            candidates: coordinadorCandidates
+          })
+        );
+      }
 
       const dcsCandidates = getDcsOperatorsForDay({
         operators,
@@ -144,74 +259,33 @@ const getAvailableOperatorsByRole = ({ operators, dateKey, roleId, shiftCode }) 
       } else {
         warnings.push("Sin DCS disponible");
       }
-      const brigadaCandidates = getAvailableOperatorsByRole({
-  operators,
-  dateKey,
-  roleId: SECURITY_ROLE_IDS.BRIGADA,
-  shiftCode
-});
 
-      const selectedBrigada = pickLeastAssignedOperator({
-        candidates: brigadaCandidates,
-        roleId: SECURITY_ROLE_IDS.BRIGADA,
+      const conteoCandidates = getAvailableOperatorsByRole({
+        operators,
+        dateKey,
+        roleId: SECURITY_ROLE_IDS.CONTEO,
+        shiftCode
+      });
+
+      const selectedConteo = pickLeastAssignedOperator({
+        candidates: conteoCandidates,
+        roleId: SECURITY_ROLE_IDS.CONTEO,
         counters,
         usedOperatorIds
       });
 
-      if (selectedBrigada) {
-        securityDay.BRIGADA = selectedBrigada.id;
-        usedOperatorIds.add(selectedBrigada.id);
-        counters.BRIGADA[selectedBrigada.id] = (counters.BRIGADA[selectedBrigada.id] || 0) + 1;
+      if (selectedConteo) {
+        securityDay.CONTEO = selectedConteo.id;
+        usedOperatorIds.add(selectedConteo.id);
+        counters.CONTEO[selectedConteo.id] = (counters.CONTEO[selectedConteo.id] || 0) + 1;
       } else {
-        warnings.push("Sin Brigada disponible");
+        warnings.push("Sin Conteo disponible");
       }
-      const coordinadorCandidates = getAvailableOperatorsByRole({
-  operators,
-  dateKey,
-  roleId: SECURITY_ROLE_IDS.COORDINADOR_EMERGENCIAS,
-  shiftCode
-});
 
-const selectedCoordinador = pickLeastAssignedOperator({
-  candidates: coordinadorCandidates,
-  roleId: SECURITY_ROLE_IDS.COORDINADOR_EMERGENCIAS,
-  counters,
-  usedOperatorIds
-});
-
-if (selectedCoordinador) {
-  securityDay.COORDINADOR_EMERGENCIAS = selectedCoordinador.id;
-  usedOperatorIds.add(selectedCoordinador.id);
-  counters.COORDINADOR_EMERGENCIAS[selectedCoordinador.id] =
-    (counters.COORDINADOR_EMERGENCIAS[selectedCoordinador.id] || 0) + 1;
-} else {
-  warnings.push("Sin Coordinador de Emergencias disponible");
-}
-const conteoCandidates = getAvailableOperatorsByRole({
-  operators,
-  dateKey,
-  roleId: SECURITY_ROLE_IDS.CONTEO,
-  shiftCode
-});
-
-const selectedConteo = pickLeastAssignedOperator({
-  candidates: conteoCandidates,
-  roleId: SECURITY_ROLE_IDS.CONTEO,
-  counters,
-  usedOperatorIds
-});
-
-if (selectedConteo) {
-  securityDay.CONTEO = selectedConteo.id;
-  usedOperatorIds.add(selectedConteo.id);
-  counters.CONTEO[selectedConteo.id] = (counters.CONTEO[selectedConteo.id] || 0) + 1;
-} else {
-  warnings.push("Sin Conteo disponible");
-}
       days[dateKey] = {
-  ...securityDay,
-  dateLabel: formatEuropeanDate(year, monthNumber, day)
-};  
+        ...securityDay,
+        dateLabel: formatEuropeanDate(year, monthNumber, day)
+      };
     }
   }
 

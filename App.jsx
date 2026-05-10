@@ -361,7 +361,7 @@ const todayDcsOperators = useMemo(() => {
 
   return dcsOps.filter(op => todayAssignments?.[op.id] === "SC");
 }, [savedPlanData, todayKey, dcsOps]);
-  const activeSecurityMonthSummary = useMemo(() => {
+ const activeSecurityMonthSummary = useMemo(() => {
   if (!activeSecurityPlan?.days) {
     return {
       totalDays: 0,
@@ -384,9 +384,15 @@ const todayDcsOperators = useMemo(() => {
       const missingCount = roleIds.length - assignedCount;
       const hasWarnings = Array.isArray(dayPlan.warnings) && dayPlan.warnings.length > 0;
 
+      const isRestDay = assignedCount === 0;
+
       summary.totalDays += 1;
 
-      if (missingCount === 0) {
+      if (isRestDay) {
+        return summary;
+      }
+
+      if (assignedCount === roleIds.length && !hasWarnings) {
         summary.completeDays += 1;
       }
 
@@ -542,18 +548,44 @@ const dailySummary = [
   },
 ];
 
- if (!session) {
+if (!session) {
   return (
-    <LoginScreenComponent
-      admins={admins}
-      onLogin={(newSession) => {
-        setSession(newSession);
-        setView("daily");
+    <div
+      style={{
+        height: "100dvh",
+        overflow: "hidden",
+        background: "linear-gradient(180deg, #f8fafc 0%, #eef7f3 46%, #f8fafc 100%)"
       }}
-      theme={t}
-    />
+    >
+      <style>{`
+        html,
+        body,
+        #root {
+          height: 100%;
+          margin: 0;
+          overflow: hidden;
+        }
+      `}</style>
+
+      <div
+        style={{
+          height: "100%",
+          transform: "translateY(-34px) scale(0.94)",
+          transformOrigin: "top center"
+        }}
+      >
+        <LoginScreenComponent
+          admins={admins}
+          onLogin={(newSession) => {
+            setSession(newSession);
+            setView("daily");
+          }}
+          theme={t}
+        />
+      </div>
+    </div>
   );
-}
+} 
 
   return (
    <div style={{
@@ -759,12 +791,12 @@ const dailySummary = [
     }}
   >
     {[
-      { id: "daily", label: "Operativa diaria", short: "Hoy" },
-      { id: "calendar", label: "Calendario DCS", short: "Sala" },
-      { id: "security", label: "Calendario Seguridad", short: "Seguridad" },
-      { id: "stats", label: "Estadísticas", short: "Datos" },
-      canSeeEditor && { id: "editor", label: "Personal", short: "Equipo" },
-      isAdmin && { id: "config", label: "Administración", short: "Ajustes" }
+      { id: "daily", label: "Operativa diaria", short: "" },
+      { id: "calendar", label: "Calendario DCS", short: "" },
+      { id: "security", label: "Calendario Seguridad", short: "" },
+      { id: "stats", label: "Estadísticas", short: "" },
+      canSeeEditor && { id: "editor", label: "Personal", short: "" },
+      isAdmin && { id: "config", label: "Administración", short: "" }
     ]
       .filter(Boolean)
       .map(item => {
@@ -804,18 +836,20 @@ const dailySummary = [
                   {item.label}
                 </div>
 
-                <div
-                  style={{
-                    marginTop: 4,
-                    fontSize: 10,
-                    color: active ? t.accent : t.sub,
-                    textTransform: "uppercase",
-                    letterSpacing: "0.07em",
-                    fontWeight: 900
-                  }}
-                >
-                  {item.short}
-                </div>
+                {item.short && (
+  <div
+    style={{
+      marginTop: 4,
+      fontSize: 10,
+      color: active ? t.accent : t.sub,
+      textTransform: "uppercase",
+      letterSpacing: "0.07em",
+      fontWeight: 900
+    }}
+  >
+    {item.short}
+  </div>
+)}
               </div>
             </div>
           </button>
@@ -839,18 +873,7 @@ const dailySummary = [
   }}
 >
   <div>
-    <div
-      style={{
-        fontSize: 12,
-        textTransform: "uppercase",
-        letterSpacing: "0.12em",
-        color: t.accent,
-        marginBottom: 10,
-        fontWeight: 800
-      }}
-    >
-      Operativa diaria
-    </div>
+    
 
     <h1
   style={{
@@ -915,47 +938,7 @@ const dailySummary = [
         boxShadow: "0 12px 28px rgba(15, 23, 42, 0.06)"
       }}
     >
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "flex-start",
-          gap: 12,
-          marginBottom: 16
-        }}
-      >
-        <div
-          style={{
-            width: 42,
-            height: 42,
-            borderRadius: 14,
-            background: t.accentSoft,
-            color: t.accent,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontWeight: 900,
-            fontSize: 14
-          }}
-        >
-          {title.slice(0, 2).toUpperCase()}
-        </div>
-
-        <span
-          style={{
-            padding: "6px 10px",
-            borderRadius: 999,
-            background: assigned ? "rgba(22, 163, 74, 0.10)" : "rgba(245, 158, 11, 0.14)",
-            color: assigned ? "#15803d" : "#b45309",
-            fontSize: 11,
-            fontWeight: 900,
-            textTransform: "uppercase",
-            letterSpacing: "0.06em"
-          }}
-        >
-          {assigned ? "Asignado" : "Pendiente"}
-        </span>
-      </div>
+      
 
       <h2 style={{ margin: "0 0 12px", color: t.title, fontSize: 21, lineHeight: 1.15 }}>
         {title}
@@ -1020,19 +1003,7 @@ const dailySummary = [
     }}
   >
     <div>
-      <div
-        style={{
-          fontSize: 12,
-          textTransform: "uppercase",
-          letterSpacing: "0.10em",
-          color: t.accent,
-          marginBottom: 8,
-          fontWeight: 900
-        }}
-      >
-        Bloque final
-      </div>
-
+      
       <h2 style={{ margin: 0, color: t.title, fontSize: 24 }}>
         Ausencias de hoy
       </h2>
@@ -1111,19 +1082,7 @@ const dailySummary = [
                 </div>
               </div>
             </div>
-
-            <strong
-              style={{
-                padding: "7px 10px",
-                borderRadius: 999,
-                background: `${absenceColor}18`,
-                color: absenceColor,
-                fontSize: 12,
-                letterSpacing: "0.04em"
-              }}
-            >
-              {code}
-            </strong>
+        
           </div>
         );
       })}
@@ -1172,19 +1131,7 @@ const dailySummary = [
     }}
   >
     <div>
-      <div
-        style={{
-          fontSize: 12,
-          textTransform: "uppercase",
-          letterSpacing: "0.10em",
-          color: t.accent,
-          marginBottom: 8,
-          fontWeight: 900
-        }}
-      >
-        Calendario DCS
-      </div>
-
+      
       <h2
         style={{
           margin: 0,
@@ -1277,7 +1224,57 @@ const dailySummary = [
     >
       Mes siguiente
     </button>
+          {isAdmin && (
+      <button
+        type="button"
+        onClick={() => {
+          const nextOffset = window.prompt(
+            "Introduce el valor de sincronización del calendario:",
+            String(off)
+          );
 
+          if (nextOffset === null) return;
+
+          const cleanOffset = Number(nextOffset);
+
+          if (Number.isNaN(cleanOffset)) {
+            alert("Introduce un número válido.");
+            return;
+          }
+
+          saveOff(cleanOffset);
+        }}
+        title="Ajustar sincronización del calendario DCS"
+        style={{
+          padding: "10px 13px",
+          borderRadius: 14,
+          border: "1px solid rgba(8, 145, 118, 0.26)",
+          background: "#ffffff",
+          color: t.title,
+          cursor: "pointer",
+          fontSize: 12,
+          fontWeight: 900,
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 8,
+          whiteSpace: "nowrap"
+        }}
+      >
+        Sincronización del calendario
+        <span
+          style={{
+            padding: "3px 7px",
+            borderRadius: 999,
+            background: "rgba(8, 145, 118, 0.10)",
+            color: t.accent,
+            fontSize: 11,
+            fontWeight: 900
+          }}
+        >
+          {off}
+        </span>
+      </button>
+    )}
     <select
       value={printMode}
       onChange={e => setPrintMode(e.target.value)}
@@ -1455,20 +1452,7 @@ const dailySummary = [
         Códigos del calendario
       </div>
     </div>
-
-    <div
-      style={{
-        color: t.sub,
-        fontSize: 12,
-        fontWeight: 700,
-        padding: "8px 11px",
-        borderRadius: 999,
-        background: "#ffffff",
-        border: `1px solid ${t.border}`
-      }}
-    >
-      Turnos · SC · Ausencias
-    </div>
+  
   </div>
 
   <div
@@ -1572,19 +1556,7 @@ const dailySummary = [
       border: `1px solid ${t.border}`
     }}
   >
-    <div
-      style={{
-        fontSize: 12,
-        textTransform: "uppercase",
-        letterSpacing: "0.10em",
-        color: t.accent,
-        marginBottom: 8,
-        fontWeight: 900
-      }}
-    >
-      Calendario Seguridad
-    </div>
-
+    
     <h2
       style={{
         margin: 0,
@@ -1677,18 +1649,18 @@ const dailySummary = [
     style={{
       marginTop: 26,
       border: `1px solid ${t.border}`,
-      background: t.shell,
-      borderRadius: 22,
-      padding: 18
+      background: "rgba(248, 250, 252, 0.72)",
+      borderRadius: 24,
+      padding: 20
     }}
   >
     <div
       style={{
         display: "flex",
         justifyContent: "space-between",
-        alignItems: "center",
-        gap: 12,
-        marginBottom: 16,
+        alignItems: "stretch",
+        gap: 16,
+        marginBottom: 18,
         flexWrap: "wrap"
       }}
     >
@@ -1698,117 +1670,173 @@ const dailySummary = [
             fontSize: 12,
             textTransform: "uppercase",
             letterSpacing: "0.12em",
-            color: t.sub,
-            marginBottom: 4
+            color: t.accent,
+            marginBottom: 6,
+            fontWeight: 900
           }}
         >
           Calendario mensual de seguridad
         </div>
 
-        <h3 style={{ margin: 0, color: t.title, fontSize: 24 }}>
+        <h3
+          style={{
+            margin: 0,
+            color: t.title,
+            fontSize: 26,
+            letterSpacing: "-0.03em",
+            lineHeight: 1.1
+          }}
+        >
           {MONTHS[month]} {activeYear}
         </h3>
-      </div>
 
-      <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-  <button
-    onClick={() => {
-      if (month === 0) {
-        setAY(activeYear - 1);
-        setMonth(11);
-      } else {
-        setMonth(month - 1);
-      }
-    }}
-    style={{
-      padding: "10px 14px",
-      borderRadius: 12,
-      border: `1px solid ${t.border}`,
-      background: t.card,
-      color: t.text,
-      cursor: "pointer",
-      fontWeight: 700
-    }}
-  >
-    Mes anterior
-  </button>
-
-  <button
-    onClick={() => {
-      if (month === 11) {
-        setAY(activeYear + 1);
-        setMonth(0);
-      } else {
-        setMonth(month + 1);
-      }
-    }}
-    style={{
-      padding: "10px 14px",
-      borderRadius: 12,
-      border: `1px solid ${t.border}`,
-      background: t.accentSoft,
-      color: t.title,
-      cursor: "pointer",
-      fontWeight: 800
-    }}
-  >
-    Mes siguiente
-  </button>
-</div>
-    </div>
-<div
-  style={{
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
-    gap: 10,
-    marginBottom: 16
-  }}
->
-  {[
-    ["Días del mes", activeSecurityMonthSummary.totalDays],
-    ["Días completos", activeSecurityMonthSummary.completeDays],
-    ["Días con avisos", activeSecurityMonthSummary.warningDays],
-    ["Puestos pendientes", activeSecurityMonthSummary.missingAssignments]
-  ].map(([label, value]) => (
-    <div
-      key={label}
-      style={{
-        border: `1px solid ${t.border}`,
-        background: t.card,
-        borderRadius: 16,
-        padding: 14
-      }}
-    >
-      <div
-        style={{
-          color: t.sub,
-          fontSize: 11,
-          textTransform: "uppercase",
-          letterSpacing: "0.08em",
-          marginBottom: 6,
-          fontWeight: 800
-        }}
-      >
-        {label}
+        <p style={{ margin: "8px 0 0", color: t.sub, fontSize: 14, lineHeight: 1.45 }}>
+          Revisión mensual de roles asignados y posibles avisos de cobertura.
+        </p>
       </div>
 
       <div
         style={{
-          color: t.title,
-          fontSize: 24,
-          fontWeight: 900
+          display: "flex",
+          gap: 10,
+          alignItems: "center",
+          flexWrap: "wrap",
+          justifyContent: "flex-end"
         }}
       >
-        {value}
+        <button
+          onClick={() => {
+            if (month === 0) {
+              setAY(activeYear - 1);
+              setMonth(11);
+            } else {
+              setMonth(month - 1);
+            }
+          }}
+          style={{
+            padding: "10px 14px",
+            borderRadius: 14,
+            border: `1px solid ${t.border}`,
+            background: "#ffffff",
+            color: t.text,
+            cursor: "pointer",
+            fontWeight: 900,
+            fontSize: 12
+          }}
+        >
+          Mes anterior
+        </button>
+
+        <button
+          onClick={() => {
+            if (month === 11) {
+              setAY(activeYear + 1);
+              setMonth(0);
+            } else {
+              setMonth(month + 1);
+            }
+          }}
+          style={{
+            padding: "10px 14px",
+            borderRadius: 14,
+            border: "1px solid rgba(8, 145, 118, 0.26)",
+            background: "rgba(8, 145, 118, 0.12)",
+            color: t.title,
+            cursor: "pointer",
+            fontWeight: 900,
+            fontSize: 12
+          }}
+        >
+          Mes siguiente
+        </button>
       </div>
     </div>
-  ))}
-</div>
+
     <div
       style={{
         display: "grid",
-        gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))",
-        gap: 10
+        gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))",
+        gap: 12,
+        marginBottom: 18
+      }}
+    >
+      {[
+        ["Días del mes", activeSecurityMonthSummary.totalDays, "Total"],
+        ["Días completos", activeSecurityMonthSummary.completeDays, "OK"],
+        ["Días con avisos", activeSecurityMonthSummary.warningDays, "Revisar"],
+        ["Puestos pendientes", activeSecurityMonthSummary.missingAssignments, "Pendiente"]
+      ].map(([label, value, tag]) => {
+        const isWarning = label === "Días con avisos" || label === "Puestos pendientes";
+        const hasValue = Number(value) > 0;
+
+        return (
+          <div
+            key={label}
+            style={{
+              border: `1px solid ${isWarning && hasValue ? "rgba(245, 158, 11, 0.40)" : t.border}`,
+              background: "#ffffff",
+              borderRadius: 18,
+              padding: 16,
+              boxShadow: "0 10px 24px rgba(15, 23, 42, 0.05)"
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                gap: 8,
+                alignItems: "center",
+                marginBottom: 10
+              }}
+            >
+              <div
+                style={{
+                  color: t.sub,
+                  fontSize: 11,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.08em",
+                  fontWeight: 900
+                }}
+              >
+                {label}
+              </div>
+
+              <span
+                style={{
+                  padding: "5px 8px",
+                  borderRadius: 999,
+                  background: isWarning && hasValue ? "rgba(245, 158, 11, 0.14)" : "rgba(8, 145, 118, 0.10)",
+                  color: isWarning && hasValue ? "#92400e" : "#15803d",
+                  fontSize: 10,
+                  fontWeight: 900,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.05em"
+                }}
+              >
+                {tag}
+              </span>
+            </div>
+
+            <div
+              style={{
+                color: t.title,
+                fontSize: 28,
+                fontWeight: 900,
+                lineHeight: 1
+              }}
+            >
+              {value}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))",
+        gap: 12
       }}
     >
       {Array.from({ length: dim(activeYear, month) }).map((_, i) => {
@@ -1827,76 +1855,177 @@ const dailySummary = [
           ["CONTEO", "Conteo"]
         ];
 
+const dayWarnings = dayPlan.warnings || [];
+const assignedRolesCount = roleRows.filter(([roleId]) => dayPlan?.[roleId]).length;
+const isRestDay = assignedRolesCount === 0;
+const hasWarnings = !isRestDay && dayWarnings.length > 0;
+const isComplete = !isRestDay && assignedRolesCount === roleRows.length;
+
+const statusText = hasWarnings
+  ? "Aviso"
+  : isRestDay
+  ? "Descanso"
+  : isComplete
+  ? "Completo"
+  : "Pendiente";
+
+const statusColor = hasWarnings
+  ? "#dc2626"
+  : isRestDay
+  ? "#475569"
+  : isComplete
+  ? "#15803d"
+  : "#b45309";
+
+const statusBg = hasWarnings
+  ? "rgba(239, 68, 68, 0.10)"
+  : isRestDay
+  ? "rgba(100, 116, 139, 0.12)"
+  : isComplete
+  ? "rgba(22, 163, 74, 0.10)"
+  : "rgba(245, 158, 11, 0.14)";
+
         return (
           <div
             key={dateKey}
             style={{
-              border: `1px solid ${isToday ? t.accent : t.border}`,
-              background: isToday ? t.accentSoft : t.card,
-              borderRadius: 16,
-              padding: 12,
-              boxShadow: isToday ? `inset 0 0 0 2px ${t.accent}` : undefined
+              border: `1px solid ${
+  isToday
+    ? "rgba(8, 145, 118, 0.55)"
+    : isRestDay
+    ? "rgba(148, 163, 184, 0.45)"
+    : t.border
+}`,
+background: isRestDay
+  ? "rgba(241, 245, 249, 0.72)"
+  : isToday
+  ? "rgba(8, 145, 118, 0.08)"
+  : "#ffffff",
+borderRadius: 18,
+padding: 14,
+boxShadow: isToday
+  ? "0 12px 26px rgba(8, 145, 118, 0.12)"
+  : isRestDay
+  ? "none"
+  : "0 10px 22px rgba(15, 23, 42, 0.05)"
             }}
           >
             <div
               style={{
                 display: "flex",
                 justifyContent: "space-between",
-                alignItems: "center",
-                marginBottom: 10
+                alignItems: "flex-start",
+                gap: 10,
+                marginBottom: 12
               }}
             >
-              <strong style={{ color: t.title, fontSize: 16 }}>
-                {dayNumber}
-              </strong>
+              <div>
+                <strong style={{ color: t.title, fontSize: 20, lineHeight: 1 }}>
+                  {dayNumber}
+                </strong>
 
-              <span style={{ color: t.sub, fontSize: 11 }}>
-                {dayPlan.dateLabel || `${String(dayNumber).padStart(2, "0")}/${String(month + 1).padStart(2, "0")}/${activeYear}`}
+                <div style={{ color: t.sub, fontSize: 11, marginTop: 4, fontWeight: 700 }}>
+                  {dayPlan.dateLabel || `${String(dayNumber).padStart(2, "0")}/${String(month + 1).padStart(2, "0")}/${activeYear}`}
+                </div>
+              </div>
+
+              <span
+                style={{
+                  padding: "5px 8px",
+                  borderRadius: 999,
+                  background: statusBg,
+                  color: statusColor,
+                  fontSize: 10,
+                  fontWeight: 900,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.05em"
+                }}
+              >
+                {isToday ? `Hoy · ${statusText}` : statusText}
               </span>
             </div>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              {roleRows.map(([roleId, label]) => {
-                const operatorId = dayPlan?.[roleId];
+            {isRestDay ? (
+  <div
+    style={{
+      padding: "14px 12px",
+      borderRadius: 14,
+      background: "rgba(100, 116, 139, 0.08)",
+      border: "1px solid rgba(100, 116, 139, 0.18)",
+      color: "#475569",
+      fontWeight: 900,
+      fontSize: 13,
+      display: "flex",
+      flexDirection: "column",
+      gap: 4
+    }}
+  >
+    <span>Descanso del turno</span>
+    <small style={{ color: t.sub, fontWeight: 700 }}>
+      Sin roles de seguridad asignados para esta jornada.
+    </small>
+  </div>
+) : (
+  <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+    {roleRows.map(([roleId, label]) => {
+      const operatorId = dayPlan?.[roleId];
+      const assigned = Boolean(operatorId);
 
-                return (
-                  <div
-                    key={roleId}
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      gap: 8,
-                      fontSize: 12,
-                      color: t.text
-                    }}
-                  >
-                    <span style={{ color: t.sub }}>
-                      {label}
-                    </span>
+      return (
+        <div
+          key={roleId}
+          style={{
+            display: "grid",
+            gridTemplateColumns: "58px 1fr",
+            gap: 8,
+            alignItems: "center",
+            fontSize: 12,
+            padding: "7px 8px",
+            borderRadius: 12,
+            background: assigned ? "rgba(248, 250, 252, 0.95)" : "rgba(245, 158, 11, 0.08)",
+            border: `1px solid ${assigned ? "rgba(226, 232, 240, 0.9)" : "rgba(245, 158, 11, 0.18)"}`
+          }}
+        >
+          <span
+            style={{
+              color: assigned ? t.sub : "#92400e",
+              fontWeight: 900
+            }}
+          >
+            {label}
+          </span>
 
-                    <strong
-                      style={{
-                        color: operatorId ? t.title : t.sub,
-                        textAlign: "right"
-                      }}
-                    >
-                      {operatorId ? getOperatorNameById(operatorId) : "—"}
-                    </strong>
-                  </div>
-                );
-              })}
-            </div>
+          <strong
+            style={{
+              color: assigned ? t.title : "#92400e",
+              textAlign: "right",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap"
+            }}
+          >
+            {assigned ? getOperatorNameById(operatorId) : "Sin asignar"}
+          </strong>
+        </div>
+      );
+    })}
+  </div>
+)}
 
-            {dayPlan.warnings?.length > 0 && (
+            {hasWarnings && (
               <div
                 style={{
-                  marginTop: 8,
-                  color: "#ef4444",
+                  marginTop: 10,
+                  padding: "8px 10px",
+                  borderRadius: 12,
+                  background: "rgba(239, 68, 68, 0.08)",
+                  color: "#dc2626",
                   fontSize: 11,
-                  fontWeight: 800
+                  fontWeight: 900,
+                  border: "1px solid rgba(239, 68, 68, 0.16)"
                 }}
               >
-                {dayPlan.warnings.length} aviso/s
+                {dayWarnings.length} aviso/s
               </div>
             )}
           </div>
@@ -1905,59 +2034,382 @@ const dailySummary = [
     </div>
   </div>
 )}
+        <div
+      style={{
+        marginTop: 24,
+        padding: 20,
+        borderRadius: 24,
+        background: "rgba(248, 250, 252, 0.72)",
+        border: `1px solid ${t.border}`
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "flex-start",
+          gap: 14,
+          marginBottom: 18,
+          flexWrap: "wrap"
+        }}
+      >
+        <div>
+          <div
+            style={{
+              fontSize: 12,
+              textTransform: "uppercase",
+              letterSpacing: "0.10em",
+              color: t.accent,
+              marginBottom: 8,
+              fontWeight: 900
+            }}
+          >
+            Equipo disponible
+          </div>
+
+          <h3 style={{ margin: 0, color: t.title, fontSize: 24 }}>
+            Operadores por rol de seguridad
+          </h3>
+
+          <p style={{ marginTop: 7, marginBottom: 0, color: t.sub, fontSize: 14 }}>
+            Personal configurado para Brigada, DCS, Coordinador de Emergencias y Conteo.
+          </p>
+        </div>
+
+        <div
+          style={{
+            padding: "10px 14px",
+            borderRadius: 999,
+            background: "#ffffff",
+            border: `1px solid ${t.border}`,
+            color: t.title,
+            fontWeight: 900,
+            fontSize: 13
+          }}
+        >
+          {SECURITY_ROLES.length} roles
+        </div>
+      </div>
+
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+          gap: 14
+        }}
+      >
+        {SECURITY_ROLES.map(role => {
+          const roleOps = ops.filter(op =>
+            Array.isArray(op.securityRoles) && op.securityRoles.includes(role.id)
+          );
+
+          return (
+            <div
+              key={role.id}
+              style={{
+                border: `1px solid ${t.border}`,
+                background: "#ffffff",
+                borderRadius: 20,
+                padding: 18,
+                boxShadow: "0 10px 24px rgba(15, 23, 42, 0.05)"
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "flex-start",
+                  gap: 12,
+                  marginBottom: 14
+                }}
+              >
+                <div>
+                  <div
+                    style={{
+                      fontSize: 16,
+                      fontWeight: 900,
+                      color: t.title,
+                      marginBottom: 4
+                    }}
+                  >
+                    {role.label}
+                  </div>
+
+                  <div style={{ color: t.sub, fontSize: 12, fontWeight: 700 }}>
+                    Personal habilitado
+                  </div>
+                </div>
+
+                <span
+                  style={{
+                    padding: "6px 10px",
+                    borderRadius: 999,
+                    background: roleOps.length > 0
+                      ? "rgba(8, 145, 118, 0.10)"
+                      : "rgba(245, 158, 11, 0.14)",
+                    color: roleOps.length > 0 ? "#15803d" : "#92400e",
+                    fontSize: 11,
+                    fontWeight: 900,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.05em"
+                  }}
+                >
+                  {roleOps.length} operadores
+                </span>
+              </div>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {roleOps.length > 0 ? (
+                  roleOps.map(op => (
+                    <div
+                      key={op.id}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 10,
+                        color: t.text,
+                        fontSize: 13,
+                        padding: "9px 10px",
+                        borderRadius: 14,
+                        background: "rgba(248, 250, 252, 0.95)",
+                        border: "1px solid rgba(226, 232, 240, 0.90)"
+                      }}
+                    >
+                      <Av name={op.name} color={op.color} size={26} />
+
+                      <span style={{ fontWeight: 800, color: t.title }}>
+                        {op.name}
+                      </span>
+                    </div>
+                  ))
+                ) : (
+                  <div
+                    style={{
+                      color: "#92400e",
+                      fontSize: 13,
+                      fontWeight: 800,
+                      padding: "12px 14px",
+                      borderRadius: 14,
+                      background: "rgba(245, 158, 11, 0.10)",
+                      border: "1px solid rgba(245, 158, 11, 0.20)"
+                    }}
+                  >
+                    Sin operadores asignados
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+{activeSecurityPlan?.counters && (
+  <div
+    style={{
+      marginTop: 24,
+      padding: 20,
+      borderRadius: 24,
+      background: "rgba(248, 250, 252, 0.72)",
+      border: `1px solid ${t.border}`
+    }}
+  >
+    <div
+      style={{
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "flex-start",
+        gap: 14,
+        marginBottom: 18,
+        flexWrap: "wrap"
+      }}
+    >
+      <div>
+        <div
+          style={{
+            fontSize: 12,
+            textTransform: "uppercase",
+            letterSpacing: "0.10em",
+            color: t.accent,
+            marginBottom: 8,
+            fontWeight: 900
+          }}
+        >
+          Resumen anual
+        </div>
+
+        <h3 style={{ margin: 0, color: t.title, fontSize: 24 }}>
+          Reparto de seguridad
+        </h3>
+
+        <p style={{ marginTop: 7, marginBottom: 0, color: t.sub, fontSize: 14 }}>
+          Número de asignaciones acumuladas por operador en cada rol.
+        </p>
+      </div>
+
+      <div
+        style={{
+          padding: "10px 14px",
+          borderRadius: 999,
+          background: "#ffffff",
+          border: `1px solid ${t.border}`,
+          color: t.title,
+          fontWeight: 900,
+          fontSize: 13
+        }}
+      >
+        Año {activeYear}
+      </div>
+    </div>
+
     <div
       style={{
         display: "grid",
-        gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+        gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
         gap: 14
       }}
     >
-      {SECURITY_ROLES.map(role => {
-        const roleOps = ops.filter(op =>
-          Array.isArray(op.securityRoles) && op.securityRoles.includes(role.id)
-        );
+      {[
+        ["DCS", "DCS seguridad"],
+        ["BRIGADA", "Brigada"],
+        ["COORDINADOR_EMERGENCIAS", "Coordinador Emergencias"],
+        ["CONTEO", "Conteo"]
+      ].map(([roleId, title]) => {
+        const entries = Object.entries(activeSecurityPlan.counters?.[roleId] || {});
+        const sortedEntries = [...entries].sort((a, b) => Number(b[1]) - Number(a[1]));
+        const totalAssignments = entries.reduce((sum, [, count]) => sum + Number(count || 0), 0);
+        const maxCount = Math.max(1, ...entries.map(([, count]) => Number(count || 0)));
 
         return (
           <div
-            key={role.id}
+            key={roleId}
             style={{
               border: `1px solid ${t.border}`,
-              background: t.shell,
-              borderRadius: 18,
-              padding: 16
+              background: "#ffffff",
+              borderRadius: 20,
+              padding: 18,
+              boxShadow: "0 10px 24px rgba(15, 23, 42, 0.05)"
             }}
           >
             <div
               style={{
-                fontSize: 13,
-                fontWeight: 900,
-                color: t.title,
-                marginBottom: 10
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "flex-start",
+                gap: 12,
+                marginBottom: 14
               }}
             >
-              {role.label}
+              <div>
+                <h4 style={{ margin: 0, color: t.title, fontSize: 16 }}>
+                  {title}
+                </h4>
+
+                <div style={{ marginTop: 4, color: t.sub, fontSize: 12, fontWeight: 700 }}>
+                  Reparto acumulado
+                </div>
+              </div>
+
+              <span
+                style={{
+                  padding: "6px 10px",
+                  borderRadius: 999,
+                  background: totalAssignments > 0 ? "rgba(8, 145, 118, 0.10)" : "rgba(100, 116, 139, 0.10)",
+                  color: totalAssignments > 0 ? "#15803d" : "#475569",
+                  fontSize: 11,
+                  fontWeight: 900,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.05em"
+                }}
+              >
+                {totalAssignments} total
+              </span>
             </div>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {roleOps.length > 0 ? (
-                roleOps.map(op => (
-                  <div
-                    key={op.id}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 8,
-                      color: t.text,
-                      fontSize: 13
-                    }}
-                  >
-                    <Av name={op.name} color={op.color} size={24} />
-                    <span>{op.name}</span>
-                  </div>
-                ))
+            <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
+              {sortedEntries.length > 0 ? (
+                sortedEntries.map(([operatorId, count]) => {
+                  const op = ops.find(item => String(item.id) === String(operatorId));
+                  const numericCount = Number(count || 0);
+                  const width = `${Math.max(8, Math.round((numericCount / maxCount) * 100))}%`;
+
+                  return (
+                    <div
+                      key={operatorId}
+                      style={{
+                        padding: "10px 11px",
+                        borderRadius: 15,
+                        background: "rgba(248, 250, 252, 0.95)",
+                        border: "1px solid rgba(226, 232, 240, 0.90)"
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          gap: 10,
+                          marginBottom: 8
+                        }}
+                      >
+                        <div style={{ display: "flex", alignItems: "center", gap: 9, minWidth: 0 }}>
+                          <Av
+                            name={op?.name || getOperatorNameById(operatorId)}
+                            color={op?.color}
+                            size={24}
+                          />
+
+                          <span
+                            style={{
+                              color: t.title,
+                              fontSize: 13,
+                              fontWeight: 800,
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              whiteSpace: "nowrap"
+                            }}
+                          >
+                            {op?.name || getOperatorNameById(operatorId)}
+                          </span>
+                        </div>
+
+                        <strong style={{ color: t.title, fontSize: 14 }}>
+                          {numericCount}
+                        </strong>
+                      </div>
+
+                      <div
+                        style={{
+                          height: 7,
+                          borderRadius: 999,
+                          background: "rgba(226, 232, 240, 0.90)",
+                          overflow: "hidden"
+                        }}
+                      >
+                        <div
+                          style={{
+                            width,
+                            height: "100%",
+                            borderRadius: 999,
+                            background: "rgba(8, 145, 118, 0.65)"
+                          }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })
               ) : (
-                <div style={{ color: t.sub, fontSize: 13 }}>
-                  Sin operadores asignados
+                <div
+                  style={{
+                    color: "#475569",
+                    fontSize: 13,
+                    fontWeight: 800,
+                    padding: "12px 14px",
+                    borderRadius: 14,
+                    background: "rgba(100, 116, 139, 0.08)",
+                    border: "1px solid rgba(100, 116, 139, 0.18)"
+                  }}
+                >
+                  Sin asignaciones registradas
                 </div>
               )}
             </div>
@@ -1965,219 +2417,817 @@ const dailySummary = [
         );
       })}
     </div>
-{activeSecurityPlan?.counters && (
-  <div
-    style={{
-      marginTop: 18,
-      borderTop: `1px solid ${t.border}`,
-      paddingTop: 18
-    }}
-  >
-    <h3 style={{ margin: "0 0 12px", color: t.title, fontSize: 16 }}>
-      Reparto de seguridad
-    </h3>
-
-    <div
-      style={{
-        display: "grid",
-        gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-        gap: 14
-      }}
-    >
-      {[
-  ["DCS", "DCS seguridad"],
-  ["BRIGADA", "Brigada"],
-  ["COORDINADOR_EMERGENCIAS", "Coordinador Emergencias"],
-  ["CONTEO", "Conteo"]
-].map(([roleId, title]) => (
-        <div
-          key={roleId}
-          style={{
-            border: `1px solid ${t.border}`,
-            background: t.shell,
-            borderRadius: 16,
-            padding: 14
-          }}
-        >
-          <h4 style={{ margin: "0 0 10px", color: t.title, fontSize: 14 }}>
-            {title}
-          </h4>
-
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {Object.entries(activeSecurityPlan.counters?.[roleId] || {}).length > 0 ? (
-              Object.entries(activeSecurityPlan.counters?.[roleId] || {}).map(([operatorId, count]) => (
-                <div
-                  key={operatorId}
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    gap: 10,
-                    color: t.text,
-                    fontSize: 13
-                  }}
-                >
-                  <span>{getOperatorNameById(operatorId)}</span>
-                  <strong style={{ color: t.title }}>{count}</strong>
-                </div>
-              ))
-            ) : (
-              <span style={{ color: t.sub, fontSize: 13 }}>
-                Sin asignaciones
-              </span>
-            )}
-          </div>
-        </div>
-      ))}
-    </div>
   </div>
 )}
   </div>
 )}
         {view === "stats" && (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 20 }}>
-            {stats.sort((a,b) => b.nSC - a.nSC || b.hSC - a.hSC).map(s => (
-              <div key={s.id} className="glass-panel section-card" style={{ padding: 25 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18 }}><Av name={s.name} color={s.color} size={36} /><div><div style={{ fontWeight: 'bold', color: t.title, fontSize: 18 }}>{s.name}</div><div style={{ fontSize: 12, color: t.sub }}>Resumen anual de servicio</div></div></div>
-                <div style={{ fontSize: 34, fontWeight: 800, color: t.title, marginBottom: 6 }}>{s.sc} SC</div>
-                <div style={{ fontSize: 14, color: t.sub, marginBottom: 16 }}>{s.hSC} horas totales asignadas</div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center', paddingTop: 14, borderTop: `1px solid ${t.border}` }}>
-                  <span style={{ fontSize: 12, color: t.sub }}>Noches</span>
-                  <strong style={{ color: t.accent, fontSize: 18 }}>{s.nSC}</strong>
-                </div>
+  <div style={{ display: "grid", gap: 20 }}>
+    {(() => {
+      const sortedStats = [...stats].sort((a, b) => b.nSC - a.nSC || b.hSC - a.hSC);
+      const totalSC = sortedStats.reduce((sum, item) => sum + Number(item.sc || 0), 0);
+      const totalHoras = sortedStats.reduce((sum, item) => sum + Number(item.hSC || 0), 0);
+      const totalNoches = sortedStats.reduce((sum, item) => sum + Number(item.nSC || 0), 0);
+      const maxSC = Math.max(1, ...sortedStats.map(item => Number(item.sc || 0)));
+
+      return (
+        <>
+          <section
+            className="glass-panel section-card"
+            style={{
+              padding: 24,
+              borderRadius: 24
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "flex-start",
+                gap: 16,
+                flexWrap: "wrap",
+                marginBottom: 20
+              }}
+            >
+              <div>
+                
+                <h2
+                  style={{
+                    margin: 0,
+                    color: t.title,
+                    fontSize: 30,
+                    letterSpacing: "-0.03em",
+                    lineHeight: 1.05
+                  }}
+                >
+                  Resumen anual de Sala de Control
+                </h2>
+
+                <p style={{ marginTop: 10, marginBottom: 0, color: t.sub, fontSize: 14, lineHeight: 1.5 }}>
+                  Reparto acumulado de servicios SC, horas asignadas y noches por operador.
+                </p>
               </div>
-            ))}
+
+              <div
+                style={{
+                  padding: "10px 14px",
+                  borderRadius: 999,
+                  background: "#ffffff",
+                  border: `1px solid ${t.border}`,
+                  color: t.title,
+                  fontWeight: 900,
+                  fontSize: 13
+                }}
+              >
+                Año {activeYear}
+              </div>
+            </div>
+
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+                gap: 12
+              }}
+            >
+              {[
+                ["Servicios SC", totalSC, "Total anual"],
+                ["Horas SC", totalHoras, "Horas asignadas"],
+                ["Noches SC", totalNoches, "Turnos nocturnos"],
+                ["Operadores", sortedStats.length, "Personal DCS"]
+              ].map(([label, value, subtitle]) => (
+                <div
+                  key={label}
+                  style={{
+                    background: "#ffffff",
+                    border: `1px solid ${t.border}`,
+                    borderRadius: 18,
+                    padding: 16,
+                    boxShadow: "0 10px 24px rgba(15, 23, 42, 0.05)"
+                  }}
+                >
+                  <div
+                    style={{
+                      color: t.sub,
+                      fontSize: 11,
+                      textTransform: "uppercase",
+                      letterSpacing: "0.08em",
+                      fontWeight: 900,
+                      marginBottom: 10
+                    }}
+                  >
+                    {label}
+                  </div>
+
+                  <div style={{ color: t.title, fontSize: 28, fontWeight: 900, lineHeight: 1 }}>
+                    {value}
+                  </div>
+
+                  <div style={{ marginTop: 8, color: t.sub, fontSize: 12, fontWeight: 700 }}>
+                    {subtitle}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
+              gap: 16
+            }}
+          >
+            {sortedStats.map((s, index) => {
+              const scCount = Number(s.sc || 0);
+              const progressWidth = `${Math.max(8, Math.round((scCount / maxSC) * 100))}%`;
+
+              return (
+                <article
+                  key={s.id}
+                  className="glass-panel section-card"
+                  style={{
+                    padding: 20,
+                    borderRadius: 22,
+                    boxShadow: "0 12px 28px rgba(15, 23, 42, 0.06)"
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "flex-start",
+                      gap: 12,
+                      marginBottom: 18
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
+                      <Av name={s.name} color={s.color} size={38} />
+
+                      <div style={{ minWidth: 0 }}>
+                        <div
+                          style={{
+                            fontWeight: 900,
+                            color: t.title,
+                            fontSize: 17,
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap"
+                          }}
+                        >
+                          {s.name}
+                        </div>
+
+                        <div style={{ fontSize: 12, color: t.sub, fontWeight: 700, marginTop: 3 }}>
+                          Resumen anual de servicio
+                        </div>
+                      </div>
+                    </div>
+
+                    <span
+                      style={{
+                        padding: "6px 10px",
+                        borderRadius: 999,
+                        background: index === 0 ? "rgba(8, 145, 118, 0.12)" : "rgba(100, 116, 139, 0.10)",
+                        color: index === 0 ? "#15803d" : "#475569",
+                        fontSize: 11,
+                        fontWeight: 900,
+                        textTransform: "uppercase",
+                        letterSpacing: "0.05em"
+                      }}
+                    >
+                      #{index + 1}
+                    </span>
+                  </div>
+
+                  <div style={{ marginBottom: 16 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12 }}>
+                      <div style={{ fontSize: 34, fontWeight: 900, color: t.title, lineHeight: 1 }}>
+                        {s.sc}
+                      </div>
+
+                      <div style={{ color: t.sub, fontSize: 13, fontWeight: 800 }}>
+                        servicios SC
+                      </div>
+                    </div>
+
+                    <div
+                      style={{
+                        marginTop: 12,
+                        height: 8,
+                        borderRadius: 999,
+                        background: "rgba(226, 232, 240, 0.90)",
+                        overflow: "hidden"
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: progressWidth,
+                          height: "100%",
+                          borderRadius: 999,
+                          background: "rgba(8, 145, 118, 0.65)"
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "1fr 1fr",
+                      gap: 10,
+                      paddingTop: 14,
+                      borderTop: `1px solid ${t.border}`
+                    }}
+                  >
+                    <div
+                      style={{
+                        padding: "11px 12px",
+                        borderRadius: 14,
+                        background: "rgba(248, 250, 252, 0.95)",
+                        border: "1px solid rgba(226, 232, 240, 0.90)"
+                      }}
+                    >
+                      <div style={{ color: t.sub, fontSize: 11, fontWeight: 900, marginBottom: 5 }}>
+                        Horas
+                      </div>
+
+                      <strong style={{ color: t.title, fontSize: 18 }}>
+                        {s.hSC}
+                      </strong>
+                    </div>
+
+                    <div
+                      style={{
+                        padding: "11px 12px",
+                        borderRadius: 14,
+                        background: "rgba(248, 250, 252, 0.95)",
+                        border: "1px solid rgba(226, 232, 240, 0.90)"
+                      }}
+                    >
+                      <div style={{ color: t.sub, fontSize: 11, fontWeight: 900, marginBottom: 5 }}>
+                        Noches
+                      </div>
+
+                      <strong style={{ color: t.accent, fontSize: 18 }}>
+                        {s.nSC}
+                      </strong>
+                    </div>
+                  </div>
+                </article>
+              );
+            })}
           </div>
-        )}
+        </>
+      );
+    })()}
+  </div>
+)}
 
         {view === "editor" && <EditorComponent ops={ops} saveOps={saveOps} activeYear={activeYear} theme={t} off={off} canEdit={canEdit} />}
 
         {view === "config" && isAdmin && (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 30 }}>
-            <div className="glass-panel section-card" style={{ padding: 25 }}>
-              <h3 style={{ color: t.title, marginTop: 0 }}>OPERADORES</h3>
-              <p style={{ color: t.sub, fontSize: 13, marginTop: 0, marginBottom: 18 }}>Alta y baja de personal operativo disponible en el sistema.</p>
-              <div style={{ display: 'flex', gap: 10, marginBottom: 20 }}>
-                <input id="newOpN" placeholder="Nombre..." style={{ flex: 1, padding: 12, borderRadius: 12, border: `1px solid ${t.border}`, background: t.shell, color: t.text }} />
-               <button onClick={() => { const n = document.getElementById('newOpN').value; if(n) { saveOps([...ops, { id: Date.now(), name: n, color: '#'+Math.random().toString(16).slice(2,8), calendar: {}, securityRoles: [] }]); document.getElementById('newOpN').value = ''; } }} style={{ padding: '0 20px', background: t.accentSoft, color: t.title, border: `1px solid ${t.border}`, borderRadius: 12, fontWeight: 'bold', cursor: 'pointer' }}>AÑADIR</button>
-              </div>
-              {ops.map(o => {
-  const selectedRoles = Array.isArray(o.securityRoles) ? o.securityRoles : [];
-
-  return (
-    <div
-      key={o.id}
-      style={{
-        padding: "14px 0",
-        borderTop: `1px solid ${t.border}`,
-        display: "flex",
-        flexDirection: "column",
-        gap: 12
-      }}
-    >
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          gap: 12
-        }}
-      >
-        <span style={{ fontWeight: 700, color: t.title }}>{o.name}</span>
-
-        <button
-          onClick={() => saveOps(ops.filter(x => x.id !== o.id))}
-          style={{
-            color: "#EF4444",
-            border: "none",
-            background: "none",
-            cursor: "pointer",
-            fontSize: 18
-          }}
-        >
-          ×
-        </button>
-      </div>
-
-      <div>
-        <div
-          style={{
-            fontSize: 11,
-            color: t.sub,
-            marginBottom: 8,
-            textTransform: "uppercase",
-            letterSpacing: "0.08em",
-            fontWeight: 800
-          }}
-        >
-          Roles de seguridad
-        </div>
-
-        <div
-          style={{
-            display: "flex",
-            gap: 8,
-            flexWrap: "wrap"
-          }}
-        >
-          {SECURITY_ROLES.map(role => {
-            const active = selectedRoles.includes(role.id);
-
-            return (
-              <button
-                key={role.id}
-                type="button"
-                onClick={() => toggleSecurityRole(o.id, role.id)}
+                    <div style={{ display: "grid", gap: 20 }}>
+            <section
+              className="glass-panel section-card"
+              style={{
+                padding: 24,
+                borderRadius: 24
+              }}
+            >
+              <div
                 style={{
-                  padding: "7px 10px",
-                  borderRadius: 999,
-                  border: `1px solid ${active ? t.accent : t.border}`,
-                  background: active ? t.accentSoft : t.shell,
-                  color: active ? t.title : t.sub,
-                  cursor: "pointer",
-                  fontSize: 11,
-                  fontWeight: 800
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "flex-start",
+                  gap: 16,
+                  flexWrap: "wrap"
                 }}
               >
-                {role.label}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-    </div>
-  );
-})}
-            </div>
+                <div>
+                  
+                  <h2
+                    style={{
+                      margin: 0,
+                      color: t.title,
+                      fontSize: 30,
+                      letterSpacing: "-0.03em",
+                      lineHeight: 1.05
+                    }}
+                  >
+                    Configuración del sistema
+                  </h2>
 
-            <div className="glass-panel section-card" style={{ padding: 25 }}>
-              <h3 style={{ color: t.title, marginTop: 0 }}>OFFSET</h3>
-              <p style={{ color: t.sub, fontSize: 13, marginTop: 0, marginBottom: 12 }}>Valor actual de desfase aplicado al ciclo base.</p>
-              <div style={{ fontSize: 30, fontWeight: 800, color: t.accent, marginBottom: 16 }}>{off}</div>
-              <input type="number" value={off} onChange={e => saveOff(Number(e.target.value))} style={{ padding: 12, width: '100%', borderRadius: 12, border: `1px solid ${t.border}`, background: t.shell, color: t.text }} />
-            </div>
-
-             {isAdmin && (
-              <div className="glass-panel section-card" style={{ padding: 25 }}>
-              <h3 style={{ color: t.title, marginTop: 0 }}>GESTIÓN DE ACCESOS</h3>
-                <p style={{ color: t.sub, fontSize: 13, marginTop: 0, marginBottom: 18 }}>Creación y retirada de usuarios con permisos administrativos o de edición.</p>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
-                  <input id="newU" placeholder="Usuario" style={{ padding: 10, borderRadius: 12, border: `1px solid ${t.border}`, background: t.shell, color: t.text }} />
-                  <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                    <input id="newP" type={showConfigPass ? "text" : "password"} placeholder="Contraseña" style={{ flex: 1, padding: 10, paddingRight: 40, borderRadius: 12, border: `1px solid ${t.border}`, background: t.shell, color: t.text }} />
-                    <button onClick={() => setShowConfigPass(!showConfigPass)} style={{ position: 'absolute', right: 10, background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex' }}><EyeIcon visible={showConfigPass} color={t.sub} /></button>
-                  </div>
-                  <select id="newR" style={{ padding: 10, borderRadius: 12, border: `1px solid ${t.border}`, background: t.shell, color: t.text }}><option value="admin">Administrador</option><option value="editor">Editor</option></select>
-                  <button onClick={() => {
-                    const u = document.getElementById('newU').value, p = document.getElementById('newP').value, r = document.getElementById('newR').value;
-                    if(u && p) { saveAdmins([...admins, { user: u, passHash: simpleHash(p), role: r }]); document.getElementById('newU').value = ''; document.getElementById('newP').value = ''; }
-                  }} style={{ padding: 12, background: t.accentSoft, color: t.title, border: `1px solid ${t.border}`, borderRadius: 12, fontWeight: 'bold', cursor: 'pointer' }}>CREAR</button>
+                  <p
+                    style={{
+                      marginTop: 10,
+                      marginBottom: 0,
+                      color: t.sub,
+                      fontSize: 14,
+                      lineHeight: 1.5
+                    }}
+                  >
+                    Gestión de operadores y accesos administrativos.
+                  </p>
                 </div>
-                {admins.map(a => (
-                  <div key={a.user} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderTop: `1px solid ${t.border}`, fontSize: 12 }}>
-                    <span>{a.user} <strong style={{ color: t.accent }}>({a.role})</strong></span>
-                    {a.role !== 'superadmin' && <button onClick={() => saveAdmins(admins.filter(x => x.user !== a.user))} style={{ color: '#EF4444', border: 'none', background: 'none', cursor: 'pointer' }}>×</button>}
+
+                <div
+                  style={{
+                    padding: "10px 14px",
+                    borderRadius: 999,
+                    background: "#ffffff",
+                    border: `1px solid ${t.border}`,
+                    color: t.title,
+                    fontWeight: 900,
+                    fontSize: 13
+                  }}
+                >
+                  Modo administrador
+                </div>
+              </div>
+            </section>
+
+            
+                        <div
+              className="glass-panel section-card"
+              style={{
+                padding: 24,
+                borderRadius: 24
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "flex-start",
+                  gap: 14,
+                  marginBottom: 18,
+                  flexWrap: "wrap"
+                }}
+              >
+                <div>
+                  <div
+                    style={{
+                      fontSize: 12,
+                      textTransform: "uppercase",
+                      letterSpacing: "0.10em",
+                      color: t.accent,
+                      marginBottom: 8,
+                      fontWeight: 900
+                    }}
+                  >
+                    Personal operativo
                   </div>
-                ))}
+
+                  <h3 style={{ color: t.title, margin: 0, fontSize: 24 }}>
+                    Operadores
+                  </h3>
+
+                  <p
+                    style={{
+                      color: t.sub,
+                      fontSize: 14,
+                      marginTop: 7,
+                      marginBottom: 0,
+                      lineHeight: 1.5
+                    }}
+                  >
+                    Alta, baja y roles de seguridad del personal disponible en el sistema.
+                  </p>
+                </div>
+
+                <div
+                  style={{
+                    padding: "10px 14px",
+                    borderRadius: 999,
+                    background: "#ffffff",
+                    border: `1px solid ${t.border}`,
+                    color: t.title,
+                    fontWeight: 900,
+                    fontSize: 13
+                  }}
+                >
+                  {ops.length} operadores
+                </div>
+              </div>
+
+              <div
+                style={{
+                  display: "flex",
+                  gap: 10,
+                  marginBottom: 20,
+                  padding: 14,
+                  borderRadius: 18,
+                  background: "rgba(248, 250, 252, 0.72)",
+                  border: `1px solid ${t.border}`,
+                  flexWrap: "wrap"
+                }}
+              >
+                <input
+                  id="newOpN"
+                  placeholder="Nombre del operador..."
+                  style={{
+                    flex: "1 1 220px",
+                    padding: "11px 12px",
+                    borderRadius: 14,
+                    border: `1px solid ${t.border}`,
+                    background: "#ffffff",
+                    color: t.text,
+                    fontWeight: 700
+                  }}
+                />
+
+                <button
+                  onClick={() => {
+                    const n = document.getElementById("newOpN").value;
+                    if (n) {
+                      saveOps([
+                        ...ops,
+                        {
+                          id: Date.now(),
+                          name: n,
+                          color: "#" + Math.random().toString(16).slice(2, 8),
+                          calendar: {},
+                          securityRoles: []
+                        }
+                      ]);
+                      document.getElementById("newOpN").value = "";
+                    }
+                  }}
+                  style={{
+                    padding: "11px 16px",
+                    background: "rgba(8, 145, 118, 0.12)",
+                    color: t.title,
+                    border: "1px solid rgba(8, 145, 118, 0.26)",
+                    borderRadius: 14,
+                    fontWeight: 900,
+                    cursor: "pointer",
+                    fontSize: 12
+                  }}
+                >
+                  Añadir operador
+                </button>
+              </div>
+                                          <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fit, minmax(310px, 1fr))",
+                  gap: 10
+                }}
+              >
+                {ops.map(o => {
+                  const selectedRoles = Array.isArray(o.securityRoles) ? o.securityRoles : [];
+
+                  return (
+                    <div
+                      key={o.id}
+                      style={{
+                        padding: 12,
+                        borderRadius: 16,
+                        border: `1px solid ${t.border}`,
+                        background: "#ffffff",
+                        boxShadow: "0 8px 18px rgba(15, 23, 42, 0.04)",
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 10,
+                        minHeight: 126
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "flex-start",
+                          gap: 10
+                        }}
+                      >
+                        <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
+                          <Av name={o.name} color={o.color} size={32} />
+
+                          <div style={{ minWidth: 0 }}>
+                            <div
+                              style={{
+                                fontWeight: 900,
+                                color: t.title,
+                                fontSize: 14,
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                                whiteSpace: "nowrap"
+                              }}
+                            >
+                              {o.name}
+                            </div>
+
+                            <div
+                              style={{
+                                color: t.sub,
+                                fontSize: 11,
+                                fontWeight: 800,
+                                marginTop: 2
+                              }}
+                            >
+                              {selectedRoles.length} roles de seguridad
+                            </div>
+                          </div>
+                        </div>
+
+                        <button
+                          onClick={() => saveOps(ops.filter(x => x.id !== o.id))}
+                          title="Eliminar operador"
+                          style={{
+                            width: 30,
+                            height: 30,
+                            borderRadius: 11,
+                            color: "#dc2626",
+                            border: "1px solid rgba(239, 68, 68, 0.20)",
+                            background: "rgba(239, 68, 68, 0.08)",
+                            cursor: "pointer",
+                            fontSize: 17,
+                            fontWeight: 900,
+                            lineHeight: 1,
+                            flexShrink: 0
+                          }}
+                        >
+                          ×
+                        </button>
+                      </div>
+
+                      <div
+                        style={{
+                          display: "flex",
+                          gap: 6,
+                          flexWrap: "wrap"
+                        }}
+                      >
+                        {SECURITY_ROLES.map(role => {
+                          const active = selectedRoles.includes(role.id);
+
+                          return (
+                            <button
+                              key={role.id}
+                              type="button"
+                              onClick={() => toggleSecurityRole(o.id, role.id)}
+                              style={{
+                                padding: "6px 9px",
+                                borderRadius: 999,
+                                border: `1px solid ${active ? "rgba(8, 145, 118, 0.35)" : t.border}`,
+                                background: active ? "rgba(8, 145, 118, 0.12)" : "rgba(248, 250, 252, 0.95)",
+                                color: active ? t.title : t.sub,
+                                cursor: "pointer",
+                                fontSize: 10,
+                                fontWeight: 900,
+                                boxShadow: active ? "0 5px 11px rgba(15, 23, 42, 0.05)" : "none",
+                                whiteSpace: "nowrap"
+                              }}
+                            >
+                              {role.label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            
+
+                          {isAdmin && (
+              <div
+                className="glass-panel section-card"
+                style={{
+                  padding: 24,
+                  borderRadius: 24
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "flex-start",
+                    gap: 14,
+                    marginBottom: 18,
+                    flexWrap: "wrap"
+                  }}
+                >
+                  <div>
+                    <div
+                      style={{
+                        fontSize: 12,
+                        textTransform: "uppercase",
+                        letterSpacing: "0.10em",
+                        color: t.accent,
+                        marginBottom: 8,
+                        fontWeight: 900
+                      }}
+                    >
+                      Seguridad de acceso
+                    </div>
+
+                    <h3 style={{ color: t.title, margin: 0, fontSize: 24 }}>
+                      Gestión de accesos
+                    </h3>
+
+                    <p
+                      style={{
+                        color: t.sub,
+                        fontSize: 14,
+                        marginTop: 7,
+                        marginBottom: 0,
+                        lineHeight: 1.5
+                      }}
+                    >
+                      Creación y retirada de usuarios con permisos administrativos o de edición.
+                    </p>
+                  </div>
+
+                  <div
+                    style={{
+                      padding: "10px 14px",
+                      borderRadius: 999,
+                      background: "#ffffff",
+                      border: `1px solid ${t.border}`,
+                      color: t.title,
+                      fontWeight: 900,
+                      fontSize: 13
+                    }}
+                  >
+                    {admins.length} usuarios
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 10,
+                    marginBottom: 20,
+                    padding: 14,
+                    borderRadius: 18,
+                    background: "rgba(248, 250, 252, 0.72)",
+                    border: `1px solid ${t.border}`
+                  }}
+                >
+                  <input
+                    id="newU"
+                    placeholder="Usuario"
+                    style={{
+                      padding: "11px 12px",
+                      borderRadius: 14,
+                      border: `1px solid ${t.border}`,
+                      background: "#ffffff",
+                      color: t.text,
+                      fontWeight: 700
+                    }}
+                  />
+
+                  <div
+                    style={{
+                      position: "relative",
+                      display: "flex",
+                      alignItems: "center"
+                    }}
+                  >
+                    <input
+                      id="newP"
+                      type={showConfigPass ? "text" : "password"}
+                      placeholder="Contraseña"
+                      style={{
+                        flex: 1,
+                        padding: "11px 42px 11px 12px",
+                        borderRadius: 14,
+                        border: `1px solid ${t.border}`,
+                        background: "#ffffff",
+                        color: t.text,
+                        fontWeight: 700
+                      }}
+                    />
+
+                    <button
+                      onClick={() => setShowConfigPass(!showConfigPass)}
+                      style={{
+                        position: "absolute",
+                        right: 11,
+                        background: "none",
+                        border: "none",
+                        cursor: "pointer",
+                        padding: 0,
+                        display: "flex"
+                      }}
+                    >
+                      <EyeIcon visible={showConfigPass} color={t.sub} />
+                    </button>
+                  </div>
+
+                  <select
+                    id="newR"
+                    style={{
+                      padding: "11px 12px",
+                      borderRadius: 14,
+                      border: `1px solid ${t.border}`,
+                      background: "#ffffff",
+                      color: t.text,
+                      fontWeight: 800
+                    }}
+                  >
+                    <option value="admin">Administrador</option>
+                    <option value="editor">Editor</option>
+                  </select>
+
+                  <button
+                    onClick={() => {
+                      const u = document.getElementById("newU").value;
+                      const p = document.getElementById("newP").value;
+                      const r = document.getElementById("newR").value;
+
+                      if (u && p) {
+                        saveAdmins([
+                          ...admins,
+                          {
+                            user: u,
+                            passHash: simpleHash(p),
+                            role: r
+                          }
+                        ]);
+
+                        document.getElementById("newU").value = "";
+                        document.getElementById("newP").value = "";
+                      }
+                    }}
+                    style={{
+                      padding: "11px 16px",
+                      background: "rgba(8, 145, 118, 0.12)",
+                      color: t.title,
+                      border: "1px solid rgba(8, 145, 118, 0.26)",
+                      borderRadius: 14,
+                      fontWeight: 900,
+                      cursor: "pointer",
+                      fontSize: 12
+                    }}
+                  >
+                    Crear usuario
+                  </button>
+                </div>
+
+                <div style={{ display: "grid", gap: 10 }}>
+                  {admins.map(a => (
+                    <div
+                      key={a.user}
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        gap: 12,
+                        padding: "12px 13px",
+                        borderRadius: 15,
+                        background: "#ffffff",
+                        border: `1px solid ${t.border}`,
+                        fontSize: 13
+                      }}
+                    >
+                      <div>
+                        <div style={{ color: t.title, fontWeight: 900 }}>
+                          {a.user}
+                        </div>
+
+                        <div
+                          style={{
+                            marginTop: 3,
+                            color: t.sub,
+                            fontSize: 11,
+                            fontWeight: 800,
+                            textTransform: "uppercase",
+                            letterSpacing: "0.06em"
+                          }}
+                        >
+                          {a.role}
+                        </div>
+                      </div>
+
+                      {a.role !== "superadmin" && (
+                        <button
+                          onClick={() => saveAdmins(admins.filter(x => x.user !== a.user))}
+                          title="Eliminar usuario"
+                          style={{
+                            width: 32,
+                            height: 32,
+                            borderRadius: 12,
+                            color: "#dc2626",
+                            border: "1px solid rgba(239, 68, 68, 0.20)",
+                            background: "rgba(239, 68, 68, 0.08)",
+                            cursor: "pointer",
+                            fontSize: 18,
+                            fontWeight: 900,
+                            lineHeight: 1
+                          }}
+                        >
+                          ×
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </div>
@@ -2202,32 +3252,401 @@ function EditorComponent({ ops, saveOps, activeYear, theme: t, off, canEdit }) {
   };
 
   return (
-    <div className="glass-panel section-card" style={{ padding: 25 }}>
-      {!canEdit && <p style={{ color: '#EF4444', fontSize: 12, marginBottom: 15, fontWeight: 'bold' }}>MODO LECTURA</p>}
-      <div style={{ marginBottom: 18 }}>
-        <h3 style={{ margin: '0 0 8px', color: t.title }}>Editor de ausencias</h3>
-        <p style={{ margin: 0, color: t.sub, fontSize: 13 }}>Selecciona un operador y marca vacaciones, entrenamiento o baja sin afectar a la lógica base del calendario.</p>
+        <div
+      className="glass-panel section-card"
+      style={{
+        padding: 24,
+        borderRadius: 24
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "flex-start",
+          gap: 16,
+          flexWrap: "wrap",
+          marginBottom: 22
+        }}
+      >
+        <div>
+          
+          <h3
+            style={{
+              margin: 0,
+              color: t.title,
+              fontSize: 30,
+              letterSpacing: "-0.03em",
+              lineHeight: 1.05
+            }}
+          >
+            Editor de ausencias
+          </h3>
+
+          <p
+            style={{
+              marginTop: 10,
+              marginBottom: 0,
+              color: t.sub,
+              fontSize: 14,
+              lineHeight: 1.5
+            }}
+          >
+            Selecciona un operador y marca vacaciones, entrenamiento o baja sin afectar a la lógica base del calendario.
+          </p>
+        </div>
+
+        {!canEdit && (
+          <div
+            style={{
+              padding: "10px 14px",
+              borderRadius: 999,
+              background: "rgba(239, 68, 68, 0.08)",
+              border: "1px solid rgba(239, 68, 68, 0.22)",
+              color: "#dc2626",
+              fontSize: 12,
+              fontWeight: 900,
+              textTransform: "uppercase",
+              letterSpacing: "0.06em"
+            }}
+          >
+            Modo lectura
+          </div>
+        )}
       </div>
-      <select value={selOp} onChange={e => setSelOp(Number(e.target.value))} style={{ padding: 12, width: '100%', background: t.shell, color: t.text, border: `1px solid ${t.border}`, borderRadius: 12, marginBottom: 20 }}>
-        {ops.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
-      </select>
-      <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap' }}>
-        {Object.keys(ABSENCE).map(k => (
-          <button key={k} onClick={() => setSelAb(k)} style={{ background: selAb === k ? ABSENCE[k].color : 'transparent', border: `2px solid ${ABSENCE[k].color}`, color: selAb === k ? '#000' : ABSENCE[k].color, padding: '10px 14px', borderRadius: 12, cursor: 'pointer', fontWeight: 'bold' }}>{ABSENCE[k].icon} {ABSENCE[k].label}</button>
-        ))}
-      </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 15 }}>
-        {MONTHS.map((m, mi) => (
-          <div key={m} style={{ background: t.shell, padding: 14, borderRadius: 16, border: `1px solid ${t.border}` }}>
-            <div style={{ fontSize: 11, fontWeight: 'bold', marginBottom: 10, textAlign: 'center' }}>{m.toUpperCase()}</div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4 }}>
-              {Array.from({ length: dim(activeYear, mi) }).map((_, di) => {
-                const k = mk(activeYear, mi + 1, di + 1), status = ops.find(o => o.id === selOp)?.calendar?.[k], rot = cshift(activeYear, mi, di + 1, off);
-                return <div key={di} onClick={() => toggleAbsence(k)} style={{ height: 32, background: status ? ABSENCE[status].color : t.card, borderBottom: `3px solid ${TURNO_DEF[rot]?.color || 'transparent'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, cursor: canEdit ? 'pointer' : 'default', borderRadius: 4, color: status ? '#000' : t.text }}>{di+1}</div>;
-              })}
+            <div
+        style={{
+          padding: 16,
+          borderRadius: 20,
+          background: "rgba(248, 250, 252, 0.72)",
+          border: `1px solid ${t.border}`,
+          marginBottom: 18
+        }}
+      >
+        <div
+          style={{
+            fontSize: 11,
+            color: t.sub,
+            fontWeight: 900,
+            textTransform: "uppercase",
+            letterSpacing: "0.08em",
+            marginBottom: 9
+          }}
+        >
+          Operador seleccionado
+        </div>
+
+        <select
+          value={selOp}
+          onChange={e => setSelOp(Number(e.target.value))}
+          style={{
+            padding: "11px 12px",
+            width: "100%",
+            background: "#ffffff",
+            color: t.text,
+            border: `1px solid ${t.border}`,
+            borderRadius: 14,
+            fontWeight: 800
+          }}
+        >
+          {ops.map(o => (
+            <option key={o.id} value={o.id}>
+              {o.name}
+            </option>
+          ))}
+        </select>
+
+        {ops.find(o => o.id === selOp) && (
+          <div
+            style={{
+              marginTop: 12,
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              padding: "10px 12px",
+              borderRadius: 14,
+              background: "#ffffff",
+              border: `1px solid ${t.border}`
+            }}
+          >
+            <Av
+              name={ops.find(o => o.id === selOp)?.name}
+              color={ops.find(o => o.id === selOp)?.color}
+              size={30}
+            />
+
+            <div>
+              <div style={{ color: t.title, fontWeight: 900, fontSize: 14 }}>
+                {ops.find(o => o.id === selOp)?.name}
+              </div>
+
+              <div style={{ color: t.sub, fontSize: 12, fontWeight: 700 }}>
+                Calendario {activeYear}
+              </div>
             </div>
           </div>
-        ))}
+        )}
+      </div>
+           <div
+        style={{
+          padding: 16,
+          borderRadius: 20,
+          background: "rgba(248, 250, 252, 0.72)",
+          border: `1px solid ${t.border}`,
+          marginBottom: 20
+        }}
+      >
+        <div
+          style={{
+            fontSize: 11,
+            color: t.sub,
+            fontWeight: 900,
+            textTransform: "uppercase",
+            letterSpacing: "0.08em",
+            marginBottom: 10
+          }}
+        >
+          Tipo de ausencia
+        </div>
+
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+          {Object.keys(ABSENCE).map(k => {
+            const active = selAb === k;
+
+            return (
+              <button
+                key={k}
+                onClick={() => setSelAb(k)}
+                style={{
+                  background: active ? ABSENCE[k].color : "#ffffff",
+                  border: `1px solid ${active ? ABSENCE[k].color : t.border}`,
+                  color: active ? "#111827" : t.title,
+                  padding: "10px 14px",
+                  borderRadius: 14,
+                  cursor: "pointer",
+                  fontWeight: 900,
+                  fontSize: 12,
+                  boxShadow: active ? "0 8px 18px rgba(15, 23, 42, 0.08)" : "none"
+                }}
+              >
+                {ABSENCE[k].icon} {ABSENCE[k].label}
+              </button>
+            );
+          })}
+        </div>
+
+        <div
+          style={{
+            marginTop: 12,
+            padding: "10px 12px",
+            borderRadius: 14,
+            background: "#ffffff",
+            border: `1px solid ${t.border}`,
+            color: t.sub,
+            fontSize: 13,
+            fontWeight: 700
+          }}
+        >
+          Marcando ahora:{" "}
+          <strong style={{ color: t.title }}>
+            {ABSENCE[selAb]?.label || selAb}
+          </strong>
+        </div>
+      </div>
+                 <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fill, minmax(270px, 1fr))",
+          gap: 16
+        }}
+      >
+        {MONTHS.map((m, mi) => {
+          const currentOp = ops.find(o => o.id === selOp);
+          const daysInMonth = dim(activeYear, mi);
+          const firstDayOffset = (new Date(activeYear, mi, 1).getDay() + 6) % 7;
+          const calendarCells = [
+            ...Array.from({ length: firstDayOffset }, () => null),
+            ...Array.from({ length: daysInMonth }, (_, index) => index + 1)
+          ];
+
+          const monthAbsences = Array.from({ length: daysInMonth }).filter((_, di) => {
+            const k = mk(activeYear, mi + 1, di + 1);
+            return Boolean(currentOp?.calendar?.[k]);
+          }).length;
+
+          return (
+            <div
+              key={m}
+              style={{
+                background: "#ffffff",
+                padding: 16,
+                borderRadius: 20,
+                border: `1px solid ${t.border}`,
+                boxShadow: "0 10px 24px rgba(15, 23, 42, 0.05)"
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  gap: 10,
+                  marginBottom: 13
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: 12,
+                    fontWeight: 900,
+                    color: t.title,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.07em"
+                  }}
+                >
+                  {m}
+                </div>
+
+                <span
+                  style={{
+                    padding: "5px 8px",
+                    borderRadius: 999,
+                    background: monthAbsences > 0
+                      ? "rgba(8, 145, 118, 0.10)"
+                      : "rgba(100, 116, 139, 0.10)",
+                    color: monthAbsences > 0 ? "#15803d" : "#475569",
+                    fontSize: 10,
+                    fontWeight: 900
+                  }}
+                >
+                  {monthAbsences} aus.
+                </span>
+              </div>
+
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(7, 1fr)",
+                  gap: 5,
+                  marginBottom: 6
+                }}
+              >
+                {["L", "M", "X", "J", "V", "S", "D"].map(dayName => (
+                  <div
+                    key={dayName}
+                    style={{
+                      textAlign: "center",
+                      color: t.sub,
+                      fontSize: 10,
+                      fontWeight: 900,
+                      textTransform: "uppercase"
+                    }}
+                  >
+                    {dayName}
+                  </div>
+                ))}
+              </div>
+
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(7, 1fr)",
+                  gap: 5
+                }}
+              >
+                {calendarCells.map((dayNumber, cellIndex) => {
+                  if (!dayNumber) {
+                    return (
+                      <div
+                        key={`empty-${cellIndex}`}
+                        style={{
+                          height: 42,
+                          borderRadius: 10,
+                          background: "transparent"
+                        }}
+                      />
+                    );
+                  }
+
+                  const k = mk(activeYear, mi + 1, dayNumber);
+                  const status = currentOp?.calendar?.[k];
+                  const rot = cshift(activeYear, mi, dayNumber, off);
+                  const absenceDef = status ? ABSENCE[status] : null;
+
+                  const turnLabel =
+                    rot === "M"
+                      ? "M"
+                      : rot === "N"
+                        ? "N"
+                        : "";
+
+                  const turnStyle =
+                    rot === "M"
+                      ? {
+                          background: "rgba(251, 191, 36, 0.13)",
+                          border: "1px solid rgba(245, 158, 11, 0.28)",
+                          color: "#b45309"
+                        }
+                      : rot === "N"
+                        ? {
+                            background: "rgba(99, 102, 241, 0.11)",
+                            border: "1px solid rgba(99, 102, 241, 0.24)",
+                            color: "#4f46e5"
+                          }
+                        : {
+                            background: "rgba(241, 245, 249, 0.95)",
+                            border: "1px solid rgba(226, 232, 240, 0.95)",
+                            color: "#64748b"
+                          };
+
+                  return (
+                    <div
+                      key={dayNumber}
+                      onClick={() => toggleAbsence(k)}
+                      title={
+                        status
+                          ? `${absenceDef?.label || status} · ${TURNO_DEF[rot]?.label || "Descanso"}`
+                          : TURNO_DEF[rot]?.label
+                      }
+                      style={{
+                        height: 42,
+                        background: status ? absenceDef?.color : turnStyle.background,
+                        border: status ? "1px solid rgba(15, 23, 42, 0.10)" : turnStyle.border,
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: 2,
+                        cursor: canEdit ? "pointer" : "default",
+                        borderRadius: 10,
+                        color: status ? "#111827" : t.title,
+                        fontWeight: 900,
+                        boxShadow: status
+                          ? "0 7px 16px rgba(15, 23, 42, 0.10)"
+                          : "inset 0 -2px 0 rgba(15, 23, 42, 0.08)"
+                      }}
+                    >
+                      <span style={{ fontSize: 12, lineHeight: 1 }}>
+                        {dayNumber}
+                      </span>
+
+                      <span
+                        style={{
+                          fontSize: 10,
+                          lineHeight: 1,
+                          color: status ? "#111827" : turnStyle.color,
+                          fontWeight: 900,
+                          minHeight: 10
+                        }}
+                      >
+                        {turnLabel}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

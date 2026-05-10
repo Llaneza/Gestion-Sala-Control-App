@@ -548,16 +548,42 @@ const dailySummary = [
   },
 ];
 
- if (!session) {
+if (!session) {
   return (
-    <LoginScreenComponent
-      admins={admins}
-      onLogin={(newSession) => {
-        setSession(newSession);
-        setView("daily");
+    <div
+      style={{
+        height: "100dvh",
+        overflow: "hidden",
+        background: "linear-gradient(180deg, #f8fafc 0%, #eef7f3 46%, #f8fafc 100%)"
       }}
-      theme={t}
-    />
+    >
+      <style>{`
+        html,
+        body,
+        #root {
+          height: 100%;
+          margin: 0;
+          overflow: hidden;
+        }
+      `}</style>
+
+      <div
+        style={{
+          height: "100%",
+          transform: "translateY(-34px) scale(0.94)",
+          transformOrigin: "top center"
+        }}
+      >
+        <LoginScreenComponent
+          admins={admins}
+          onLogin={(newSession) => {
+            setSession(newSession);
+            setView("daily");
+          }}
+          theme={t}
+        />
+      </div>
+    </div>
   );
 }
 

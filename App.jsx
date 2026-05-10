@@ -796,7 +796,7 @@ if (!session) {
       { id: "security", label: "Calendario Seguridad", short: "" },
       { id: "stats", label: "Estadísticas", short: "" },
       canSeeEditor && { id: "editor", label: "Personal", short: "" },
-      isAdmin && { id: "config", label: "Administración", short: "Ajustes" }
+      isAdmin && { id: "config", label: "Administración", short: "" }
     ]
       .filter(Boolean)
       .map(item => {
@@ -2705,19 +2705,7 @@ boxShadow: isToday
                 }}
               >
                 <div>
-                  <div
-                    style={{
-                      fontSize: 12,
-                      textTransform: "uppercase",
-                      letterSpacing: "0.12em",
-                      color: t.accent,
-                      marginBottom: 8,
-                      fontWeight: 900
-                    }}
-                  >
-                    Administración
-                  </div>
-
+                  
                   <h2
                     style={{
                       margin: 0,
@@ -2739,7 +2727,7 @@ boxShadow: isToday
                       lineHeight: 1.5
                     }}
                   >
-                    Gestión de operadores, desfase del ciclo y accesos administrativos.
+                    Gestión de operadores y accesos administrativos.
                   </p>
                 </div>
 

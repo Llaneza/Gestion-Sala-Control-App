@@ -2926,101 +2926,134 @@ boxShadow: isToday
                   Añadir operador
                 </button>
               </div>
-              {ops.map(o => {
-  const selectedRoles = Array.isArray(o.securityRoles) ? o.securityRoles : [];
-
-  return (
-    <div
-      key={o.id}
-      style={{
-        padding: "14px 0",
-        borderTop: `1px solid ${t.border}`,
-        display: "flex",
-        flexDirection: "column",
-        gap: 12
-      }}
-    >
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          gap: 12
-        }}
-      >
-        <span style={{ fontWeight: 700, color: t.title }}>{o.name}</span>
-
-        <button
-          onClick={() => saveOps(ops.filter(x => x.id !== o.id))}
-          style={{
-            color: "#EF4444",
-            border: "none",
-            background: "none",
-            cursor: "pointer",
-            fontSize: 18
-          }}
-        >
-          ×
-        </button>
-      </div>
-
-      <div>
-        <div
-          style={{
-            fontSize: 11,
-            color: t.sub,
-            marginBottom: 8,
-            textTransform: "uppercase",
-            letterSpacing: "0.08em",
-            fontWeight: 800
-          }}
-        >
-          Roles de seguridad
-        </div>
-
-        <div
-          style={{
-            display: "flex",
-            gap: 8,
-            flexWrap: "wrap"
-          }}
-        >
-          {SECURITY_ROLES.map(role => {
-            const active = selectedRoles.includes(role.id);
-
-            return (
-              <button
-                key={role.id}
-                type="button"
-                onClick={() => toggleSecurityRole(o.id, role.id)}
+                            <div
                 style={{
-                  padding: "7px 10px",
-                  borderRadius: 999,
-                  border: `1px solid ${active ? t.accent : t.border}`,
-                  background: active ? t.accentSoft : t.shell,
-                  color: active ? t.title : t.sub,
-                  cursor: "pointer",
-                  fontSize: 11,
-                  fontWeight: 800
+                  display: "grid",
+                  gap: 12
                 }}
               >
-                {role.label}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-    </div>
-  );
-})}
+                {ops.map(o => {
+                  const selectedRoles = Array.isArray(o.securityRoles) ? o.securityRoles : [];
+
+                  return (
+                    <div
+                      key={o.id}
+                      style={{
+                        padding: 16,
+                        borderRadius: 18,
+                        border: `1px solid ${t.border}`,
+                        background: "#ffffff",
+                        boxShadow: "0 10px 24px rgba(15, 23, 42, 0.05)",
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 14
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "flex-start",
+                          gap: 12
+                        }}
+                      >
+                        <div style={{ display: "flex", alignItems: "center", gap: 11, minWidth: 0 }}>
+                          <Av name={o.name} color={o.color} size={34} />
+
+                          <div style={{ minWidth: 0 }}>
+                            <div
+                              style={{
+                                fontWeight: 900,
+                                color: t.title,
+                                fontSize: 15,
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                                whiteSpace: "nowrap"
+                              }}
+                            >
+                              {o.name}
+                            </div>
+
+                            <div style={{ color: t.sub, fontSize: 12, fontWeight: 700, marginTop: 3 }}>
+                              {selectedRoles.length} roles de seguridad
+                            </div>
+                          </div>
+                        </div>
+
+                        <button
+                          onClick={() => saveOps(ops.filter(x => x.id !== o.id))}
+                          title="Eliminar operador"
+                          style={{
+                            width: 34,
+                            height: 34,
+                            borderRadius: 12,
+                            color: "#dc2626",
+                            border: "1px solid rgba(239, 68, 68, 0.20)",
+                            background: "rgba(239, 68, 68, 0.08)",
+                            cursor: "pointer",
+                            fontSize: 18,
+                            fontWeight: 900,
+                            lineHeight: 1
+                          }}
+                        >
+                          ×
+                        </button>
+                      </div>
+
+                      <div>
+                        <div
+                          style={{
+                            fontSize: 11,
+                            color: t.sub,
+                            marginBottom: 9,
+                            textTransform: "uppercase",
+                            letterSpacing: "0.08em",
+                            fontWeight: 900
+                          }}
+                        >
+                          Roles de seguridad
+                        </div>
+
+                        <div
+                          style={{
+                            display: "flex",
+                            gap: 8,
+                            flexWrap: "wrap"
+                          }}
+                        >
+                          {SECURITY_ROLES.map(role => {
+                            const active = selectedRoles.includes(role.id);
+
+                            return (
+                              <button
+                                key={role.id}
+                                type="button"
+                                onClick={() => toggleSecurityRole(o.id, role.id)}
+                                style={{
+                                  padding: "8px 11px",
+                                  borderRadius: 999,
+                                  border: `1px solid ${active ? "rgba(8, 145, 118, 0.35)" : t.border}`,
+                                  background: active ? "rgba(8, 145, 118, 0.12)" : "rgba(248, 250, 252, 0.95)",
+                                  color: active ? t.title : t.sub,
+                                  cursor: "pointer",
+                                  fontSize: 11,
+                                  fontWeight: 900,
+                                  boxShadow: active ? "0 6px 14px rgba(15, 23, 42, 0.06)" : "none"
+                                }}
+                              >
+                                {role.label}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
 
-            <div className="glass-panel section-card" style={{ padding: 25 }}>
-              <h3 style={{ color: t.title, marginTop: 0 }}>OFFSET</h3>
-              <p style={{ color: t.sub, fontSize: 13, marginTop: 0, marginBottom: 12 }}>Valor actual de desfase aplicado al ciclo base.</p>
-              <div style={{ fontSize: 30, fontWeight: 800, color: t.accent, marginBottom: 16 }}>{off}</div>
-              <input type="number" value={off} onChange={e => saveOff(Number(e.target.value))} style={{ padding: 12, width: '100%', borderRadius: 12, border: `1px solid ${t.border}`, background: t.shell, color: t.text }} />
-            </div>
+            
 
              {isAdmin && (
               <div className="glass-panel section-card" style={{ padding: 25 }}>

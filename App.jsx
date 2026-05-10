@@ -3105,28 +3105,241 @@ boxShadow: isToday
 
             
 
-             {isAdmin && (
-              <div className="glass-panel section-card" style={{ padding: 25 }}>
-              <h3 style={{ color: t.title, marginTop: 0 }}>GESTIÓN DE ACCESOS</h3>
-                <p style={{ color: t.sub, fontSize: 13, marginTop: 0, marginBottom: 18 }}>Creación y retirada de usuarios con permisos administrativos o de edición.</p>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
-                  <input id="newU" placeholder="Usuario" style={{ padding: 10, borderRadius: 12, border: `1px solid ${t.border}`, background: t.shell, color: t.text }} />
-                  <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                    <input id="newP" type={showConfigPass ? "text" : "password"} placeholder="Contraseña" style={{ flex: 1, padding: 10, paddingRight: 40, borderRadius: 12, border: `1px solid ${t.border}`, background: t.shell, color: t.text }} />
-                    <button onClick={() => setShowConfigPass(!showConfigPass)} style={{ position: 'absolute', right: 10, background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex' }}><EyeIcon visible={showConfigPass} color={t.sub} /></button>
+                          {isAdmin && (
+              <div
+                className="glass-panel section-card"
+                style={{
+                  padding: 24,
+                  borderRadius: 24
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "flex-start",
+                    gap: 14,
+                    marginBottom: 18,
+                    flexWrap: "wrap"
+                  }}
+                >
+                  <div>
+                    <div
+                      style={{
+                        fontSize: 12,
+                        textTransform: "uppercase",
+                        letterSpacing: "0.10em",
+                        color: t.accent,
+                        marginBottom: 8,
+                        fontWeight: 900
+                      }}
+                    >
+                      Seguridad de acceso
+                    </div>
+
+                    <h3 style={{ color: t.title, margin: 0, fontSize: 24 }}>
+                      Gestión de accesos
+                    </h3>
+
+                    <p
+                      style={{
+                        color: t.sub,
+                        fontSize: 14,
+                        marginTop: 7,
+                        marginBottom: 0,
+                        lineHeight: 1.5
+                      }}
+                    >
+                      Creación y retirada de usuarios con permisos administrativos o de edición.
+                    </p>
                   </div>
-                  <select id="newR" style={{ padding: 10, borderRadius: 12, border: `1px solid ${t.border}`, background: t.shell, color: t.text }}><option value="admin">Administrador</option><option value="editor">Editor</option></select>
-                  <button onClick={() => {
-                    const u = document.getElementById('newU').value, p = document.getElementById('newP').value, r = document.getElementById('newR').value;
-                    if(u && p) { saveAdmins([...admins, { user: u, passHash: simpleHash(p), role: r }]); document.getElementById('newU').value = ''; document.getElementById('newP').value = ''; }
-                  }} style={{ padding: 12, background: t.accentSoft, color: t.title, border: `1px solid ${t.border}`, borderRadius: 12, fontWeight: 'bold', cursor: 'pointer' }}>CREAR</button>
+
+                  <div
+                    style={{
+                      padding: "10px 14px",
+                      borderRadius: 999,
+                      background: "#ffffff",
+                      border: `1px solid ${t.border}`,
+                      color: t.title,
+                      fontWeight: 900,
+                      fontSize: 13
+                    }}
+                  >
+                    {admins.length} usuarios
+                  </div>
                 </div>
-                {admins.map(a => (
-                  <div key={a.user} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderTop: `1px solid ${t.border}`, fontSize: 12 }}>
-                    <span>{a.user} <strong style={{ color: t.accent }}>({a.role})</strong></span>
-                    {a.role !== 'superadmin' && <button onClick={() => saveAdmins(admins.filter(x => x.user !== a.user))} style={{ color: '#EF4444', border: 'none', background: 'none', cursor: 'pointer' }}>×</button>}
+
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 10,
+                    marginBottom: 20,
+                    padding: 14,
+                    borderRadius: 18,
+                    background: "rgba(248, 250, 252, 0.72)",
+                    border: `1px solid ${t.border}`
+                  }}
+                >
+                  <input
+                    id="newU"
+                    placeholder="Usuario"
+                    style={{
+                      padding: "11px 12px",
+                      borderRadius: 14,
+                      border: `1px solid ${t.border}`,
+                      background: "#ffffff",
+                      color: t.text,
+                      fontWeight: 700
+                    }}
+                  />
+
+                  <div
+                    style={{
+                      position: "relative",
+                      display: "flex",
+                      alignItems: "center"
+                    }}
+                  >
+                    <input
+                      id="newP"
+                      type={showConfigPass ? "text" : "password"}
+                      placeholder="Contraseña"
+                      style={{
+                        flex: 1,
+                        padding: "11px 42px 11px 12px",
+                        borderRadius: 14,
+                        border: `1px solid ${t.border}`,
+                        background: "#ffffff",
+                        color: t.text,
+                        fontWeight: 700
+                      }}
+                    />
+
+                    <button
+                      onClick={() => setShowConfigPass(!showConfigPass)}
+                      style={{
+                        position: "absolute",
+                        right: 11,
+                        background: "none",
+                        border: "none",
+                        cursor: "pointer",
+                        padding: 0,
+                        display: "flex"
+                      }}
+                    >
+                      <EyeIcon visible={showConfigPass} color={t.sub} />
+                    </button>
                   </div>
-                ))}
+
+                  <select
+                    id="newR"
+                    style={{
+                      padding: "11px 12px",
+                      borderRadius: 14,
+                      border: `1px solid ${t.border}`,
+                      background: "#ffffff",
+                      color: t.text,
+                      fontWeight: 800
+                    }}
+                  >
+                    <option value="admin">Administrador</option>
+                    <option value="editor">Editor</option>
+                  </select>
+
+                  <button
+                    onClick={() => {
+                      const u = document.getElementById("newU").value;
+                      const p = document.getElementById("newP").value;
+                      const r = document.getElementById("newR").value;
+
+                      if (u && p) {
+                        saveAdmins([
+                          ...admins,
+                          {
+                            user: u,
+                            passHash: simpleHash(p),
+                            role: r
+                          }
+                        ]);
+
+                        document.getElementById("newU").value = "";
+                        document.getElementById("newP").value = "";
+                      }
+                    }}
+                    style={{
+                      padding: "11px 16px",
+                      background: "rgba(8, 145, 118, 0.12)",
+                      color: t.title,
+                      border: "1px solid rgba(8, 145, 118, 0.26)",
+                      borderRadius: 14,
+                      fontWeight: 900,
+                      cursor: "pointer",
+                      fontSize: 12
+                    }}
+                  >
+                    Crear usuario
+                  </button>
+                </div>
+
+                <div style={{ display: "grid", gap: 10 }}>
+                  {admins.map(a => (
+                    <div
+                      key={a.user}
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        gap: 12,
+                        padding: "12px 13px",
+                        borderRadius: 15,
+                        background: "#ffffff",
+                        border: `1px solid ${t.border}`,
+                        fontSize: 13
+                      }}
+                    >
+                      <div>
+                        <div style={{ color: t.title, fontWeight: 900 }}>
+                          {a.user}
+                        </div>
+
+                        <div
+                          style={{
+                            marginTop: 3,
+                            color: t.sub,
+                            fontSize: 11,
+                            fontWeight: 800,
+                            textTransform: "uppercase",
+                            letterSpacing: "0.06em"
+                          }}
+                        >
+                          {a.role}
+                        </div>
+                      </div>
+
+                      {a.role !== "superadmin" && (
+                        <button
+                          onClick={() => saveAdmins(admins.filter(x => x.user !== a.user))}
+                          title="Eliminar usuario"
+                          style={{
+                            width: 32,
+                            height: 32,
+                            borderRadius: 12,
+                            color: "#dc2626",
+                            border: "1px solid rgba(239, 68, 68, 0.20)",
+                            background: "rgba(239, 68, 68, 0.08)",
+                            cursor: "pointer",
+                            fontSize: 18,
+                            fontWeight: 900,
+                            lineHeight: 1
+                          }}
+                        >
+                          ×
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </div>

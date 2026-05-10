@@ -3469,16 +3469,23 @@ function EditorComponent({ ops, saveOps, activeYear, theme: t, off, canEdit }) {
           </strong>
         </div>
       </div>
-            <div
+                 <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))",
-          gap: 15
+          gridTemplateColumns: "repeat(auto-fill, minmax(270px, 1fr))",
+          gap: 16
         }}
       >
         {MONTHS.map((m, mi) => {
           const currentOp = ops.find(o => o.id === selOp);
-          const monthAbsences = Array.from({ length: dim(activeYear, mi) }).filter((_, di) => {
+          const daysInMonth = dim(activeYear, mi);
+          const firstDayOffset = (new Date(activeYear, mi, 1).getDay() + 6) % 7;
+          const calendarCells = [
+            ...Array.from({ length: firstDayOffset }, () => null),
+            ...Array.from({ length: daysInMonth }, (_, index) => index + 1)
+          ];
+
+          const monthAbsences = Array.from({ length: daysInMonth }).filter((_, di) => {
             const k = mk(activeYear, mi + 1, di + 1);
             return Boolean(currentOp?.calendar?.[k]);
           }).length;
@@ -3488,7 +3495,7 @@ function EditorComponent({ ops, saveOps, activeYear, theme: t, off, canEdit }) {
               key={m}
               style={{
                 background: "#ffffff",
-                padding: 15,
+                padding: 16,
                 borderRadius: 20,
                 border: `1px solid ${t.border}`,
                 boxShadow: "0 10px 24px rgba(15, 23, 42, 0.05)"
@@ -3500,7 +3507,7 @@ function EditorComponent({ ops, saveOps, activeYear, theme: t, off, canEdit }) {
                   justifyContent: "space-between",
                   alignItems: "center",
                   gap: 10,
-                  marginBottom: 12
+                  marginBottom: 13
                 }}
               >
                 <div
@@ -3535,36 +3542,120 @@ function EditorComponent({ ops, saveOps, activeYear, theme: t, off, canEdit }) {
                 style={{
                   display: "grid",
                   gridTemplateColumns: "repeat(7, 1fr)",
+                  gap: 5,
+                  marginBottom: 6
+                }}
+              >
+                {["L", "M", "X", "J", "V", "S", "D"].map(dayName => (
+                  <div
+                    key={dayName}
+                    style={{
+                      textAlign: "center",
+                      color: t.sub,
+                      fontSize: 10,
+                      fontWeight: 900,
+                      textTransform: "uppercase"
+                    }}
+                  >
+                    {dayName}
+                  </div>
+                ))}
+              </div>
+
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(7, 1fr)",
                   gap: 5
                 }}
               >
-                {Array.from({ length: dim(activeYear, mi) }).map((_, di) => {
-                  const k = mk(activeYear, mi + 1, di + 1);
+                {calendarCells.map((dayNumber, cellIndex) => {
+                  if (!dayNumber) {
+                    return (
+                      <div
+                        key={`empty-${cellIndex}`}
+                        style={{
+                          height: 42,
+                          borderRadius: 10,
+                          background: "transparent"
+                        }}
+                      />
+                    );
+                  }
+
+                  const k = mk(activeYear, mi + 1, dayNumber);
                   const status = currentOp?.calendar?.[k];
-                  const rot = cshift(activeYear, mi, di + 1, off);
+                  const rot = cshift(activeYear, mi, dayNumber, off);
                   const absenceDef = status ? ABSENCE[status] : null;
+
+                  const turnLabel =
+                    rot === "M"
+                      ? "M"
+                      : rot === "N"
+                        ? "N"
+                        : "";
+
+                  const turnStyle =
+                    rot === "M"
+                      ? {
+                          background: "rgba(251, 191, 36, 0.13)",
+                          border: "1px solid rgba(245, 158, 11, 0.28)",
+                          color: "#b45309"
+                        }
+                      : rot === "N"
+                        ? {
+                            background: "rgba(99, 102, 241, 0.11)",
+                            border: "1px solid rgba(99, 102, 241, 0.24)",
+                            color: "#4f46e5"
+                          }
+                        : {
+                            background: "rgba(241, 245, 249, 0.95)",
+                            border: "1px solid rgba(226, 232, 240, 0.95)",
+                            color: "#64748b"
+                          };
 
                   return (
                     <div
-                      key={di}
+                      key={dayNumber}
                       onClick={() => toggleAbsence(k)}
-                      title={status ? absenceDef?.label : TURNO_DEF[rot]?.label}
+                      title={
+                        status
+                          ? `${absenceDef?.label || status} · ${TURNO_DEF[rot]?.label || "Descanso"}`
+                          : TURNO_DEF[rot]?.label
+                      }
                       style={{
-                        height: 34,
-                        background: status ? absenceDef?.color : "rgba(248, 250, 252, 0.95)",
-                        border: `1px solid ${status ? "rgba(15, 23, 42, 0.10)" : "rgba(226, 232, 240, 0.90)"}`,
-                        borderBottom: `3px solid ${TURNO_DEF[rot]?.color || "transparent"}`,
+                        height: 42,
+                        background: status ? absenceDef?.color : turnStyle.background,
+                        border: status ? "1px solid rgba(15, 23, 42, 0.10)" : turnStyle.border,
                         display: "flex",
+                        flexDirection: "column",
                         alignItems: "center",
                         justifyContent: "center",
-                        fontSize: 10,
+                        gap: 2,
                         cursor: canEdit ? "pointer" : "default",
-                        borderRadius: 8,
-                        color: status ? "#111827" : t.text,
-                        fontWeight: status ? 900 : 700
+                        borderRadius: 10,
+                        color: status ? "#111827" : t.title,
+                        fontWeight: 900,
+                        boxShadow: status
+                          ? "0 7px 16px rgba(15, 23, 42, 0.10)"
+                          : "inset 0 -2px 0 rgba(15, 23, 42, 0.08)"
                       }}
                     >
-                      {di + 1}
+                      <span style={{ fontSize: 12, lineHeight: 1 }}>
+                        {dayNumber}
+                      </span>
+
+                      <span
+                        style={{
+                          fontSize: 10,
+                          lineHeight: 1,
+                          color: status ? "#111827" : turnStyle.color,
+                          fontWeight: 900,
+                          minHeight: 10
+                        }}
+                      >
+                        {turnLabel}
+                      </span>
                     </div>
                   );
                 })}

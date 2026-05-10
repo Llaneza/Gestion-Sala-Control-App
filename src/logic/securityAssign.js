@@ -90,55 +90,56 @@ const getSecurityBlockIndex = ({ year, monthIndex, day }) => {
   return Math.floor(dayOfYearIndex / 15);
 };
 
-const getBlockLeadOperator = ({
-  operators,
-  roleId,
-  blockIndex,
-  excludedOperatorIds = new Set()
-}) => {
-  const roleOperators = operators.filter(operator => hasSecurityRole(operator, roleId));
+const FIXED_BRIGADA_ORDER = ["Pablo", "Carlos", "Manuga", "Toni"];
 
-  if (roleOperators.length === 0) {
-    return null;
+const FIXED_COORDINADOR_ORDER = ["Alejandro", "Claudia", "Rosa", "Kao", "Florentino"];
+
+const normalizeOperatorName = name => {
+  return String(name || "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+};
+
+const findOperatorByNameAndRole = ({ operators, name, roleId }) => {
+  const normalizedName = normalizeOperatorName(name);
+
+  return operators.find(operator => {
+    return (
+      normalizeOperatorName(operator?.name) === normalizedName &&
+      hasSecurityRole(operator, roleId)
+    );
+  });
+};
+
+const getFixedOrderCandidatesForBlock = ({ operators, roleId, orderedNames, blockIndex }) => {
+  if (!Array.isArray(orderedNames) || orderedNames.length === 0) {
+    return [];
   }
 
-  const preferredOperators = roleOperators.filter(
-    operator => !excludedOperatorIds.has(operator.id)
+  const startIndex = blockIndex % orderedNames.length;
+  const orderedCycleNames = [
+    ...orderedNames.slice(startIndex),
+    ...orderedNames.slice(0, startIndex)
+  ];
+
+  return orderedCycleNames
+    .map(name => findOperatorByNameAndRole({ operators, name, roleId }))
+    .filter(Boolean);
+};
+
+const pickFirstAvailableFixedOrderOperator = ({ candidates, dateKey, usedOperatorIds }) => {
+  return (
+    candidates.find(operator => {
+      return !isBlockedByAbsence(operator, dateKey) && !usedOperatorIds.has(operator.id);
+    }) || null
   );
-
-  const availableBlockOperators =
-    preferredOperators.length > 0 ? preferredOperators : roleOperators;
-
-  return availableBlockOperators[blockIndex % availableBlockOperators.length];
 };
 
-const pickFixedBlockLeadOperator = ({ blockLeadOperator, dateKey, usedOperatorIds }) => {
-  if (!blockLeadOperator) {
-    return null;
-  }
-
-  if (isBlockedByAbsence(blockLeadOperator, dateKey)) {
-    return null;
-  }
-
-  if (usedOperatorIds.has(blockLeadOperator.id)) {
-    return null;
-  }
-
-  return blockLeadOperator;
-};
-
-const getFixedBlockWarning = ({ roleLabel, blockLeadOperator, dateKey, usedOperatorIds }) => {
-  if (!blockLeadOperator) {
-    return `Sin ${roleLabel} disponible`;
-  }
-
-  if (isBlockedByAbsence(blockLeadOperator, dateKey)) {
-    return `${roleLabel} sin asignar: titular ausente`;
-  }
-
-  if (usedOperatorIds.has(blockLeadOperator.id)) {
-    return `${roleLabel} sin asignar: titular ya asignado en otro rol`;
+const getFixedOrderWarning = ({ roleLabel, candidates }) => {
+  if (!candidates || candidates.length === 0) {
+    return `Sin ${roleLabel} configurado`;
   }
 
   return `Sin ${roleLabel} disponible`;
@@ -185,6 +186,59 @@ export function generateSecurityPlan({ operators = [], year, dcsPlan = {}, off =
 
         continue;
       }
+            const brigadaCandidates = getFixedOrderCandidatesForBlock({
+        operators,
+        roleId: SECURITY_ROLE_IDS.BRIGADA,
+        orderedNames: FIXED_BRIGADA_ORDER,
+        blockIndex
+      });
+
+      const selectedBrigada = pickFirstAvailableFixedOrderOperator({
+        candidates: brigadaCandidates,
+        dateKey,
+        usedOperatorIds
+      });
+
+      if (selectedBrigada) {
+        securityDay.BRIGADA = selectedBrigada.id;
+        usedOperatorIds.add(selectedBrigada.id);
+        counters.BRIGADA[selectedBrigada.id] = (counters.BRIGADA[selectedBrigada.id] || 0) + 1;
+      } else {
+        warnings.push(
+          getFixedOrderWarning({
+            roleLabel: "Brigada",
+            candidates: brigadaCandidates
+          })
+        );
+      }
+
+      const coordinadorCandidates = getFixedOrderCandidatesForBlock({
+        operators,
+        roleId: SECURITY_ROLE_IDS.COORDINADOR_EMERGENCIAS,
+        orderedNames: FIXED_COORDINADOR_ORDER,
+        blockIndex
+      });
+
+      const selectedCoordinador = pickFirstAvailableFixedOrderOperator({
+        candidates: coordinadorCandidates,
+        dateKey,
+        usedOperatorIds
+      });
+
+      if (selectedCoordinador) {
+        securityDay.COORDINADOR_EMERGENCIAS = selectedCoordinador.id;
+        usedOperatorIds.add(selectedCoordinador.id);
+        counters.COORDINADOR_EMERGENCIAS[selectedCoordinador.id] =
+          (counters.COORDINADOR_EMERGENCIAS[selectedCoordinador.id] || 0) + 1;
+      } else {
+        warnings.push(
+          getFixedOrderWarning({
+            roleLabel: "Coordinador de Emergencias",
+            candidates: coordinadorCandidates
+          })
+        );
+      }
+
       const dcsCandidates = getDcsOperatorsForDay({
         operators,
         dateKey,
@@ -205,62 +259,6 @@ export function generateSecurityPlan({ operators = [], year, dcsPlan = {}, off =
       } else {
         warnings.push("Sin DCS disponible");
       }
-
-      const brigadaBlockLead = getBlockLeadOperator({
-        operators,
-        roleId: SECURITY_ROLE_IDS.BRIGADA,
-        blockIndex
-      });
-
-            const selectedBrigada = pickFixedBlockLeadOperator({
-        blockLeadOperator: brigadaBlockLead,
-        dateKey,
-        usedOperatorIds
-      });
-
-      if (selectedBrigada) {
-        securityDay.BRIGADA = selectedBrigada.id;
-        usedOperatorIds.add(selectedBrigada.id);
-        counters.BRIGADA[selectedBrigada.id] = (counters.BRIGADA[selectedBrigada.id] || 0) + 1;
-      } else {
-        warnings.push(
-          getFixedBlockWarning({
-            roleLabel: "Brigada",
-            blockLeadOperator: brigadaBlockLead,
-            dateKey,
-            usedOperatorIds
-          })
-        );
-      }
-
-      const coordinadorBlockLead = getBlockLeadOperator({
-        operators,
-        roleId: SECURITY_ROLE_IDS.COORDINADOR_EMERGENCIAS,
-        blockIndex,
-        excludedOperatorIds: new Set(brigadaBlockLead ? [brigadaBlockLead.id] : [])
-      });
-
-           const selectedCoordinador = pickFixedBlockLeadOperator({
-        blockLeadOperator: coordinadorBlockLead,
-        dateKey,
-        usedOperatorIds
-      });
-
-      if (selectedCoordinador) {
-        securityDay.COORDINADOR_EMERGENCIAS = selectedCoordinador.id;
-        usedOperatorIds.add(selectedCoordinador.id);
-        counters.COORDINADOR_EMERGENCIAS[selectedCoordinador.id] =
-          (counters.COORDINADOR_EMERGENCIAS[selectedCoordinador.id] || 0) + 1;
-      } else {
-        warnings.push(
-          getFixedBlockWarning({
-            roleLabel: "Coordinador de Emergencias",
-            blockLeadOperator: coordinadorBlockLead,
-            dateKey,
-            usedOperatorIds
-          })
-        );
-      } 
 
       const conteoCandidates = getAvailableOperatorsByRole({
         operators,

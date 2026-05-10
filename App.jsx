@@ -585,7 +585,7 @@ if (!session) {
       </div>
     </div>
   );
-}
+} 
 
   return (
    <div style={{
@@ -791,7 +791,7 @@ if (!session) {
     }}
   >
     {[
-      { id: "daily", label: "Operativa diaria", short: "Hoy" },
+      { id: "daily", label: "Operativa diaria", short: "" },
       { id: "calendar", label: "Calendario DCS", short: "Sala" },
       { id: "security", label: "Calendario Seguridad", short: "Seguridad" },
       { id: "stats", label: "Estadísticas", short: "Datos" },
@@ -836,18 +836,20 @@ if (!session) {
                   {item.label}
                 </div>
 
-                <div
-                  style={{
-                    marginTop: 4,
-                    fontSize: 10,
-                    color: active ? t.accent : t.sub,
-                    textTransform: "uppercase",
-                    letterSpacing: "0.07em",
-                    fontWeight: 900
-                  }}
-                >
-                  {item.short}
-                </div>
+                {item.short && (
+  <div
+    style={{
+      marginTop: 4,
+      fontSize: 10,
+      color: active ? t.accent : t.sub,
+      textTransform: "uppercase",
+      letterSpacing: "0.07em",
+      fontWeight: 900
+    }}
+  >
+    {item.short}
+  </div>
+)}
               </div>
             </div>
           </button>
@@ -871,18 +873,7 @@ if (!session) {
   }}
 >
   <div>
-    <div
-      style={{
-        fontSize: 12,
-        textTransform: "uppercase",
-        letterSpacing: "0.12em",
-        color: t.accent,
-        marginBottom: 10,
-        fontWeight: 800
-      }}
-    >
-      Operativa diaria
-    </div>
+    
 
     <h1
   style={{
@@ -947,47 +938,7 @@ if (!session) {
         boxShadow: "0 12px 28px rgba(15, 23, 42, 0.06)"
       }}
     >
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "flex-start",
-          gap: 12,
-          marginBottom: 16
-        }}
-      >
-        <div
-          style={{
-            width: 42,
-            height: 42,
-            borderRadius: 14,
-            background: t.accentSoft,
-            color: t.accent,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontWeight: 900,
-            fontSize: 14
-          }}
-        >
-          {title.slice(0, 2).toUpperCase()}
-        </div>
-
-        <span
-          style={{
-            padding: "6px 10px",
-            borderRadius: 999,
-            background: assigned ? "rgba(22, 163, 74, 0.10)" : "rgba(245, 158, 11, 0.14)",
-            color: assigned ? "#15803d" : "#b45309",
-            fontSize: 11,
-            fontWeight: 900,
-            textTransform: "uppercase",
-            letterSpacing: "0.06em"
-          }}
-        >
-          {assigned ? "Asignado" : "Pendiente"}
-        </span>
-      </div>
+      
 
       <h2 style={{ margin: "0 0 12px", color: t.title, fontSize: 21, lineHeight: 1.15 }}>
         {title}
@@ -1052,19 +1003,7 @@ if (!session) {
     }}
   >
     <div>
-      <div
-        style={{
-          fontSize: 12,
-          textTransform: "uppercase",
-          letterSpacing: "0.10em",
-          color: t.accent,
-          marginBottom: 8,
-          fontWeight: 900
-        }}
-      >
-        Bloque final
-      </div>
-
+      
       <h2 style={{ margin: 0, color: t.title, fontSize: 24 }}>
         Ausencias de hoy
       </h2>
@@ -1143,19 +1082,7 @@ if (!session) {
                 </div>
               </div>
             </div>
-
-            <strong
-              style={{
-                padding: "7px 10px",
-                borderRadius: 999,
-                background: `${absenceColor}18`,
-                color: absenceColor,
-                fontSize: 12,
-                letterSpacing: "0.04em"
-              }}
-            >
-              {code}
-            </strong>
+        
           </div>
         );
       })}

@@ -794,8 +794,8 @@ if (!session) {
       { id: "daily", label: "Operativa diaria", short: "" },
       { id: "calendar", label: "Calendario DCS", short: "" },
       { id: "security", label: "Calendario Seguridad", short: "" },
-      { id: "stats", label: "Estadísticas", short: "Datos" },
-      canSeeEditor && { id: "editor", label: "Personal", short: "Equipo" },
+      { id: "stats", label: "Estadísticas", short: "" },
+      canSeeEditor && { id: "editor", label: "Personal", short: "" },
       isAdmin && { id: "config", label: "Administración", short: "Ajustes" }
     ]
       .filter(Boolean)
@@ -2450,19 +2450,7 @@ boxShadow: isToday
               }}
             >
               <div>
-                <div
-                  style={{
-                    fontSize: 12,
-                    textTransform: "uppercase",
-                    letterSpacing: "0.12em",
-                    color: t.accent,
-                    marginBottom: 8,
-                    fontWeight: 900
-                  }}
-                >
-                  Estadísticas
-                </div>
-
+                
                 <h2
                   style={{
                     margin: 0,
@@ -3298,19 +3286,7 @@ function EditorComponent({ ops, saveOps, activeYear, theme: t, off, canEdit }) {
         }}
       >
         <div>
-          <div
-            style={{
-              fontSize: 12,
-              textTransform: "uppercase",
-              letterSpacing: "0.12em",
-              color: t.accent,
-              marginBottom: 8,
-              fontWeight: 900
-            }}
-          >
-            Personal
-          </div>
-
+          
           <h3
             style={{
               margin: 0,

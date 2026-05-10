@@ -1283,7 +1283,57 @@ const dailySummary = [
     >
       Mes siguiente
     </button>
+          {isAdmin && (
+      <button
+        type="button"
+        onClick={() => {
+          const nextOffset = window.prompt(
+            "Introduce el valor de sincronización del calendario:",
+            String(off)
+          );
 
+          if (nextOffset === null) return;
+
+          const cleanOffset = Number(nextOffset);
+
+          if (Number.isNaN(cleanOffset)) {
+            alert("Introduce un número válido.");
+            return;
+          }
+
+          saveOff(cleanOffset);
+        }}
+        title="Ajustar sincronización del calendario DCS"
+        style={{
+          padding: "10px 13px",
+          borderRadius: 14,
+          border: "1px solid rgba(8, 145, 118, 0.26)",
+          background: "#ffffff",
+          color: t.title,
+          cursor: "pointer",
+          fontSize: 12,
+          fontWeight: 900,
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 8,
+          whiteSpace: "nowrap"
+        }}
+      >
+        Sincronización del calendario
+        <span
+          style={{
+            padding: "3px 7px",
+            borderRadius: 999,
+            background: "rgba(8, 145, 118, 0.10)",
+            color: t.accent,
+            fontSize: 11,
+            fontWeight: 900
+          }}
+        >
+          {off}
+        </span>
+      </button>
+    )}
     <select
       value={printMode}
       onChange={e => setPrintMode(e.target.value)}

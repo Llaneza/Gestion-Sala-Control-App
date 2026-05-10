@@ -2868,10 +2868,11 @@ boxShadow: isToday
                   Añadir operador
                 </button>
               </div>
-                            <div
+                                          <div
                 style={{
                   display: "grid",
-                  gap: 12
+                  gridTemplateColumns: "repeat(auto-fit, minmax(310px, 1fr))",
+                  gap: 10
                 }}
               >
                 {ops.map(o => {
@@ -2881,14 +2882,15 @@ boxShadow: isToday
                     <div
                       key={o.id}
                       style={{
-                        padding: 16,
-                        borderRadius: 18,
+                        padding: 12,
+                        borderRadius: 16,
                         border: `1px solid ${t.border}`,
                         background: "#ffffff",
-                        boxShadow: "0 10px 24px rgba(15, 23, 42, 0.05)",
+                        boxShadow: "0 8px 18px rgba(15, 23, 42, 0.04)",
                         display: "flex",
                         flexDirection: "column",
-                        gap: 14
+                        gap: 10,
+                        minHeight: 126
                       }}
                     >
                       <div
@@ -2896,18 +2898,18 @@ boxShadow: isToday
                           display: "flex",
                           justifyContent: "space-between",
                           alignItems: "flex-start",
-                          gap: 12
+                          gap: 10
                         }}
                       >
-                        <div style={{ display: "flex", alignItems: "center", gap: 11, minWidth: 0 }}>
-                          <Av name={o.name} color={o.color} size={34} />
+                        <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
+                          <Av name={o.name} color={o.color} size={32} />
 
                           <div style={{ minWidth: 0 }}>
                             <div
                               style={{
                                 fontWeight: 900,
                                 color: t.title,
-                                fontSize: 15,
+                                fontSize: 14,
                                 overflow: "hidden",
                                 textOverflow: "ellipsis",
                                 whiteSpace: "nowrap"
@@ -2916,7 +2918,14 @@ boxShadow: isToday
                               {o.name}
                             </div>
 
-                            <div style={{ color: t.sub, fontSize: 12, fontWeight: 700, marginTop: 3 }}>
+                            <div
+                              style={{
+                                color: t.sub,
+                                fontSize: 11,
+                                fontWeight: 800,
+                                marginTop: 2
+                              }}
+                            >
                               {selectedRoles.length} roles de seguridad
                             </div>
                           </div>
@@ -2926,68 +2935,55 @@ boxShadow: isToday
                           onClick={() => saveOps(ops.filter(x => x.id !== o.id))}
                           title="Eliminar operador"
                           style={{
-                            width: 34,
-                            height: 34,
-                            borderRadius: 12,
+                            width: 30,
+                            height: 30,
+                            borderRadius: 11,
                             color: "#dc2626",
                             border: "1px solid rgba(239, 68, 68, 0.20)",
                             background: "rgba(239, 68, 68, 0.08)",
                             cursor: "pointer",
-                            fontSize: 18,
+                            fontSize: 17,
                             fontWeight: 900,
-                            lineHeight: 1
+                            lineHeight: 1,
+                            flexShrink: 0
                           }}
                         >
                           ×
                         </button>
                       </div>
 
-                      <div>
-                        <div
-                          style={{
-                            fontSize: 11,
-                            color: t.sub,
-                            marginBottom: 9,
-                            textTransform: "uppercase",
-                            letterSpacing: "0.08em",
-                            fontWeight: 900
-                          }}
-                        >
-                          Roles de seguridad
-                        </div>
+                      <div
+                        style={{
+                          display: "flex",
+                          gap: 6,
+                          flexWrap: "wrap"
+                        }}
+                      >
+                        {SECURITY_ROLES.map(role => {
+                          const active = selectedRoles.includes(role.id);
 
-                        <div
-                          style={{
-                            display: "flex",
-                            gap: 8,
-                            flexWrap: "wrap"
-                          }}
-                        >
-                          {SECURITY_ROLES.map(role => {
-                            const active = selectedRoles.includes(role.id);
-
-                            return (
-                              <button
-                                key={role.id}
-                                type="button"
-                                onClick={() => toggleSecurityRole(o.id, role.id)}
-                                style={{
-                                  padding: "8px 11px",
-                                  borderRadius: 999,
-                                  border: `1px solid ${active ? "rgba(8, 145, 118, 0.35)" : t.border}`,
-                                  background: active ? "rgba(8, 145, 118, 0.12)" : "rgba(248, 250, 252, 0.95)",
-                                  color: active ? t.title : t.sub,
-                                  cursor: "pointer",
-                                  fontSize: 11,
-                                  fontWeight: 900,
-                                  boxShadow: active ? "0 6px 14px rgba(15, 23, 42, 0.06)" : "none"
-                                }}
-                              >
-                                {role.label}
-                              </button>
-                            );
-                          })}
-                        </div>
+                          return (
+                            <button
+                              key={role.id}
+                              type="button"
+                              onClick={() => toggleSecurityRole(o.id, role.id)}
+                              style={{
+                                padding: "6px 9px",
+                                borderRadius: 999,
+                                border: `1px solid ${active ? "rgba(8, 145, 118, 0.35)" : t.border}`,
+                                background: active ? "rgba(8, 145, 118, 0.12)" : "rgba(248, 250, 252, 0.95)",
+                                color: active ? t.title : t.sub,
+                                cursor: "pointer",
+                                fontSize: 10,
+                                fontWeight: 900,
+                                boxShadow: active ? "0 5px 11px rgba(15, 23, 42, 0.05)" : "none",
+                                whiteSpace: "nowrap"
+                              }}
+                            >
+                              {role.label}
+                            </button>
+                          );
+                        })}
                       </div>
                     </div>
                   );

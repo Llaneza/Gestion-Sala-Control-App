@@ -3814,7 +3814,72 @@ function EditorComponent({ ops, saveOps, activeYear, theme: t, off, canEdit }) {
               ))}
             </select>
           </div>
+          <div
+            style={{
+              padding: 16,
+              borderRadius: 20,
+              background: "rgba(248, 250, 252, 0.72)",
+              border: `1px solid ${t.border}`
+            }}
+          >
+            <div
+              style={{
+                fontSize: 11,
+                color: t.sub,
+                fontWeight: 900,
+                textTransform: "uppercase",
+                letterSpacing: "0.08em",
+                marginBottom: 10
+              }}
+            >
+              Tipo de ausencia a marcar
+            </div>
 
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+              {Object.keys(ABSENCE).map(k => {
+                const active = selAb === k;
+
+                return (
+                  <button
+                    key={k}
+                    type="button"
+                    onClick={() => setSelAb(k)}
+                    style={{
+                      background: active ? ABSENCE[k].color : "#ffffff",
+                      border: `1px solid ${active ? ABSENCE[k].color : t.border}`,
+                      color: active ? "#111827" : t.title,
+                      padding: "10px 14px",
+                      borderRadius: 14,
+                      cursor: "pointer",
+                      fontWeight: 900,
+                      fontSize: 12,
+                      boxShadow: active ? "0 8px 18px rgba(15, 23, 42, 0.08)" : "none"
+                    }}
+                  >
+                    {ABSENCE[k].icon} {ABSENCE[k].label}
+                  </button>
+                );
+              })}
+            </div>
+
+            <div
+              style={{
+                marginTop: 12,
+                padding: "10px 12px",
+                borderRadius: 14,
+                background: "#ffffff",
+                border: `1px solid ${t.border}`,
+                color: t.sub,
+                fontSize: 13,
+                fontWeight: 700
+              }}
+            >
+              Marcando ahora:{" "}
+              <strong style={{ color: t.title }}>
+                {ABSENCE[selAb]?.label || selAb}
+              </strong>
+            </div>
+          </div>
                    <div
             style={{
               background: "#ffffff",

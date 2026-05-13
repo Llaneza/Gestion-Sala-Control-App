@@ -3504,7 +3504,7 @@ function EditorComponent({ ops, saveOps, activeYear, theme: t, off, canEdit }) {
           </div>
         )}
       </div>
-           <div
+                      <div
         style={{
           padding: 16,
           borderRadius: 20,
@@ -3523,52 +3523,40 @@ function EditorComponent({ ops, saveOps, activeYear, theme: t, off, canEdit }) {
             marginBottom: 10
           }}
         >
-          Tipo de ausencia
+          Leyenda de ausencias
         </div>
 
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-          {Object.keys(ABSENCE).map(k => {
-            const active = selAb === k;
-
-            return (
-              <button
-                key={k}
-                onClick={() => setSelAb(k)}
-                style={{
-                  background: active ? ABSENCE[k].color : "#ffffff",
-                  border: `1px solid ${active ? ABSENCE[k].color : t.border}`,
-                  color: active ? "#111827" : t.title,
-                  padding: "10px 14px",
-                  borderRadius: 14,
-                  cursor: "pointer",
-                  fontWeight: 900,
-                  fontSize: 12,
-                  boxShadow: active ? "0 8px 18px rgba(15, 23, 42, 0.08)" : "none"
-                }}
-              >
-                {ABSENCE[k].icon} {ABSENCE[k].label}
-              </button>
-            );
-          })}
+          {Object.keys(ABSENCE).map(k => (
+            <div
+              key={k}
+              style={{
+                background: ABSENCE[k].color,
+                border: `1px solid ${ABSENCE[k].color}`,
+                color: "#111827",
+                padding: "10px 14px",
+                borderRadius: 14,
+                fontWeight: 900,
+                fontSize: 12,
+                boxShadow: "0 8px 18px rgba(15, 23, 42, 0.06)"
+              }}
+            >
+              {ABSENCE[k].icon} {ABSENCE[k].label}
+            </div>
+          ))}
         </div>
 
-        <div
+        <p
           style={{
-            marginTop: 12,
-            padding: "10px 12px",
-            borderRadius: 14,
-            background: "#ffffff",
-            border: `1px solid ${t.border}`,
+            margin: "12px 0 0",
             color: t.sub,
             fontSize: 13,
+            lineHeight: 1.5,
             fontWeight: 700
           }}
         >
-          Marcando ahora:{" "}
-          <strong style={{ color: t.title }}>
-            {ABSENCE[selAb]?.label || selAb}
-          </strong>
-        </div>
+          Esta vista es solo de consulta. Las ausencias se editan desde Vista Equipo.
+        </p>
       </div>
                  <div
         style={{
@@ -4027,7 +4015,7 @@ function EditorComponent({ ops, saveOps, activeYear, theme: t, off, canEdit }) {
                             ? "M"
                             : cellInfo.rot === "N"
                               ? "N"
-                              : "D");
+                              : "");
 
                         return (
                           <div

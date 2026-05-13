@@ -3240,6 +3240,8 @@ boxShadow: isToday
 function EditorComponent({ ops, saveOps, activeYear, theme: t, off, canEdit }) {
   const [selOp, setSelOp] = useState(ops[0]?.id);
   const [selAb, setSelAb] = useState("VA");
+  const [viewMode, setViewMode] = useState("individual");
+  const [teamMonth, setTeamMonth] = useState(new Date().getMonth());
   const toggleAbsence = (dateKey) => {
     if (!canEdit) return;
     const newOps = ops.map(o => {

@@ -3240,6 +3240,8 @@ boxShadow: isToday
 function EditorComponent({ ops, saveOps, activeYear, theme: t, off, canEdit }) {
   const [selOp, setSelOp] = useState(ops[0]?.id);
   const [selAb, setSelAb] = useState("VA");
+  const [viewMode, setViewMode] = useState("individual");
+  const [teamMonth, setTeamMonth] = useState(new Date().getMonth());
   const toggleAbsence = (dateKey) => {
     if (!canEdit) return;
     const newOps = ops.map(o => {
@@ -3250,7 +3252,68 @@ function EditorComponent({ ops, saveOps, activeYear, theme: t, off, canEdit }) {
     });
     saveOps(newOps);
   };
+  const getPersonalTurnStyle = (rot) => {
+    if (rot === "M") {
+      return {
+        background: "rgba(251, 191, 36, 0.13)",
+        border: "1px solid rgba(245, 158, 11, 0.28)",
+        color: "#b45309"
+      };
+    }
 
+    if (rot === "N") {
+      return {
+        background: "rgba(99, 102, 241, 0.11)",
+        border: "1px solid rgba(99, 102, 241, 0.24)",
+        color: "#4f46e5"
+      };
+    }
+
+    return {
+      background: "rgba(241, 245, 249, 0.95)",
+      border: "1px solid rgba(226, 232, 240, 0.95)",
+      color: "#64748b"
+    };
+  };
+
+  const getPersonalCellInfo = ({ operator, monthIndex, dayNumber }) => {
+    const dateKey = mk(activeYear, monthIndex + 1, dayNumber);
+    const status = operator?.calendar?.[dateKey];
+    const rot = cshift(activeYear, monthIndex, dayNumber, off);
+    const absenceDef = status ? ABSENCE[status] : null;
+    const turnStyle = getPersonalTurnStyle(rot);
+
+    return {
+      dateKey,
+      status,
+      rot,
+      absenceDef,
+      turnStyle,
+      label: status || (rot === "M" ? "M" : rot === "N" ? "N" : "")
+    };
+  };
+    const toggleTeamAbsence = ({ operatorId, dateKey }) => {
+    if (!canEdit) return;
+
+    const newOps = ops.map(operator => {
+      if (operator.id !== operatorId) return operator;
+
+      const newCal = { ...(operator.calendar || {}) };
+
+      if (newCal[dateKey] === selAb) {
+        delete newCal[dateKey];
+      } else {
+        newCal[dateKey] = selAb;
+      }
+
+      return {
+        ...operator,
+        calendar: newCal
+      };
+    });
+
+    saveOps(newOps);
+  };
   return (
         <div
       className="glass-panel section-card"
@@ -3330,6 +3393,60 @@ function EditorComponent({ ops, saveOps, activeYear, theme: t, off, canEdit }) {
             fontWeight: 900,
             textTransform: "uppercase",
             letterSpacing: "0.08em",
+            marginBottom: 10
+          }}
+        >
+          Vista
+        </div>
+
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+          {[
+            { id: "individual", label: "Individual" },
+            { id: "equipo", label: "Equipo" }
+          ].map(view => {
+            const active = viewMode === view.id;
+
+            return (
+              <button
+                key={view.id}
+                type="button"
+                onClick={() => setViewMode(view.id)}
+                style={{
+                  background: active ? "rgba(8, 145, 118, 0.12)" : "#ffffff",
+                  border: `1px solid ${active ? "rgba(8, 145, 118, 0.35)" : t.border}`,
+                  color: active ? t.title : t.sub,
+                  padding: "10px 14px",
+                  borderRadius: 14,
+                  cursor: "pointer",
+                  fontWeight: 900,
+                  fontSize: 12,
+                  boxShadow: active ? "0 8px 18px rgba(15, 23, 42, 0.08)" : "none"
+                }}
+              >
+                {view.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+            {viewMode === "individual" ? (
+        <>
+            <div
+        style={{
+          padding: 16,
+          borderRadius: 20,
+          background: "rgba(248, 250, 252, 0.72)",
+          border: `1px solid ${t.border}`,
+          marginBottom: 18
+        }}
+      >
+        <div
+          style={{
+            fontSize: 11,
+            color: t.sub,
+            fontWeight: 900,
+            textTransform: "uppercase",
+            letterSpacing: "0.08em",
             marginBottom: 9
           }}
         >
@@ -3387,7 +3504,7 @@ function EditorComponent({ ops, saveOps, activeYear, theme: t, off, canEdit }) {
           </div>
         )}
       </div>
-           <div
+                      <div
         style={{
           padding: 16,
           borderRadius: 20,
@@ -3406,52 +3523,40 @@ function EditorComponent({ ops, saveOps, activeYear, theme: t, off, canEdit }) {
             marginBottom: 10
           }}
         >
-          Tipo de ausencia
+          Leyenda de ausencias
         </div>
 
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-          {Object.keys(ABSENCE).map(k => {
-            const active = selAb === k;
-
-            return (
-              <button
-                key={k}
-                onClick={() => setSelAb(k)}
-                style={{
-                  background: active ? ABSENCE[k].color : "#ffffff",
-                  border: `1px solid ${active ? ABSENCE[k].color : t.border}`,
-                  color: active ? "#111827" : t.title,
-                  padding: "10px 14px",
-                  borderRadius: 14,
-                  cursor: "pointer",
-                  fontWeight: 900,
-                  fontSize: 12,
-                  boxShadow: active ? "0 8px 18px rgba(15, 23, 42, 0.08)" : "none"
-                }}
-              >
-                {ABSENCE[k].icon} {ABSENCE[k].label}
-              </button>
-            );
-          })}
+          {Object.keys(ABSENCE).map(k => (
+            <div
+              key={k}
+              style={{
+                background: ABSENCE[k].color,
+                border: `1px solid ${ABSENCE[k].color}`,
+                color: "#111827",
+                padding: "10px 14px",
+                borderRadius: 14,
+                fontWeight: 900,
+                fontSize: 12,
+                boxShadow: "0 8px 18px rgba(15, 23, 42, 0.06)"
+              }}
+            >
+              {ABSENCE[k].icon} {ABSENCE[k].label}
+            </div>
+          ))}
         </div>
 
-        <div
+        <p
           style={{
-            marginTop: 12,
-            padding: "10px 12px",
-            borderRadius: 14,
-            background: "#ffffff",
-            border: `1px solid ${t.border}`,
+            margin: "12px 0 0",
             color: t.sub,
             fontSize: 13,
+            lineHeight: 1.5,
             fontWeight: 700
           }}
         >
-          Marcando ahora:{" "}
-          <strong style={{ color: t.title }}>
-            {ABSENCE[selAb]?.label || selAb}
-          </strong>
-        </div>
+          Esta vista es solo de consulta. Las ausencias se editan desde Vista Equipo.
+        </p>
       </div>
                  <div
         style={{
@@ -3601,7 +3706,6 @@ function EditorComponent({ ops, saveOps, activeYear, theme: t, off, canEdit }) {
                   return (
                     <div
                       key={dayNumber}
-                      onClick={() => toggleAbsence(k)}
                       title={
                         status
                           ? `${absenceDef?.label || status} · ${TURNO_DEF[rot]?.label || "Descanso"}`
@@ -3616,7 +3720,7 @@ function EditorComponent({ ops, saveOps, activeYear, theme: t, off, canEdit }) {
                         alignItems: "center",
                         justifyContent: "center",
                         gap: 2,
-                        cursor: canEdit ? "pointer" : "default",
+                        cursor: "default",
                         borderRadius: 10,
                         color: status ? "#111827" : t.title,
                         fontWeight: 900,
@@ -3648,6 +3752,312 @@ function EditorComponent({ ops, saveOps, activeYear, theme: t, off, canEdit }) {
           );
         })}
       </div>
+              </>
+      ) : (
+                <div
+          style={{
+            display: "grid",
+            gap: 18
+          }}
+        >
+          <div
+            style={{
+              padding: 16,
+              borderRadius: 20,
+              background: "rgba(248, 250, 252, 0.72)",
+              border: `1px solid ${t.border}`
+            }}
+          >
+            <div
+              style={{
+                fontSize: 11,
+                color: t.sub,
+                fontWeight: 900,
+                textTransform: "uppercase",
+                letterSpacing: "0.08em",
+                marginBottom: 9
+              }}
+            >
+              Mes en vista equipo
+            </div>
+
+            <select
+              value={teamMonth}
+              onChange={e => setTeamMonth(Number(e.target.value))}
+              style={{
+                padding: "11px 12px",
+                width: "100%",
+                background: "#ffffff",
+                color: t.text,
+                border: `1px solid ${t.border}`,
+                borderRadius: 14,
+                fontWeight: 800
+              }}
+            >
+              {MONTHS.map((monthName, monthIndex) => (
+                <option key={monthName} value={monthIndex}>
+                  {monthName}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div
+            style={{
+              padding: 16,
+              borderRadius: 20,
+              background: "rgba(248, 250, 252, 0.72)",
+              border: `1px solid ${t.border}`
+            }}
+          >
+            <div
+              style={{
+                fontSize: 11,
+                color: t.sub,
+                fontWeight: 900,
+                textTransform: "uppercase",
+                letterSpacing: "0.08em",
+                marginBottom: 10
+              }}
+            >
+              Tipo de ausencia a marcar
+            </div>
+
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+              {Object.keys(ABSENCE).map(k => {
+                const active = selAb === k;
+
+                return (
+                  <button
+                    key={k}
+                    type="button"
+                    onClick={() => setSelAb(k)}
+                    style={{
+                      background: active ? ABSENCE[k].color : "#ffffff",
+                      border: `1px solid ${active ? ABSENCE[k].color : t.border}`,
+                      color: active ? "#111827" : t.title,
+                      padding: "10px 14px",
+                      borderRadius: 14,
+                      cursor: "pointer",
+                      fontWeight: 900,
+                      fontSize: 12,
+                      boxShadow: active ? "0 8px 18px rgba(15, 23, 42, 0.08)" : "none"
+                    }}
+                  >
+                    {ABSENCE[k].icon} {ABSENCE[k].label}
+                  </button>
+                );
+              })}
+            </div>
+
+            <div
+              style={{
+                marginTop: 12,
+                padding: "10px 12px",
+                borderRadius: 14,
+                background: "#ffffff",
+                border: `1px solid ${t.border}`,
+                color: t.sub,
+                fontSize: 13,
+                fontWeight: 700
+              }}
+            >
+              Marcando ahora:{" "}
+              <strong style={{ color: t.title }}>
+                {ABSENCE[selAb]?.label || selAb}
+              </strong>
+            </div>
+          </div>
+                   <div
+            style={{
+              background: "#ffffff",
+              padding: 16,
+              borderRadius: 20,
+              border: `1px solid ${t.border}`,
+              boxShadow: "0 10px 24px rgba(15, 23, 42, 0.05)"
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                gap: 10,
+                marginBottom: 13,
+                flexWrap: "wrap"
+              }}
+            >
+              <div
+                style={{
+                  fontSize: 12,
+                  fontWeight: 900,
+                  color: t.title,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.07em"
+                }}
+              >
+                {MONTHS[teamMonth]} · {activeYear}
+              </div>
+
+              <span
+                style={{
+                  padding: "5px 8px",
+                  borderRadius: 999,
+                  background: "rgba(8, 145, 118, 0.10)",
+                  color: "#15803d",
+                  fontSize: 10,
+                  fontWeight: 900
+                }}
+              >
+                Vista equipo
+              </span>
+            </div>
+
+            <div style={{ overflowX: "auto", paddingBottom: 4 }}>
+              {(() => {
+                const daysInSelectedMonth = dim(activeYear, teamMonth);
+                const days = Array.from(
+                  { length: daysInSelectedMonth },
+                  (_, index) => index + 1
+                );
+
+                const gridTemplateColumns = `minmax(170px, 1.35fr) repeat(${daysInSelectedMonth}, minmax(34px, 1fr))`;
+
+                return (
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns,
+                      gap: 5,
+                      minWidth: Math.max(920, 180 + daysInSelectedMonth * 39)
+                    }}
+                  >
+                    <div
+                      style={{
+                        position: "sticky",
+                        left: 0,
+                        zIndex: 2,
+                        background: "#ffffff",
+                        color: t.sub,
+                        fontSize: 10,
+                        fontWeight: 900,
+                        textTransform: "uppercase",
+                        letterSpacing: "0.06em",
+                        padding: "8px 10px",
+                        borderRadius: 10,
+                        border: `1px solid ${t.border}`
+                      }}
+                    >
+                      Operador
+                    </div>
+
+                    {days.map(dayNumber => (
+                      <div
+                        key={`head-${dayNumber}`}
+                        style={{
+                          textAlign: "center",
+                          color: t.sub,
+                          fontSize: 10,
+                          fontWeight: 900,
+                          padding: "8px 0",
+                          borderRadius: 10,
+                          background: "rgba(248, 250, 252, 0.95)",
+                          border: `1px solid ${t.border}`
+                        }}
+                      >
+                        {dayNumber}
+                      </div>
+                    ))}
+
+                    {ops.flatMap(operator => [
+                      <div
+                        key={`${operator.id}-name`}
+                        style={{
+                          position: "sticky",
+                          left: 0,
+                          zIndex: 1,
+                          background: "#ffffff",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 8,
+                          padding: "7px 9px",
+                          borderRadius: 10,
+                          border: `1px solid ${t.border}`,
+                          minHeight: 36
+                        }}
+                      >
+                        <Av name={operator.name} color={operator.color} size={24} />
+
+                        <div
+                          style={{
+                            color: t.title,
+                            fontSize: 12,
+                            fontWeight: 900,
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap"
+                          }}
+                        >
+                          {operator.name}
+                        </div>
+                      </div>,
+
+                      ...days.map(dayNumber => {
+                        const cellInfo = getPersonalCellInfo({
+                          operator,
+                          monthIndex: teamMonth,
+                          dayNumber
+                        });
+
+                        const cellLabel =
+                          cellInfo.status ||
+                          (cellInfo.rot === "M"
+                            ? "M"
+                            : cellInfo.rot === "N"
+                              ? "N"
+                              : "");
+
+                        return (
+                          <div
+                            key={`${operator.id}-${dayNumber}`}
+                            onClick={() => toggleTeamAbsence({ operatorId: operator.id, dateKey: cellInfo.dateKey })}
+                            title={
+                              cellInfo.status
+                                ? `${operator.name} · ${cellInfo.absenceDef?.label || cellInfo.status}`
+                                : `${operator.name} · ${TURNO_DEF[cellInfo.rot]?.label || "Descanso"}`
+                            }
+                            style={{
+                              height: 36,
+                              background: cellInfo.status
+                                ? cellInfo.absenceDef?.color || "#e5e7eb"
+                                : cellInfo.turnStyle.background,
+                              border: cellInfo.status
+                                ? "1px solid rgba(15, 23, 42, 0.10)"
+                                : cellInfo.turnStyle.border,
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              borderRadius: 10,
+                              color: cellInfo.status ? "#111827" : cellInfo.turnStyle.color,
+                              fontWeight: 900,
+                              fontSize: cellInfo.status ? 10 : 11,
+                              cursor: canEdit ? "pointer" : "default",
+                              boxShadow: cellInfo.status
+                                ? "0 7px 16px rgba(15, 23, 42, 0.08)"
+                                : "inset 0 -2px 0 rgba(15, 23, 42, 0.06)"
+                            }}
+                          >
+                            {cellLabel}
+                          </div>
+                        );
+                      })
+                    ])}
+                  </div>
+                );
+              })()}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

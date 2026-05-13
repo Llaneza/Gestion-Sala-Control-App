@@ -3793,39 +3793,192 @@ function EditorComponent({ ops, saveOps, activeYear, theme: t, off, canEdit }) {
             </select>
           </div>
 
-          <div
+                   <div
             style={{
-              padding: 20,
-              borderRadius: 20,
               background: "#ffffff",
+              padding: 16,
+              borderRadius: 20,
               border: `1px solid ${t.border}`,
               boxShadow: "0 10px 24px rgba(15, 23, 42, 0.05)"
             }}
           >
             <div
               style={{
-                fontSize: 12,
-                fontWeight: 900,
-                color: t.title,
-                textTransform: "uppercase",
-                letterSpacing: "0.07em",
-                marginBottom: 10
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                gap: 10,
+                marginBottom: 13,
+                flexWrap: "wrap"
               }}
             >
-              {MONTHS[teamMonth]} · {activeYear}
+              <div
+                style={{
+                  fontSize: 12,
+                  fontWeight: 900,
+                  color: t.title,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.07em"
+                }}
+              >
+                {MONTHS[teamMonth]} · {activeYear}
+              </div>
+
+              <span
+                style={{
+                  padding: "5px 8px",
+                  borderRadius: 999,
+                  background: "rgba(8, 145, 118, 0.10)",
+                  color: "#15803d",
+                  fontSize: 10,
+                  fontWeight: 900
+                }}
+              >
+                Vista equipo
+              </span>
             </div>
 
-            <p
-              style={{
-                margin: 0,
-                color: t.sub,
-                fontSize: 14,
-                lineHeight: 1.5,
-                fontWeight: 700
-              }}
-            >
-              En el siguiente paso añadiremos aquí la tabla mensual de todos los operadores.
-            </p>
+            <div style={{ overflowX: "auto", paddingBottom: 4 }}>
+              {(() => {
+                const daysInSelectedMonth = dim(activeYear, teamMonth);
+                const days = Array.from(
+                  { length: daysInSelectedMonth },
+                  (_, index) => index + 1
+                );
+
+                const gridTemplateColumns = `minmax(170px, 1.35fr) repeat(${daysInSelectedMonth}, minmax(34px, 1fr))`;
+
+                return (
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns,
+                      gap: 5,
+                      minWidth: Math.max(920, 180 + daysInSelectedMonth * 39)
+                    }}
+                  >
+                    <div
+                      style={{
+                        position: "sticky",
+                        left: 0,
+                        zIndex: 2,
+                        background: "#ffffff",
+                        color: t.sub,
+                        fontSize: 10,
+                        fontWeight: 900,
+                        textTransform: "uppercase",
+                        letterSpacing: "0.06em",
+                        padding: "8px 10px",
+                        borderRadius: 10,
+                        border: `1px solid ${t.border}`
+                      }}
+                    >
+                      Operador
+                    </div>
+
+                    {days.map(dayNumber => (
+                      <div
+                        key={`head-${dayNumber}`}
+                        style={{
+                          textAlign: "center",
+                          color: t.sub,
+                          fontSize: 10,
+                          fontWeight: 900,
+                          padding: "8px 0",
+                          borderRadius: 10,
+                          background: "rgba(248, 250, 252, 0.95)",
+                          border: `1px solid ${t.border}`
+                        }}
+                      >
+                        {dayNumber}
+                      </div>
+                    ))}
+
+                    {ops.flatMap(operator => [
+                      <div
+                        key={`${operator.id}-name`}
+                        style={{
+                          position: "sticky",
+                          left: 0,
+                          zIndex: 1,
+                          background: "#ffffff",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 8,
+                          padding: "7px 9px",
+                          borderRadius: 10,
+                          border: `1px solid ${t.border}`,
+                          minHeight: 36
+                        }}
+                      >
+                        <Av name={operator.name} color={operator.color} size={24} />
+
+                        <div
+                          style={{
+                            color: t.title,
+                            fontSize: 12,
+                            fontWeight: 900,
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap"
+                          }}
+                        >
+                          {operator.name}
+                        </div>
+                      </div>,
+
+                      ...days.map(dayNumber => {
+                        const cellInfo = getPersonalCellInfo({
+                          operator,
+                          monthIndex: teamMonth,
+                          dayNumber
+                        });
+
+                        const cellLabel =
+                          cellInfo.status ||
+                          (cellInfo.rot === "M"
+                            ? "M"
+                            : cellInfo.rot === "N"
+                              ? "N"
+                              : "D");
+
+                        return (
+                          <div
+                            key={`${operator.id}-${dayNumber}`}
+                            title={
+                              cellInfo.status
+                                ? `${operator.name} · ${cellInfo.absenceDef?.label || cellInfo.status}`
+                                : `${operator.name} · ${TURNO_DEF[cellInfo.rot]?.label || "Descanso"}`
+                            }
+                            style={{
+                              height: 36,
+                              background: cellInfo.status
+                                ? cellInfo.absenceDef?.color || "#e5e7eb"
+                                : cellInfo.turnStyle.background,
+                              border: cellInfo.status
+                                ? "1px solid rgba(15, 23, 42, 0.10)"
+                                : cellInfo.turnStyle.border,
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              borderRadius: 10,
+                              color: cellInfo.status ? "#111827" : cellInfo.turnStyle.color,
+                              fontWeight: 900,
+                              fontSize: cellInfo.status ? 10 : 11,
+                              boxShadow: cellInfo.status
+                                ? "0 7px 16px rgba(15, 23, 42, 0.08)"
+                                : "inset 0 -2px 0 rgba(15, 23, 42, 0.06)"
+                            }}
+                          >
+                            {cellLabel}
+                          </div>
+                        );
+                      })
+                    ])}
+                  </div>
+                );
+              })()}
+            </div>
           </div>
         </div>
       )}

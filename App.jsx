@@ -3745,39 +3745,88 @@ function EditorComponent({ ops, saveOps, activeYear, theme: t, off, canEdit }) {
       </div>
               </>
       ) : (
-        <div
+                <div
           style={{
-            padding: 20,
-            borderRadius: 20,
-            background: "#ffffff",
-            border: `1px solid ${t.border}`,
-            boxShadow: "0 10px 24px rgba(15, 23, 42, 0.05)"
+            display: "grid",
+            gap: 18
           }}
         >
           <div
             style={{
-              fontSize: 12,
-              fontWeight: 900,
-              color: t.title,
-              textTransform: "uppercase",
-              letterSpacing: "0.07em",
-              marginBottom: 10
+              padding: 16,
+              borderRadius: 20,
+              background: "rgba(248, 250, 252, 0.72)",
+              border: `1px solid ${t.border}`
             }}
           >
-            Vista equipo
+            <div
+              style={{
+                fontSize: 11,
+                color: t.sub,
+                fontWeight: 900,
+                textTransform: "uppercase",
+                letterSpacing: "0.08em",
+                marginBottom: 9
+              }}
+            >
+              Mes en vista equipo
+            </div>
+
+            <select
+              value={teamMonth}
+              onChange={e => setTeamMonth(Number(e.target.value))}
+              style={{
+                padding: "11px 12px",
+                width: "100%",
+                background: "#ffffff",
+                color: t.text,
+                border: `1px solid ${t.border}`,
+                borderRadius: 14,
+                fontWeight: 800
+              }}
+            >
+              {MONTHS.map((monthName, monthIndex) => (
+                <option key={monthName} value={monthIndex}>
+                  {monthName}
+                </option>
+              ))}
+            </select>
           </div>
 
-          <p
+          <div
             style={{
-              margin: 0,
-              color: t.sub,
-              fontSize: 14,
-              lineHeight: 1.5,
-              fontWeight: 700
+              padding: 20,
+              borderRadius: 20,
+              background: "#ffffff",
+              border: `1px solid ${t.border}`,
+              boxShadow: "0 10px 24px rgba(15, 23, 42, 0.05)"
             }}
           >
-            Aquí irá el calendario mensual de todos los operadores, usando la misma estética que la vista individual.
-          </p>
+            <div
+              style={{
+                fontSize: 12,
+                fontWeight: 900,
+                color: t.title,
+                textTransform: "uppercase",
+                letterSpacing: "0.07em",
+                marginBottom: 10
+              }}
+            >
+              {MONTHS[teamMonth]} · {activeYear}
+            </div>
+
+            <p
+              style={{
+                margin: 0,
+                color: t.sub,
+                fontSize: 14,
+                lineHeight: 1.5,
+                fontWeight: 700
+              }}
+            >
+              En el siguiente paso añadiremos aquí la tabla mensual de todos los operadores.
+            </p>
+          </div>
         </div>
       )}
     </div>

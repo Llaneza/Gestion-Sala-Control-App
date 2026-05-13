@@ -3706,7 +3706,6 @@ function EditorComponent({ ops, saveOps, activeYear, theme: t, off, canEdit }) {
                   return (
                     <div
                       key={dayNumber}
-                      onClick={() => toggleAbsence(k)}
                       title={
                         status
                           ? `${absenceDef?.label || status} · ${TURNO_DEF[rot]?.label || "Descanso"}`
@@ -3721,7 +3720,7 @@ function EditorComponent({ ops, saveOps, activeYear, theme: t, off, canEdit }) {
                         alignItems: "center",
                         justifyContent: "center",
                         gap: 2,
-                        cursor: canEdit ? "pointer" : "default",
+                        cursor: "default",
                         borderRadius: 10,
                         color: status ? "#111827" : t.title,
                         fontWeight: 900,

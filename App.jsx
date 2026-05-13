@@ -3407,6 +3407,8 @@ function EditorComponent({ ops, saveOps, activeYear, theme: t, off, canEdit }) {
           })}
         </div>
       </div>
+            {viewMode === "individual" ? (
+        <>
             <div
         style={{
           padding: 16,
@@ -3741,6 +3743,43 @@ function EditorComponent({ ops, saveOps, activeYear, theme: t, off, canEdit }) {
           );
         })}
       </div>
+              </>
+      ) : (
+        <div
+          style={{
+            padding: 20,
+            borderRadius: 20,
+            background: "#ffffff",
+            border: `1px solid ${t.border}`,
+            boxShadow: "0 10px 24px rgba(15, 23, 42, 0.05)"
+          }}
+        >
+          <div
+            style={{
+              fontSize: 12,
+              fontWeight: 900,
+              color: t.title,
+              textTransform: "uppercase",
+              letterSpacing: "0.07em",
+              marginBottom: 10
+            }}
+          >
+            Vista equipo
+          </div>
+
+          <p
+            style={{
+              margin: 0,
+              color: t.sub,
+              fontSize: 14,
+              lineHeight: 1.5,
+              fontWeight: 700
+            }}
+          >
+            Aquí irá el calendario mensual de todos los operadores, usando la misma estética que la vista individual.
+          </p>
+        </div>
+      )}
     </div>
   );
 }

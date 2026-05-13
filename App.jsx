@@ -3292,6 +3292,28 @@ function EditorComponent({ ops, saveOps, activeYear, theme: t, off, canEdit }) {
       label: status || (rot === "M" ? "M" : rot === "N" ? "N" : "")
     };
   };
+    const toggleTeamAbsence = ({ operatorId, dateKey }) => {
+    if (!canEdit) return;
+
+    const newOps = ops.map(operator => {
+      if (operator.id !== operatorId) return operator;
+
+      const newCal = { ...(operator.calendar || {}) };
+
+      if (newCal[dateKey] === selAb) {
+        delete newCal[dateKey];
+      } else {
+        newCal[dateKey] = selAb;
+      }
+
+      return {
+        ...operator,
+        calendar: newCal
+      };
+    });
+
+    saveOps(newOps);
+  };
   return (
         <div
       className="glass-panel section-card"
@@ -3945,6 +3967,7 @@ function EditorComponent({ ops, saveOps, activeYear, theme: t, off, canEdit }) {
                         return (
                           <div
                             key={`${operator.id}-${dayNumber}`}
+                            onClick={() => toggleTeamAbsence({ operatorId: operator.id, dateKey: cellInfo.dateKey })}
                             title={
                               cellInfo.status
                                 ? `${operator.name} · ${cellInfo.absenceDef?.label || cellInfo.status}`
@@ -3965,6 +3988,7 @@ function EditorComponent({ ops, saveOps, activeYear, theme: t, off, canEdit }) {
                               color: cellInfo.status ? "#111827" : cellInfo.turnStyle.color,
                               fontWeight: 900,
                               fontSize: cellInfo.status ? 10 : 11,
+                              cursor: canEdit ? "pointer" : "default",
                               boxShadow: cellInfo.status
                                 ? "0 7px 16px rgba(15, 23, 42, 0.08)"
                                 : "inset 0 -2px 0 rgba(15, 23, 42, 0.06)"

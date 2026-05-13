@@ -3252,7 +3252,46 @@ function EditorComponent({ ops, saveOps, activeYear, theme: t, off, canEdit }) {
     });
     saveOps(newOps);
   };
+  const getPersonalTurnStyle = (rot) => {
+    if (rot === "M") {
+      return {
+        background: "rgba(251, 191, 36, 0.13)",
+        border: "1px solid rgba(245, 158, 11, 0.28)",
+        color: "#b45309"
+      };
+    }
 
+    if (rot === "N") {
+      return {
+        background: "rgba(99, 102, 241, 0.11)",
+        border: "1px solid rgba(99, 102, 241, 0.24)",
+        color: "#4f46e5"
+      };
+    }
+
+    return {
+      background: "rgba(241, 245, 249, 0.95)",
+      border: "1px solid rgba(226, 232, 240, 0.95)",
+      color: "#64748b"
+    };
+  };
+
+  const getPersonalCellInfo = ({ operator, monthIndex, dayNumber }) => {
+    const dateKey = mk(activeYear, monthIndex + 1, dayNumber);
+    const status = operator?.calendar?.[dateKey];
+    const rot = cshift(activeYear, monthIndex, dayNumber, off);
+    const absenceDef = status ? ABSENCE[status] : null;
+    const turnStyle = getPersonalTurnStyle(rot);
+
+    return {
+      dateKey,
+      status,
+      rot,
+      absenceDef,
+      turnStyle,
+      label: status || (rot === "M" ? "M" : rot === "N" ? "N" : "")
+    };
+  };
   return (
         <div
       className="glass-panel section-card"

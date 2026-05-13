@@ -3371,6 +3371,58 @@ function EditorComponent({ ops, saveOps, activeYear, theme: t, off, canEdit }) {
             fontWeight: 900,
             textTransform: "uppercase",
             letterSpacing: "0.08em",
+            marginBottom: 10
+          }}
+        >
+          Vista
+        </div>
+
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+          {[
+            { id: "individual", label: "Individual" },
+            { id: "equipo", label: "Equipo" }
+          ].map(view => {
+            const active = viewMode === view.id;
+
+            return (
+              <button
+                key={view.id}
+                type="button"
+                onClick={() => setViewMode(view.id)}
+                style={{
+                  background: active ? "rgba(8, 145, 118, 0.12)" : "#ffffff",
+                  border: `1px solid ${active ? "rgba(8, 145, 118, 0.35)" : t.border}`,
+                  color: active ? t.title : t.sub,
+                  padding: "10px 14px",
+                  borderRadius: 14,
+                  cursor: "pointer",
+                  fontWeight: 900,
+                  fontSize: 12,
+                  boxShadow: active ? "0 8px 18px rgba(15, 23, 42, 0.08)" : "none"
+                }}
+              >
+                {view.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+            <div
+        style={{
+          padding: 16,
+          borderRadius: 20,
+          background: "rgba(248, 250, 252, 0.72)",
+          border: `1px solid ${t.border}`,
+          marginBottom: 18
+        }}
+      >
+        <div
+          style={{
+            fontSize: 11,
+            color: t.sub,
+            fontWeight: 900,
+            textTransform: "uppercase",
+            letterSpacing: "0.08em",
             marginBottom: 9
           }}
         >

@@ -25,11 +25,12 @@ export default function handler(req, res) {
     });
   }
 
-  return res.status(200).json({
-    ok: true,
-    canVacuum: false,
-    reason: "API privada lista. Pendiente conectar calendario laboral de Alejandro y Claudia.",
-    source: "gestion-personal",
-    hidden: true
-  });
+ return res.status(200).json({
+  ok: true,
+  canVacuum: false,
+  reason: "API privada lista. Pendiente conectar calendario laboral de Alejandro y Claudia.",
+  source: "gestion-personal",
+  hidden: true,
+  version: "vacuum-api-001"
+});
 }

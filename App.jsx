@@ -2766,7 +2766,7 @@ boxShadow: isToday
                           </div>
                         </div>,
 
-                        ...days.map(dayNumber => {
+                                                ...days.map(dayNumber => {
                           const role = getWwtRoleForOperator(
                             operatorName,
                             activeYear,
@@ -2774,25 +2774,80 @@ boxShadow: isToday
                             dayNumber
                           );
 
+                          const availability = getWwtOperatorAvailability(
+                            operatorName,
+                            activeYear,
+                            monthIndex,
+                            dayNumber
+                          );
+
+                          const assignment = getWwtAssignmentsForDay(
+                            activeYear,
+                            monthIndex,
+                            dayNumber
+                          );
+
+                          const isAssigned = assignment.assigned.includes(operatorName);
+                          const isRestDay = assignment.needed === 0;
+                          const hasAbsence = Boolean(availability.absenceCode);
+
+                          const cellBackground = isAssigned
+                            ? "rgba(8, 145, 118, 0.16)"
+                            : hasAbsence
+                              ? availability.absenceDef?.color || "#e5e7eb"
+                              : isRestDay
+                                ? "rgba(248, 250, 252, 0.75)"
+                                : "rgba(241, 245, 249, 0.95)";
+
+                          const cellBorder = isAssigned
+                            ? "1px solid rgba(8, 145, 118, 0.38)"
+                            : hasAbsence
+                              ? "1px solid rgba(15, 23, 42, 0.10)"
+                              : isRestDay
+                                ? "1px solid rgba(226, 232, 240, 0.65)"
+                                : "1px solid rgba(226, 232, 240, 0.95)";
+
+                          const cellColor = isAssigned
+                            ? "#047857"
+                            : hasAbsence
+                              ? "#111827"
+                              : "#94a3b8";
+
+                          const cellLabel = isAssigned
+                            ? "WWT"
+                            : hasAbsence
+                              ? availability.absenceCode
+                              : "";
+
                           return (
                             <div
                               key={`wwt-${operatorName}-${dayNumber}`}
-                              title={`${operatorName} · Día ${dayNumber} · ${role.name}`}
+                              title={`${operatorName} · Día ${dayNumber} · ${role.name} · ${
+                                isAssigned
+                                  ? "Asignado WWT"
+                                  : hasAbsence
+                                    ? availability.absenceDef?.label || availability.absenceCode
+                                    : isRestDay
+                                      ? "Descanso"
+                                      : "No asignado"
+                              }`}
                               style={{
                                 height: 36,
-                                background: role.background,
-                                border: role.border,
+                                background: cellBackground,
+                                border: cellBorder,
                                 display: "flex",
                                 alignItems: "center",
                                 justifyContent: "center",
                                 borderRadius: 10,
-                                color: role.color,
+                                color: cellColor,
                                 fontWeight: 900,
-                                fontSize: 11,
-                                boxShadow: "inset 0 -2px 0 rgba(15, 23, 42, 0.05)"
+                                fontSize: cellLabel === "WWT" ? 10 : 11,
+                                boxShadow: isAssigned
+                                  ? "0 7px 16px rgba(15, 23, 42, 0.08)"
+                                  : "inset 0 -2px 0 rgba(15, 23, 42, 0.05)"
                               }}
                             >
-                              {role.label}
+                              {cellLabel}
                             </div>
                           );
                         })

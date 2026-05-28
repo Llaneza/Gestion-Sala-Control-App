@@ -2422,6 +2422,109 @@ boxShadow: isToday
 )}
   </div>
 )}
+        {view === "wwt" && (
+          <div className="glass-panel section-card" style={{ padding: 28 }}>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "flex-start",
+                gap: 20,
+                marginBottom: 24,
+                flexWrap: "wrap"
+              }}
+            >
+              <div>
+                <h1
+                  style={{
+                    margin: 0,
+                    color: t.title,
+                    fontSize: 34,
+                    letterSpacing: "-0.03em",
+                    lineHeight: 1.05
+                  }}
+                >
+                  Calendario WWT
+                </h1>
+
+                <p
+                  style={{
+                    marginTop: 10,
+                    marginBottom: 0,
+                    color: t.sub,
+                    fontSize: 15,
+                    lineHeight: 1.5
+                  }}
+                >
+                  Planificación mensual WWT para tres operadores.
+                </p>
+              </div>
+
+              <div
+                style={{
+                  padding: "14px 18px",
+                  borderRadius: 18,
+                  background: t.shell,
+                  border: `1px solid ${t.border}`,
+                  minWidth: 160,
+                  textAlign: "right"
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: 11,
+                    color: t.sub,
+                    fontWeight: 900,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.08em",
+                    marginBottom: 5
+                  }}
+                >
+                  Año activo
+                </div>
+
+                <strong style={{ color: t.title, fontSize: 22 }}>
+                  {activeYear}
+                </strong>
+              </div>
+            </div>
+
+            <div
+              style={{
+                padding: 20,
+                borderRadius: 22,
+                background: "#ffffff",
+                border: `1px solid ${t.border}`,
+                boxShadow: "0 10px 24px rgba(15, 23, 42, 0.05)"
+              }}
+            >
+              <div
+                style={{
+                  fontSize: 12,
+                  fontWeight: 900,
+                  color: t.title,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.07em",
+                  marginBottom: 10
+                }}
+              >
+                Calendario pendiente
+              </div>
+
+              <p
+                style={{
+                  margin: 0,
+                  color: t.sub,
+                  fontSize: 14,
+                  lineHeight: 1.5,
+                  fontWeight: 700
+                }}
+              >
+                En el siguiente paso añadiremos aquí el calendario WWT para tres operadores.
+              </p>
+            </div>
+          </div>
+        )}
         {view === "stats" && (
   <div style={{ display: "grid", gap: 20 }}>
     {(() => {

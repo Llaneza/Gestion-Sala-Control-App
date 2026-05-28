@@ -2633,7 +2633,56 @@ boxShadow: isToday
                       color: "#b91c1c"
                     };
                   };
+                  const getWwtOperatorByName = operatorName => {
+                    return ops.find(operator => operator.name === operatorName);
+                  };
 
+                  const getWwtOperatorAvailability = (operatorName, year, month, day) => {
+                    const operator = getWwtOperatorByName(operatorName);
+                    const dateKey = mk(year, month, day);
+                    const absenceCode = operator?.calendar?.[dateKey] || null;
+                    const rot = cshift(year, month, day, off);
+                    const worksToday = rot === "M" || rot === "N";
+
+                    return {
+                      operator,
+                      operatorName,
+                      dateKey,
+                      rot,
+                      worksToday,
+                      absenceCode,
+                      absenceDef: absenceCode ? ABSENCE[absenceCode] : null,
+                      available: Boolean(operator) && worksToday && !absenceCode
+                    };
+                  };
+
+                  const getWwtAssignmentsForDay = (year, month, day) => {
+                    const rotation = getWwtRotationForDate(year, month, day);
+                    const rot = cshift(year, month, day, off);
+                    const needed = rot === "M" ? 2 : rot === "N" ? 1 : 0;
+
+                    const priority = [
+                      rotation.aguas1,
+                      rotation.aguas2,
+                      rotation.aguas3
+                    ];
+
+                    const availability = priority.map(operatorName =>
+                      getWwtOperatorAvailability(operatorName, year, month, day)
+                    );
+
+                    const assigned = availability
+                      .filter(item => item.available)
+                      .slice(0, needed)
+                      .map(item => item.operatorName);
+
+                    return {
+                      rot,
+                      needed,
+                      assigned,
+                      pending: Math.max(0, needed - assigned.length)
+                    };
+                  };
                   return (
                     <div
                       style={{

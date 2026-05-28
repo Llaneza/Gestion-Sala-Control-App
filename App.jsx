@@ -790,10 +790,11 @@ if (!session) {
       gap: 8
     }}
   >
-    {[
+        {[
       { id: "daily", label: "Operativa diaria", short: "" },
       { id: "calendar", label: "Calendario DCS", short: "" },
       { id: "security", label: "Calendario Seguridad", short: "" },
+      { id: "wwt", label: "WWT", short: "" },
       { id: "stats", label: "Estadísticas", short: "" },
       canSeeEditor && { id: "editor", label: "Personal", short: "" },
       isAdmin && { id: "config", label: "Administración", short: "" }

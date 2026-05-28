@@ -2489,39 +2489,189 @@ boxShadow: isToday
               </div>
             </div>
 
-            <div
+                        <div
               style={{
-                padding: 20,
-                borderRadius: 22,
                 background: "#ffffff",
+                padding: 16,
+                borderRadius: 22,
                 border: `1px solid ${t.border}`,
                 boxShadow: "0 10px 24px rgba(15, 23, 42, 0.05)"
               }}
             >
               <div
                 style={{
-                  fontSize: 12,
-                  fontWeight: 900,
-                  color: t.title,
-                  textTransform: "uppercase",
-                  letterSpacing: "0.07em",
-                  marginBottom: 10
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  gap: 12,
+                  marginBottom: 14,
+                  flexWrap: "wrap"
                 }}
               >
-                Calendario pendiente
+                <div>
+                  <div
+                    style={{
+                      fontSize: 12,
+                      fontWeight: 900,
+                      color: t.title,
+                      textTransform: "uppercase",
+                      letterSpacing: "0.07em"
+                    }}
+                  >
+                    Mayo · {activeYear}
+                  </div>
+
+                  <div
+                    style={{
+                      color: t.sub,
+                      fontSize: 13,
+                      fontWeight: 700,
+                      marginTop: 4
+                    }}
+                  >
+                    Vista mensual WWT para Carlos, Florentino y Pablo.
+                  </div>
+                </div>
+
+                <span
+                  style={{
+                    padding: "6px 10px",
+                    borderRadius: 999,
+                    background: "rgba(8, 145, 118, 0.10)",
+                    color: "#15803d",
+                    fontSize: 11,
+                    fontWeight: 900
+                  }}
+                >
+                  Prueba visual
+                </span>
               </div>
 
-              <p
-                style={{
-                  margin: 0,
-                  color: t.sub,
-                  fontSize: 14,
-                  lineHeight: 1.5,
-                  fontWeight: 700
-                }}
-              >
-                En el siguiente paso añadiremos aquí el calendario WWT para tres operadores.
-              </p>
+              <div style={{ overflowX: "auto", paddingBottom: 4 }}>
+                {(() => {
+                  const wwtOperators = ["Carlos", "Florentino", "Pablo"];
+                  const monthIndex = 4;
+                  const daysInMonth = dim(activeYear, monthIndex);
+                  const days = Array.from({ length: daysInMonth }, (_, index) => index + 1);
+                  const gridTemplateColumns = `minmax(170px, 1.35fr) repeat(${daysInMonth}, minmax(34px, 1fr))`;
+
+                  return (
+                    <div
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns,
+                        gap: 5,
+                        minWidth: Math.max(920, 180 + daysInMonth * 39)
+                      }}
+                    >
+                      <div
+                        style={{
+                          position: "sticky",
+                          left: 0,
+                          zIndex: 2,
+                          background: "#ffffff",
+                          color: t.sub,
+                          fontSize: 10,
+                          fontWeight: 900,
+                          textTransform: "uppercase",
+                          letterSpacing: "0.06em",
+                          padding: "8px 10px",
+                          borderRadius: 10,
+                          border: `1px solid ${t.border}`
+                        }}
+                      >
+                        Operador
+                      </div>
+
+                      {days.map(dayNumber => (
+                        <div
+                          key={`wwt-head-${dayNumber}`}
+                          style={{
+                            textAlign: "center",
+                            color: t.sub,
+                            fontSize: 10,
+                            fontWeight: 900,
+                            padding: "8px 0",
+                            borderRadius: 10,
+                            background: "rgba(248, 250, 252, 0.95)",
+                            border: `1px solid ${t.border}`
+                          }}
+                        >
+                          {dayNumber}
+                        </div>
+                      ))}
+
+                      {wwtOperators.flatMap((operatorName, operatorIndex) => [
+                        <div
+                          key={`wwt-${operatorName}-name`}
+                          style={{
+                            position: "sticky",
+                            left: 0,
+                            zIndex: 1,
+                            background: "#ffffff",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 8,
+                            padding: "7px 9px",
+                            borderRadius: 10,
+                            border: `1px solid ${t.border}`,
+                            minHeight: 36
+                          }}
+                        >
+                          <Av
+                            name={operatorName}
+                            color={["#16a34a", "#2563eb", "#7c3aed"][operatorIndex]}
+                            size={24}
+                          />
+
+                          <div
+                            style={{
+                              color: t.title,
+                              fontSize: 12,
+                              fontWeight: 900,
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              whiteSpace: "nowrap"
+                            }}
+                          >
+                            {operatorName}
+                          </div>
+                        </div>,
+
+                        ...days.map(dayNumber => {
+                          const isAssigned = (dayNumber + operatorIndex) % 3 === 0;
+
+                          return (
+                            <div
+                              key={`wwt-${operatorName}-${dayNumber}`}
+                              title={`${operatorName} · Día ${dayNumber}`}
+                              style={{
+                                height: 36,
+                                background: isAssigned
+                                  ? "rgba(8, 145, 118, 0.12)"
+                                  : "rgba(241, 245, 249, 0.95)",
+                                border: isAssigned
+                                  ? "1px solid rgba(8, 145, 118, 0.28)"
+                                  : "1px solid rgba(226, 232, 240, 0.95)",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                borderRadius: 10,
+                                color: isAssigned ? "#047857" : "#94a3b8",
+                                fontWeight: 900,
+                                fontSize: 11,
+                                boxShadow: "inset 0 -2px 0 rgba(15, 23, 42, 0.05)"
+                              }}
+                            >
+                              {isAssigned ? "WWT" : ""}
+                            </div>
+                          );
+                        })
+                      ])}
+                    </div>
+                  );
+                })()}
+              </div>
             </div>
           </div>
         )}

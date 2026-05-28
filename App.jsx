@@ -2548,12 +2548,82 @@ boxShadow: isToday
               </div>
 
               <div style={{ overflowX: "auto", paddingBottom: 4 }}>
-                {(() => {
+                                {(() => {
                   const wwtOperators = ["Carlos", "Florentino", "Pablo"];
                   const monthIndex = 4;
                   const daysInMonth = dim(activeYear, monthIndex);
                   const days = Array.from({ length: daysInMonth }, (_, index) => index + 1);
                   const gridTemplateColumns = `minmax(170px, 1.35fr) repeat(${daysInMonth}, minmax(34px, 1fr))`;
+
+                                    const wwtRotationBlocks2026 = [
+                    { from: "2026-01-01", to: "2026-01-15", aguas1: "Pablo", aguas2: "Carlos", aguas3: "Florentino" },
+                    { from: "2026-01-16", to: "2026-01-29", aguas1: "Carlos", aguas2: "Florentino", aguas3: "Pablo" },
+                    { from: "2026-01-30", to: "2026-02-12", aguas1: "Florentino", aguas2: "Pablo", aguas3: "Carlos" },
+                    { from: "2026-02-13", to: "2026-02-26", aguas1: "Pablo", aguas2: "Carlos", aguas3: "Florentino" },
+                    { from: "2026-02-27", to: "2026-03-12", aguas1: "Carlos", aguas2: "Florentino", aguas3: "Pablo" },
+                    { from: "2026-03-13", to: "2026-03-26", aguas1: "Florentino", aguas2: "Pablo", aguas3: "Carlos" },
+                    { from: "2026-03-27", to: "2026-04-09", aguas1: "Pablo", aguas2: "Carlos", aguas3: "Florentino" },
+                    { from: "2026-04-10", to: "2026-04-23", aguas1: "Carlos", aguas2: "Florentino", aguas3: "Pablo" },
+                    { from: "2026-04-24", to: "2026-05-07", aguas1: "Florentino", aguas2: "Pablo", aguas3: "Carlos" },
+                    { from: "2026-05-08", to: "2026-05-21", aguas1: "Pablo", aguas2: "Carlos", aguas3: "Florentino" },
+                    { from: "2026-05-22", to: "2026-06-04", aguas1: "Carlos", aguas2: "Florentino", aguas3: "Pablo" },
+                    { from: "2026-06-05", to: "2026-06-18", aguas1: "Florentino", aguas2: "Pablo", aguas3: "Carlos" },
+                    { from: "2026-06-19", to: "2026-06-30", aguas1: "Pablo", aguas2: "Carlos", aguas3: "Florentino" },
+                    { from: "2026-07-01", to: "2026-07-16", aguas1: "Carlos", aguas2: "Florentino", aguas3: "Pablo" },
+                    { from: "2026-07-17", to: "2026-07-30", aguas1: "Florentino", aguas2: "Pablo", aguas3: "Carlos" },
+                    { from: "2026-07-31", to: "2026-08-13", aguas1: "Pablo", aguas2: "Carlos", aguas3: "Florentino" },
+                    { from: "2026-08-14", to: "2026-08-27", aguas1: "Carlos", aguas2: "Florentino", aguas3: "Pablo" },
+                    { from: "2026-08-28", to: "2026-09-10", aguas1: "Florentino", aguas2: "Pablo", aguas3: "Carlos" },
+                    { from: "2026-09-11", to: "2026-09-24", aguas1: "Pablo", aguas2: "Carlos", aguas3: "Florentino" },
+                    { from: "2026-09-25", to: "2026-10-08", aguas1: "Carlos", aguas2: "Florentino", aguas3: "Pablo" },
+                    { from: "2026-10-09", to: "2026-10-22", aguas1: "Florentino", aguas2: "Pablo", aguas3: "Carlos" },
+                    { from: "2026-10-23", to: "2026-11-05", aguas1: "Pablo", aguas2: "Carlos", aguas3: "Florentino" },
+                    { from: "2026-11-06", to: "2026-11-19", aguas1: "Carlos", aguas2: "Florentino", aguas3: "Pablo" },
+                    { from: "2026-11-20", to: "2026-12-03", aguas1: "Florentino", aguas2: "Pablo", aguas3: "Carlos" },
+                    { from: "2026-12-04", to: "2026-12-17", aguas1: "Pablo", aguas2: "Carlos", aguas3: "Florentino" },
+                    { from: "2026-12-18", to: "2026-12-31", aguas1: "Carlos", aguas2: "Florentino", aguas3: "Pablo" }
+                  ];
+
+                  const getWwtRotationForDate = (year, month, day) => {
+                    const dateKey = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+
+                    return (
+                      wwtRotationBlocks2026.find(block => dateKey >= block.from && dateKey <= block.to) ||
+                      wwtRotationBlocks2026[0]
+                    );
+                  };
+
+                  const getWwtRoleForOperator = (operatorName, year, month, day) => {
+                    const rotation = getWwtRotationForDate(year, month, day);
+
+                    if (rotation.aguas1 === operatorName) {
+                      return {
+                        label: "A1",
+                        name: "Aguas 1",
+                        background: "rgba(16, 185, 129, 0.18)",
+                        border: "1px solid rgba(16, 185, 129, 0.38)",
+                        color: "#047857"
+                      };
+                    }
+
+                    if (rotation.aguas2 === operatorName) {
+                      return {
+                        label: "A2",
+                        name: "Aguas 2",
+                        background: "rgba(245, 158, 11, 0.18)",
+                        border: "1px solid rgba(245, 158, 11, 0.42)",
+                        color: "#b45309"
+                      };
+                    }
+
+                    return {
+                      label: "A3",
+                      name: "Aguas 3",
+                      background: "rgba(239, 68, 68, 0.14)",
+                      border: "1px solid rgba(239, 68, 68, 0.34)",
+                      color: "#b91c1c"
+                    };
+                  };
 
                   return (
                     <div
@@ -2639,31 +2709,32 @@ boxShadow: isToday
                         </div>,
 
                         ...days.map(dayNumber => {
-                          const isAssigned = (dayNumber + operatorIndex) % 3 === 0;
+                          const role = getWwtRoleForOperator(
+                            operatorName,
+                            activeYear,
+                            monthIndex,
+                            dayNumber
+                          );
 
                           return (
                             <div
                               key={`wwt-${operatorName}-${dayNumber}`}
-                              title={`${operatorName} · Día ${dayNumber}`}
+                              title={`${operatorName} · Día ${dayNumber} · ${role.name}`}
                               style={{
                                 height: 36,
-                                background: isAssigned
-                                  ? "rgba(8, 145, 118, 0.12)"
-                                  : "rgba(241, 245, 249, 0.95)",
-                                border: isAssigned
-                                  ? "1px solid rgba(8, 145, 118, 0.28)"
-                                  : "1px solid rgba(226, 232, 240, 0.95)",
+                                background: role.background,
+                                border: role.border,
                                 display: "flex",
                                 alignItems: "center",
                                 justifyContent: "center",
                                 borderRadius: 10,
-                                color: isAssigned ? "#047857" : "#94a3b8",
+                                color: role.color,
                                 fontWeight: 900,
                                 fontSize: 11,
                                 boxShadow: "inset 0 -2px 0 rgba(15, 23, 42, 0.05)"
                               }}
                             >
-                              {isAssigned ? "WWT" : ""}
+                              {role.label}
                             </div>
                           );
                         })

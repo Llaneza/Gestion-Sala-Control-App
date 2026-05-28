@@ -208,6 +208,7 @@ function PrintableYearCalendar({ ops, year, asgn, off, generatedAt, generatedBy 
   const [view, setView] = useState("daily");
   const [activeYear, setAY] = useState(today.getFullYear());
   const [month, setMonth] = useState(today.getMonth());
+  const [wwtMonth, setWwtMonth] = useState(today.getMonth());
   const themeMode = "light";
   const [showConfigPass, setShowConfigPass] = useState(false);
   const [printMode, setPrintMode] = useState("annual");
@@ -2518,7 +2519,7 @@ boxShadow: isToday
                       letterSpacing: "0.07em"
                     }}
                   >
-                    Mayo · {activeYear}
+                  {MONTHS[wwtMonth]} · {activeYear}
                   </div>
 
                   <div
@@ -2533,24 +2534,32 @@ boxShadow: isToday
                   </div>
                 </div>
 
-                <span
+                                <select
+                  value={wwtMonth}
+                  onChange={e => setWwtMonth(Number(e.target.value))}
                   style={{
-                    padding: "6px 10px",
-                    borderRadius: 999,
-                    background: "rgba(8, 145, 118, 0.10)",
-                    color: "#15803d",
-                    fontSize: 11,
-                    fontWeight: 900
+                    padding: "10px 12px",
+                    borderRadius: 14,
+                    background: "#ffffff",
+                    border: `1px solid ${t.border}`,
+                    color: t.title,
+                    fontSize: 13,
+                    fontWeight: 900,
+                    cursor: "pointer"
                   }}
                 >
-                  Prueba visual
-                </span>
+                  {MONTHS.map((monthName, monthIndex) => (
+                    <option key={monthName} value={monthIndex}>
+                      {monthName}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div style={{ overflowX: "auto", paddingBottom: 4 }}>
                                 {(() => {
                   const wwtOperators = ["Carlos", "Florentino", "Pablo"];
-                  const monthIndex = 4;
+                  const monthIndex = wwtMonth;
                   const daysInMonth = dim(activeYear, monthIndex);
                   const days = Array.from({ length: daysInMonth }, (_, index) => index + 1);
                   const gridTemplateColumns = `minmax(170px, 1.35fr) repeat(${daysInMonth}, minmax(34px, 1fr))`;

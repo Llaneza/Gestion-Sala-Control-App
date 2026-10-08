@@ -234,7 +234,19 @@ function resumenDeTemario(q){
    if(/yesterday|last|ago|went|was|were/.test(t))return {title:'Inglés A2 · Pasado simple',body:'Las acciones terminadas se expresan con pasado simple. Los verbos regulares añaden -ed; los irregulares tienen formas como went o was.'};
    return {title:'Inglés A2 · Uso y gramática',body:'El nivel A2 evalúa vocabulario cotidiano, preposiciones, pronombres, tiempos verbales, comparativos y expresiones fijas.'};
  }
- return {title:'Apartado pendiente de resumen específico',body:'Concepto examinado: '+String(q.opts?.[q.ans]||'la opción correcta')+'. Este apartado aún está pendiente de una síntesis concreta verificada; la respuesta no se ha modificado.'};
+ 
+ if(/Ley PRL|Ley 31\/1995|Prevenci[oó]n de Riesgos Laborales|Delegad[oa]s? de Prevenci[oó]n|Comit[eé] de Seguridad y Salud/i.test(question+' '+topic))return {title:RESUMEN_TEMAS.PRL[0],body:RESUMEN_TEMAS.PRL[1]};
+ if(/RD 2395\/2004|Estatuto del ADIF|Estatuto de ADIF/i.test(question+' '+topic))return {title:RESUMEN_TEMAS.ESTATUTO[0],body:RESUMEN_TEMAS.ESTATUTO[1]};
+ if(/LO 3\/2007|Ley Org[aá]nica 3\/2007|Igualdad efectiva|igualdad de oportunidades/i.test(question+' '+topic))return {title:RESUMEN_TEMAS.IGUALDAD[0],body:RESUMEN_TEMAS.IGUALDAD[1]};
+ if(/RD 842\/2002|ITC.BT|reglamento electrot[eé]cnico de baja tensi[oó]n/i.test(question+' '+topic))return {title:RESUMEN_TEMAS.REBT[0],body:RESUMEN_TEMAS.REBT[1]};
+ if(/RD 223\/2008|ITC.LAT|reglamento de l[ií]neas el[eé]ctricas de alta tensi[oó]n/i.test(question+' '+topic))return {title:RESUMEN_TEMAS.RLAT[0],body:RESUMEN_TEMAS.RLAT[1]};
+ if(/RD 337\/2014|ITC.RAT|instalaciones el[eé]ctricas de alta tensi[oó]n/i.test(question+' '+topic))return {title:RESUMEN_TEMAS.RAT[0],body:RESUMEN_TEMAS.RAT[1]};
+ if(/Ley 53\/1984|incompatibilidades del personal/i.test(question+' '+topic))return {title:RESUMEN_TEMAS.INCOMPAT[0],body:RESUMEN_TEMAS.INCOMPAT[1]};
+ if(/TREBEP|EBEP|RD Legislativo 5\/2015|c[oó]digo de conducta/i.test(question+' '+topic))return {title:RESUMEN_TEMAS.TREBEP[0],body:RESUMEN_TEMAS.TREBEP[1]};
+ if(/Declaraci[oó]n sobre la Red|DR 2027/i.test(question+' '+topic))return {title:'Declaración sobre la Red',body:'Describe infraestructura, servicios, condiciones de acceso y reglas para asignar capacidad de circulación ferroviaria.'};
+ if(/Ley 38\/2015|Ley del Sector Ferroviario/i.test(question+' '+topic))return {title:'Ley del Sector Ferroviario · Pregunta histórica',body:'Regula la infraestructura y funciones de los administradores ferroviarios. Revisa su encaje en el programa vigente de 2026.'};
+ if(/Reglamento de Circulaci[oó]n Ferroviaria|RCF\b/i.test(question+' '+topic))return {title:RESUMEN_TEMAS.RCF[0],body:RESUMEN_TEMAS.RCF[1]};
+return {title:'Apartado pendiente de resumen específico',body:'Concepto examinado: '+String(q.opts?.[q.ans]||'la opción correcta')+'. Este apartado aún está pendiente de una síntesis concreta verificada; la respuesta no se ha modificado.'};
 }
 function siglasDePregunta(q){
  const text=[q.q,...(q.opts||[]),q.ref,q.sub].filter(Boolean).join(' ');

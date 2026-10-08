@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="ADIF 26/11PO">
 <link rel="manifest" href="manifest.webmanifest">
-<title>ADIF 26/11PO · OEP 2026 · Alejandro · Experimental v0.6</title>
+<title>ADIF 26/11PO · OEP 2026 · Alejandro · Experimental v0.7</title>
 <style>
 :root{--bg:#f3f5f2;--card:#fff;--ink:#162119;--muted:#66736b;--line:#dce3de;--green:#0b5d3b;--green2:#e3f1e9;--bad:#bd3b31;--bad2:#f9e7e4;--amber:#a96e00;--shadow:0 3px 14px rgba(20,42,28,.07);--r:16px}
 @media(prefers-color-scheme:dark){:root{--bg:#0d1410;--card:#151f19;--ink:#e9f0eb;--muted:#99a99f;--line:#2a3a31;--green:#36b67b;--green2:#173126;--bad:#ff7568;--bad2:#391c18;--amber:#efb443;--shadow:none}}
@@ -174,6 +174,78 @@ function briefExplanation(q){
   return 'La respuesta correcta es «'+correct+'». Quédate con el dato exacto que diferencia esta opción de las demás.';
 }
 
+
+const RESUMEN_RULES=[
+["ITC-BT-08","REBT · Esquemas TT, TN e IT","TT: masas con tierra independiente. TN: masas unidas a tierra de alimentación; TN-C combina neutro y protección en PEN, TN-S los separa. IT: alimentación aislada de tierra o conectada a través de impedancia."],
+["ITC-BT-14","REBT · Línea General de Alimentación","La LGA une la Caja General de Protección (CGP) con la centralización de contadores: forma parte de la instalación de enlace."],
+["ITC-BT-17","REBT · Mando y protección","Regula dispositivos generales e individuales de mando y protección e interruptor de control de potencia cuando procede."],
+["ITC-BT-18","REBT · Puesta a tierra","La puesta a tierra limita tensiones peligrosas. Profundidad mínima: 0,50 m. Tensión de contacto límite: 24 V en lugares conductores y 50 V en los demás."],
+["ITC-BT-22","REBT · Sobreintensidades","Las causas principales de sobreintensidad son las sobrecargas y los cortocircuitos. Hay que proteger los conductores frente a ambas."],
+["ITC-BT-23","REBT · Sobretensiones","Regula protección contra sobretensiones. Recuerda: BT-22 = sobreintensidades; BT-23 = sobretensiones; BT-24 = contactos."],
+["ITC-BT-24","REBT · Contactos eléctricos","Contacto directo: con partes activas. Contacto indirecto: con masas accidentalmente puestas en tensión. Se aplican medidas contra el choque eléctrico."],
+["ITC-LAT 05","Líneas AT · Inspecciones","Las líneas AT se someten a verificaciones e inspecciones según proceda. La inspección periódica tiene carácter general trienal."],
+["ITC-RAT 01","RAT · Terminología","Recoge las definiciones reglamentarias de aparatos, elementos, instalaciones y tierras de alta tensión."],
+["ITC-RAT 04","RAT · Categorías por tensión","3.ª: >1 kV y ≤30 kV. 2.ª: >30 y ≤66 kV. 1.ª: >66 y <220 kV. Especial: ≥220 kV o determinadas instalaciones de transporte. 30 kV exactos = 3.ª."],
+["ITC-RAT 06","RAT · Aparatos de maniobra","RAT 06 = maniobra; RAT 07 = transformadores de potencia; RAT 08 = transformadores de medida; RAT 09 = protecciones."],
+["ITC-RAT 07","RAT · Transformadores","La ITC-RAT 07 regula transformadores y autotransformadores de potencia; los de medida y protección están en la ITC-RAT 08."],
+["ITC-RAT 08","RAT · Transformadores de medida","Los transformadores de medida adaptan magnitudes eléctricas para equipos de medida y relés de protección."],
+["ITC-RAT 09","RAT · Protecciones","La protección debe detectar y despejar defectos, coordinando equipos de maniobra para reducir daños y riesgos."],
+["ITC-RAT 13","RAT · Puesta a tierra","Las tierras de instalaciones AT deben controlar tensiones de paso y contacto, considerando terreno, electrodos y condiciones de defecto."],
+["1.1.1.3","RCF Libro 1 · Definiciones","Define estación, trayecto, plena vía, vía banalizada, personal ferroviario y otras nociones usadas en circulación."],
+["1.1.1.4","RCF Libro 1 · Abreviaturas","Se definen BA (Bloqueo Automático), BAB (BA de vía banalizada), BAD (BA de vía doble), CTC (Control de Tráfico Centralizado) y otras siglas."],
+["1.2.","RCF Libro 1 · Documentación","La AESF produce especificaciones técnicas; los administradores publican consignas y avisos; las empresas ferroviarias, libros de normas e itinerarios."],
+["1.3.","RCF Libro 1 · Distribución","La documentación reglamentaria debe estar actualizada y disponible para el personal afectado. También deben facilitarse los útiles de servicio."],
+["1.4.","RCF Libro 1 · Comunicaciones","Las comunicaciones pueden ser verbales o escritas. Emisor y receptor deben identificarse y asegurar que el mensaje se ha comprendido."],
+["1.5.","RCF Libro 1 · Circulación","Se establecen principios generales de señales, órdenes, marcha, velocidad y paradas para mantener la seguridad de circulación."]
+];
+const RESUMEN_TEMAS={
+ REBT:["REBT · Baja tensión","El REBT regula instalaciones de baja tensión: esquemas de conexión, instalaciones de enlace, protecciones y requisitos de seguridad."],
+ RAT:["RAT · Instalaciones AT","El RAT desarrolla seguridad de instalaciones eléctricas de alta tensión: categorías, aislamiento, transformadores, protecciones y puesta a tierra."],
+ RLAT:["Líneas de alta tensión","La reglamentación LAT regula proyecto, construcción, características técnicas, verificaciones e inspecciones de líneas de alta tensión."],
+ RCF:["RCF Libro 1","Establece definiciones, documentación, comunicaciones y principios fundamentales para una circulación ferroviaria segura."],
+ CALIDAD:["Calidad de la energía ferroviaria","Se analizan fluctuaciones de tensión, desequilibrios, flicker, armónicos y continuidad del suministro."],
+ PRL:["Prevención de Riesgos Laborales","La Ley 31/1995 recoge el derecho a protección eficaz, evaluación y prevención de riesgos, obligaciones de trabajadores y representación preventiva."],
+ IGUALDAD:["Igualdad efectiva","La LO 3/2007 trata igualdad, discriminación directa e indirecta, acoso sexual y medidas de igualdad."],
+ ESTATUTO:["Estatuto de ADIF","ADIF es una entidad pública empresarial cuyos órganos de gobierno incluyen el Consejo de Administración y el Presidente."],
+ TREBEP:["TREBEP · Conducta","El Código de Conducta exige imparcialidad, neutralidad, integridad, diligencia y servicio a los intereses generales."],
+ INCOMPAT:["Incompatibilidades","La Ley 53/1984 establece prohibiciones y requisitos para compatibilizar actividades públicas y privadas."]
+};
+function resumenDeTemario(q){
+ let question=String(q.q||''),sub=String(q.sub||''),ref=String(q.ref||''),topic=String(q.topic||''),ctx=(sub+' '+ref).toUpperCase(),source=(topic+' '+ctx+' '+question).toUpperCase();
+ if(/categor[ií]a|clasifica/i.test(question)&&/(RAT|337\/2014|ALTA TENSI[ÓO]N)/i.test(source))return {title:RESUMEN_RULES[9][1],body:RESUMEN_RULES[9][2]};
+ for(const [key,title,body] of RESUMEN_RULES){
+   if(ctx.includes(key)||ctx.includes(key.replace(' ','-')))return {title,body};
+   if(key.startsWith('ITC-')&&question.toUpperCase().includes(key))return {title,body};
+ }
+ if(/RCF|CIRCULACI[ÓO]N FERROVIARIA/i.test(source)){
+   if(/comunica|telefonema/i.test(question))return {title:RESUMEN_RULES[19][1],body:RESUMEN_RULES[19][2]};
+   if(/abreviatura|sigla|acr[oó]nimo/i.test(question))return {title:RESUMEN_RULES[17][1],body:RESUMEN_RULES[17][2]};
+ }
+ for(const [key,pair] of Object.entries(RESUMEN_TEMAS)){
+   if((topic+' '+sub).toUpperCase().includes(key))return {title:pair[0],body:pair[1]};
+ }
+ if(/Ley 31\/1995/i.test(question))return {title:RESUMEN_TEMAS.PRL[0],body:RESUMEN_TEMAS.PRL[1]};
+ if(/Ley 53\/1984/i.test(question))return {title:RESUMEN_TEMAS.INCOMPAT[0],body:RESUMEN_TEMAS.INCOMPAT[1]};
+ if(/Ley Orgánica 3\/2007/i.test(question))return {title:RESUMEN_TEMAS.IGUALDAD[0],body:RESUMEN_TEMAS.IGUALDAD[1]};
+ if(/INGL[EÉ]S|ENGLISH/i.test(topic)||String(q.block).toLowerCase()==='ing'){
+   const t=(question+' '+String(q.opts?.[q.ans]||'')).toLowerCase();
+   if(/many|much/.test(t))return {title:'Inglés A2 · Many/Much',body:'Many se usa con sustantivos contables en plural; much con incontables: many trains y much water.'};
+   if(/than|better|worse/.test(t))return {title:'Inglés A2 · Comparativos',body:'Los comparativos suelen usar -er o more + adjetivo, seguido de than. Good → better; bad → worse.'};
+   if(/yesterday|last|ago|went|was|were/.test(t))return {title:'Inglés A2 · Pasado simple',body:'Las acciones terminadas se expresan con pasado simple. Los verbos regulares añaden -ed; los irregulares tienen formas como went o was.'};
+   return {title:'Inglés A2 · Uso y gramática',body:'El nivel A2 evalúa vocabulario cotidiano, preposiciones, pronombres, tiempos verbales, comparativos y expresiones fijas.'};
+ }
+ return {title:'Apartado pendiente de resumen específico',body:'Concepto examinado: '+String(q.opts?.[q.ans]||'la opción correcta')+'. Este apartado aún está pendiente de una síntesis concreta verificada; la respuesta no se ha modificado.'};
+}
+function siglasDePregunta(q){
+ const text=[q.q,...(q.opts||[]),q.ref,q.sub].filter(Boolean).join(' ');
+ return GLOSARIO.filter(x=>x.term.length>=2&&!x.term.includes(' ')&&new RegExp('(^|[^A-Za-zÀ-ÿ0-9])'+x.term.replace(/[^A-Za-z0-9]/g,'\\function findHelpAnswer(query){')+'(?=$|[^A-Za-zÀ-ÿ0-9])').test(text)).slice(0,8);
+}
+function panelDeTemario(q){
+ const sum=resumenDeTemario(q),hit=siglasDePregunta(q);
+ let out='<div class="answer" style="margin-top:10px"><b>📖 Resumen del temario</b><div class="tiny muted">'+esc(sum.title)+'</div><div style="margin-top:6px">'+esc(sum.body)+'</div></div>';
+ if(hit.length)out+='<div class="answer" style="margin-top:10px"><b>🔤 Siglas de la pregunta</b><div style="margin-top:6px">'+hit.map(x=>'<div><b>'+esc(x.term)+'</b> = '+esc(x.title)+'</div>').join('')+'</div></div>';
+ return out;
+}
 function findHelpAnswer(query){
  let raw=String(query||'').trim(),n=normText(raw);
  if(!n)return 'Escribe una sigla o una pregunta del temario.';
@@ -204,7 +276,7 @@ function askHelp(prefill){
 function openHelpWithCurrent(){
   let q=deck[pos];showView('help');
   $('assistInput').value=q?((q.topic||'')+' '+q.q):'';
-  let a=$('assistAnswer');a.style.display='block';a.innerHTML=q?'<b>Sobre esta pregunta</b><div style="margin-top:6px">'+esc(briefExplanation(q))+'</div>':findHelpAnswer('');
+  let a=$('assistAnswer');a.style.display='block';a.innerHTML=q?'<b>Sobre esta pregunta</b><div style="margin-top:6px">'+esc(briefExplanation(q))+'</div>'+panelDeTemario(q):findHelpAnswer('');
 }
 function answer(i){
   if(answered)return;
@@ -218,7 +290,7 @@ function answer(i){
     ?'<div class="tiny" style="margin-top:8px"><b>Respuesta correcta:</b> '+correct+'</div>'
     :'<div class="tiny" style="margin-top:8px"><b>Tu respuesta:</b> '+String.fromCharCode(65+i)+'. '+esc(q.opts[i])+'<br><b>Respuesta correcta:</b> '+correct+'</div>';
   let explain='<div class="answer" style="margin-top:10px"><b>💡 Explicación</b><div style="margin-top:5px">'+esc(briefExplanation(q))+'</div></div>';
-  $('feedback').innerHTML='<div class="notice '+(ok?'':'bad')+'"><b>'+(ok?'✓ Correcta':'✗ Incorrecta')+'</b>'+picked+explain+'<button class="btn small" style="margin-top:10px" onclick="openHelpWithCurrent()">? Preguntar sobre esto</button></div>';
+  $('feedback').innerHTML='<div class="notice '+(ok?'':'bad')+'"><b>'+(ok?'✓ Correcta':'✗ Incorrecta')+'</b>'+picked+explain+panelDeTemario(q)+'<button class="btn small" style="margin-top:10px" onclick="openHelpWithCurrent()">? Preguntar sobre esto</button></div>';
   $('nextBtn').disabled=false;
   $('sessionScore').textContent='Sesión '+session.ok+'/'+session.n;
 }

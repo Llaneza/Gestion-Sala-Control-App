@@ -219,7 +219,7 @@ function resumenDeTemario(q){
  }
  if(/RCF|CIRCULACI[ÓO]N FERROVIARIA/i.test(source)){
    if(/comunica|telefonema/i.test(question))return {title:RESUMEN_RULES[19][1],body:RESUMEN_RULES[19][2]};
-   if(/abreviatura|sigla|acr[oó]nimo/i.test(question))return {title:RESUMEN_RULES[17][1],body:RESUMEN_RULES[17][2]};
+   if(/abreviatura|sigla|acr[oó]nimo/i.test(question))return {title:RESUMEN_RULES[16][1],body:RESUMEN_RULES[16][2]};
  }
  for(const [key,pair] of Object.entries(RESUMEN_TEMAS)){
    if((topic+' '+sub).toUpperCase().includes(key))return {title:pair[0],body:pair[1]};
@@ -238,7 +238,7 @@ function resumenDeTemario(q){
 }
 function siglasDePregunta(q){
  const text=[q.q,...(q.opts||[]),q.ref,q.sub].filter(Boolean).join(' ');
- return GLOSARIO.filter(x=>x.term.length>=2&&!x.term.includes(' ')&&new RegExp('(^|[^A-Za-zÀ-ÿ0-9])'+x.term.replace(/[^A-Za-z0-9]/g,'\\function findHelpAnswer(query){')+'(?=$|[^A-Za-zÀ-ÿ0-9])').test(text)).slice(0,8);
+ return GLOSARIO.filter(x=>x.term.length>=2&&!x.term.includes(' ')&&new RegExp('(^|[^A-Za-zÀ-ÿ0-9])'+x.term.replace(/[^A-Za-z0-9]/g,'\\$&')+'(?=$|[^A-Za-zÀ-ÿ0-9])').test(text)).slice(0,8);
 }
 function panelDeTemario(q){
  const sum=resumenDeTemario(q),hit=siglasDePregunta(q);

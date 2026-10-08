@@ -43,7 +43,7 @@
     <div class="card">
       <div class="qmeta"><span class="tag warn">β</span><span class="tag">Asistente local</span></div>
       <h3 style="margin-top:4px">Pregúntale a la app</h3>
-      <p class="muted">Escribe una abreviatura o concepto: <b>RAT</b>, <b>30 kV</b>, <b>TN-C</b>, <b>CGP</b>, <b>ITC-BT-18</b>, <b>flicker</b>… Responde con el contenido de estudio integrado en la app, sin conectarse a una IA externa.</p>
+      <p class="muted">Escribe una abreviatura o concepto: <b>RAT</b>, <b>30 kV</b>, <b>TN-C</b>, <b>CGP</b>, <b>ITC-BT-18</b>, <b>flicker</b>… Incluye las 71 siglas oficiales del RCF Libro 1 y abreviaturas eléctricas, sin conectarse a una IA externa.</p>
       <div class="row"><input id="assistInput" class="search" placeholder="Ej.: ¿qué categoría es 30 kV?"><button class="btn primary" id="assistBtn">Preguntar</button></div>
       <div id="assistAnswer" class="answer" style="display:none;margin-top:12px"></div>
     </div>
@@ -123,6 +123,9 @@ const STUDY_KB=[
   {term:'ITC-BT-24',title:'ITC-BT-24',keys:['itc-bt-24','contactos directos','contactos indirectos'],text:'ITC-BT-24 = protección contra contactos directos e indirectos, es decir, protección frente al choque eléctrico.'},
   {term:'ITC-RAT 06-09',title:'ITC-RAT 06 a 09',keys:['itc-rat 06','itc-rat-06','itc-rat 07','itc-rat-07','itc-rat 08','itc-rat-08','itc-rat 09','itc-rat-09'],text:'ITC-RAT 06: aparatos de maniobra. ITC-RAT 07: transformadores y autotransformadores de potencia. ITC-RAT 08: transformadores de medida y protección. ITC-RAT 09: protecciones.'}
 ];
+const RCF_71=[["AC","Estación intermitente apta para circulación"],["AESF","Agencia Estatal de Seguridad Ferroviaria"],["AI","Administrador de Infraestructura"],["ASFA","Anuncio de Señales y Frenado Automático"],["ATO","Sistema de Operación Automática de Trenes"],["ATP","Sistema de Protección Automática de Trenes"],["BA","Bloqueo Automático"],["BAB","Bloqueo Automático de vía Banalizada"],["BAD","Bloqueo Automático de vía Doble"],["BAR","Boletín de Autorización de Rebase"],["BAU","Bloqueo Automático de vía Única"],["BCA","Bloqueo de Control Automático"],["BLA","Bloqueo de Liberación Automática"],["BLAB","Bloqueo de Liberación Automática de vía Banalizada"],["BLAD","Bloqueo de Liberación Automática de vía Doble"],["BLAU","Bloqueo de Liberación Automática de vía Única"],["BOI","Boletín de Órdenes e Informaciones"],["BSL","Bloqueo de Señalización Lateral"],["BT","Bloqueo Telefónico"],["BTV","Banalización Temporal de Vía"],["CCR","Control de Circulación por Radio"],["CMS","Control-Mando y Señalización"],["CSV","Cambio Significativo de Velocidad"],["CTC","Control de Tráfico Centralizado"],["DMI","Interfaz con el maquinista en ETCS"],["DTDO","Detenido (mensaje de radiotelefonía)"],["EBICAB","Sistema de protección automática de trenes con supervisión continua"],["EF","Empresa Ferroviaria"],["ep","Freno electroneumático"],["ERTMS","Sistema Europeo de Gestión del Tráfico Ferroviario"],["ETCS","Sistema Europeo de Control de Trenes"],["ETI","Especificación Técnica de Interoperabilidad"],["ETI CMS","ETI de Control, Mando y Señalización"],["ETI LOC&PAS","ETI de Locomotoras y Material Rodante de Viajeros"],["ETI OPE","ETI de Explotación y Gestión del Tráfico"],["EVB","Entrega de Vía Bloqueada"],["FS","Supervisión completa en ETCS"],["GSM-R","Sistema de Comunicación Digital Específico para Ferrocarril"],["JRU","Registrador Jurídico"],["L","Cantón libre (anotación)"],["LSF","Ley del Sector Ferroviario"],["LTV","Limitación Temporal de Velocidad máxima"],["LZB","Sistema de control continuo del tren"],["MA","Movimiento Autorizado en ETCS"],["MC","Mando Centralizado"],["mf","Masa frenada"],["ML","Mando Local"],["Modalidad A","Radiotelefonía entre maquinista y responsables de circulación del PM o CTC"],["Modalidad C","Radiotelefonía entre maquinista y responsable de circulación de estación, maniobras y pruebas de freno"],["MRA","Material Rodante Auxiliar"],["mt","Masa total"],["MT","Marche el Tren"],["NC","Estación intermitente no apta para circulación"],["OM","Orden Ministerial"],["PAET","Puesto de Adelantamiento y Estacionamiento de Trenes"],["PB","Puesto de Bloqueo"],["PBA","Puesto de Banalización"],["PCA","Puesto de Cantonamiento"],["PLO","Puesto Local de Operaciones"],["PM","Puesto de Mando"],["PN","Paso a Nivel"],["PRO","Puesto Regional de Operaciones"],["RAM","Red de Ancho Métrico"],["RCF","Reglamento de Circulación Ferroviaria"],["RFIG","Red Ferroviaria de Interés General"],["RID","Reglamento Internacional sobre el Transporte de Mercancías Peligrosas por Ferrocarril"],["S","Identificación de los medios de socorro"],["SGS","Sistema de Gestión de la Seguridad"],["SPN","Señal de Paso a Nivel"],["TDP","Tubería de Depósitos Principales"],["TFA","Tubería de Freno Automático"]].map(x=>({term:x[0],title:x[1],area:'RCF',source:'RCF Libro 1 · art. 1.1.1.4'}));
+const EXTRA_SIGLAS=[["BEM","Bloqueo Eléctrico Manual"],["CGP","Caja General de Protección"],["LGA","Línea General de Alimentación"],["RAT","Reglamento de instalaciones de alta tensión"],["REBT","Reglamento Electrotécnico para Baja Tensión"],["LAT","Líneas de Alta Tensión"],["ITC","Instrucción Técnica Complementaria"],["TN-C","Esquema TN con neutro y protección combinados en PEN"],["TN-S","Esquema TN con N y PE separados"],["TT","Esquema de conexión a tierra TT"],["IT","Esquema de conexión a tierra IT"],["PE","Conductor de protección"],["PEN","Conductor combinado de protección y neutro"],["LPRL","Ley de Prevención de Riesgos Laborales"],["EBEP","Estatuto Básico del Empleado Público"],["TREBEP","Texto Refundido del Estatuto Básico del Empleado Público"]].map(x=>({term:x[0],title:x[1],area:'Otros',source:'Temario de la oposición'}));
+const GLOSARIO=[...RCF_71,...EXTRA_SIGLAS,...STUDY_KB.filter(x=>![...RCF_71,...EXTRA_SIGLAS].some(y=>y.term===x.term)).map(x=>({...x,area:'Otros'}))];
 function normText(v){return String(v??'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim()}
 function conceptExplanation(q){
   let t=normText([q.q,...(q.opts||[]),q.ref,q.topic,q.sub].join(' '));
@@ -170,24 +173,29 @@ function briefExplanation(q){
   if(q.note)return q.note;
   return 'La respuesta correcta es «'+correct+'». Quédate con el dato exacto que diferencia esta opción de las demás.';
 }
+
 function findHelpAnswer(query){
-  let n=normText(query);
-  if(!n)return 'Escribe una abreviatura o una duda concreta.';
-  let scored=STUDY_KB.map(x=>{
-    let score=0,term=normText(x.term),title=normText(x.title);
-    if(n===term||n===title)score+=100;
-    if(n.includes(term)||n.includes(title))score+=25;
-    for(const k of x.keys||[]){let nk=normText(k);if(n.includes(nk))score+=18;else if(nk.includes(n))score+=6}
-    return [score,x];
-  }).sort((a,b)=>b[0]-a[0]);
-  if(scored[0]?.[0]>0)return '<b>'+esc(scored[0][1].title)+'</b><div style="margin-top:6px">'+esc(scored[0][1].text)+'</div>';
-  let all=[...(banks.exp||[]),...(banks.ugt||[]),...(banks.of||[])],matches=all.filter(q=>normText([q.q,q.topic,q.sub,q.ref].join(' ')).includes(n)).slice(0,3);
-  if(matches.length)return '<b>He encontrado preguntas relacionadas:</b>'+matches.map(q=>'<div class="listitem"><b>'+esc(q.q)+'</b><div class="tiny" style="margin-top:4px">'+esc(briefExplanation(q))+'</div></div>').join('');
-  return 'No tengo todavía una explicación fiable integrada para esa consulta. Prueba con la abreviatura exacta o con un concepto más corto.';
+ let raw=String(query||'').trim(),n=normText(raw);
+ if(!n)return 'Escribe una sigla o una pregunta del temario.';
+ let found=GLOSARIO.find(x=>normText(x.term)===n);
+ if(!found){
+   const upper=(raw.match(/\b[A-Z][A-Z0-9-]{1,}\b/g)||[]).reverse();
+   found=upper.map(t=>GLOSARIO.find(x=>x.term.toUpperCase()===t)).find(Boolean);
+ }
+ if(!found){
+   const tokens=n.split(/[^a-z0-9-]+/).filter(Boolean).reverse();
+   found=tokens.map(t=>GLOSARIO.find(x=>normText(x.term)===t)).find(Boolean);
+ }
+ if(found)return '<b>'+esc(found.term)+' = '+esc(found.title)+'</b><div class="tiny muted">'+esc(found.source||'Glosario')+'</div>';
+ if(/(30|66|220)\s*kv/.test(n))return '<b>Categorías RAT</b><div>3.ª: >1 y ≤30 kV; 2.ª: >30 y ≤66 kV; 1.ª: >66 y <220 kV; especial: ≥220 kV. 30 kV es 3.ª categoría.</div>';
+ let match=GLOSARIO.find(x=>normText(x.title).length>=5&&n.includes(normText(x.title)));
+ if(match)return '<b>'+esc(match.term)+' = '+esc(match.title)+'</b>';
+ return 'Esta consulta aún no aparece en el glosario local. Prueba una sigla concreta como BA, BAB, BAD, CTC o EVB. No es una IA externa.';
 }
 function renderGlossary(){
-  let n=normText($('glossarySearch')?.value||''),xs=STUDY_KB.filter(x=>!n||normText([x.term,x.title,...x.keys,x.text].join(' ')).includes(n));
-  $('glossaryList').innerHTML=xs.map(x=>'<div class="listitem"><b>'+esc(x.term)+'</b> · '+esc(x.title)+'<div class="tiny muted" style="margin-top:4px">'+esc(x.text)+'</div></div>').join('');
+ const n=normText($('glossarySearch').value),xs=GLOSARIO.filter(x=>!n||normText([x.term,x.title,x.area,x.text].join(' ')).includes(n));
+ $('glossaryList').innerHTML='<p class="tiny muted">'+xs.length+' entradas · 71 del RCF oficial y otras del temario</p>'+
+ xs.map(x=>'<div class="listitem"><span class="tag">'+esc(x.area||'Temario')+'</span> <b>'+esc(x.term)+'</b> · '+esc(x.title)+(x.text?'<div class="tiny muted">'+esc(x.text)+'</div>':'')+'</div>').join('');
 }
 function askHelp(prefill){
   if(prefill!=null)$('assistInput').value=prefill;

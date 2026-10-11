@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="ADIF 26/11PO">
 <link rel="manifest" href="manifest.webmanifest">
-<title>ADIF 26/11PO · OEP 2026 · Alejandro · Experimental v0.8</title>
+<title>ADIF 26/11PO · OEP 2026 · Alejandro · Experimental v0.9</title>
 <style>
 :root{--bg:#f3f5f2;--card:#fff;--ink:#162119;--muted:#66736b;--line:#dce3de;--green:#0b5d3b;--green2:#e3f1e9;--bad:#bd3b31;--bad2:#f9e7e4;--amber:#a96e00;--shadow:0 3px 14px rgba(20,42,28,.07);--r:16px}
 @media(prefers-color-scheme:dark){:root{--bg:#0d1410;--card:#151f19;--ink:#e9f0eb;--muted:#99a99f;--line:#2a3a31;--green:#36b67b;--green2:#173126;--bad:#ff7568;--bad2:#391c18;--amber:#efb443;--shadow:none}}
@@ -26,6 +26,7 @@
   <section class="view" id="practiceView">
     <div class="toolbar"><div class="seg" id="modebar"><button data-mode="smart" class="on">Repaso</button><button data-mode="all">Todas</button><button data-mode="sim">Simulacro</button></div></div>
     <div id="filters" class="grid grid2"></div>
+    <div id="rotationInfo" class="tiny muted" style="margin-top:8px" hidden></div>
     <div class="row between tiny muted" style="margin-top:10px"><span id="counter">Pregunta —</span><span id="sessionScore">Sesión 0/0</span></div>
     <div class="progressbar"><i id="bar" style="width:0"></i></div>
     <div id="stage" class="card"><div class="muted">Cargando preguntas…</div></div>
@@ -86,9 +87,118 @@ function ready(msg){$('status').className='notice';$('status').innerHTML='<b>✓
 function pool(){return src==='of'?banks.of:src==='ugt'?banks.ugt:banks.exp}
 function filtered(){let p=pool().filter(q=>!q.hold);if(onlyFailed)p=p.filter(failed);if(src==='of'){if(filters.block!=='all')p=p.filter(q=>q.block===filters.block);if(filters.year!=='all')p=p.filter(q=>q.year===filters.year)}else if(src==='ugt'){if(filters.block!=='all'){let ids=new Set((banks.ugtMeta?.topics||[]).filter(t=>t.bloque===filters.block).map(t=>t.id));p=p.filter(q=>ids.has(q.topic))}if(filters.topic!=='all')p=p.filter(q=>q.topic===filters.topic);if(filters.sub!=='all')p=p.filter(q=>q.sub===filters.sub)}else{if(filters.block!=='all')p=p.filter(q=>q.block===filters.block);if(filters.topic!=='all')p=p.filter(q=>q.topic===filters.topic)}return p}
 function shuffle(a){a=[...a];for(let i=a.length-1;i>0;i--){let j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
-function makeDeck(){let p=filtered();if(mode==='smart'){let d=shuffle(p.filter(due)),n=shuffle(p.filter(fresh)).slice(0,20);return [...d,...n]}if(mode==='all')return shuffle(p);return []}
-function newSession(){session={ok:0,n:0};answered=false;pos=0;if(mode==='sim'){renderSimSetup();return}deck=makeDeck();renderQuestion()}
-function renderQuestion(){refreshHeader();if(!deck.length){$('counter').textContent='Sin preguntas';$('bar').style.width='0%';$('stage').innerHTML='<div class="question">No hay preguntas con este filtro.</div><p class="muted">Prueba otro bloque o quita “Falladas”.</p>';$('nextBtn').disabled=true;return}if(pos>=deck.length){$('stage').innerHTML=`<div class="question">Sesión terminada</div><div class="big">${session.ok}/${session.n}</div><p class="muted">Aciertos de esta sesión.</p><button class="btn primary" onclick="newSession()">Otra sesión</button>`;$('nextBtn').disabled=true;return}let q=deck[pos],r=rec(q.id);$('counter').textContent=`Pregunta ${pos+1} de ${deck.length}`;$('sessionScore').textContent=`Sesión ${session.ok}/${session.n}`;$('bar').style.width=`${pos/deck.length*100}%`;$('nextBtn').disabled=true;answered=false;let meta=src==='of'?`<span class="tag">${esc(q.year||'ADIF')}</span><span class="tag">${esc(q.topic)}</span>`:src==='ugt'?`<span class="tag">UGT</span><span class="tag">${esc(q.topic)}</span>${q.sub?`<span class="tag">${esc(q.sub)}</span>`:''}`:`<span class="tag warn">🧪 Nueva 2026</span><span class="tag">${esc(q.block==='COM'?'Común':q.block==='ESP'?'Específica':'Inglés')}</span><span class="tag">${esc(q.topic)}</span>`;let opts=(q.opts||[]).map((o,i)=>`<button class="option" data-i="${i}"><b>${String.fromCharCode(65+i)}.</b> ${esc(o)}</button>`).join('');$('stage').innerHTML=`<div class="qmeta">${meta}${r.b?`<span class="tag">Caja ${r.b}</span>`:''}</div><div class="question">${esc(q.q)}</div>${opts}<div id="feedback"></div>`;document.querySelectorAll('.option').forEach(b=>b.onclick=()=>answer(+b.dataset.i))}
+
+function balancedArea(q){
+ const b=String(q.block||'').toUpperCase();
+ if(b==='GEN'||b==='COM')return 'COM';
+ if(b==='ESP')return 'ESP';
+ if(b==='ING')return 'ING';
+ const m=(banks.ugtMeta?.topics||[]).find(t=>t.id===q.topic);
+ if(m?.bloque==='COM')return 'COM';
+ if(m?.bloque==='ESP')return 'ESP';
+ return /INGL[EÉ]S|ENGLISH/i.test(String(q.topic||''))?'ING':'ESP';
+}
+function officialSection(q){
+ if(balancedArea(q)==='ING')return 'Inglés · '+(q.year||'sin año');
+ const t=(q.q+' '+(q.ref||'')).toUpperCase();
+ if(balancedArea(q)==='COM'){
+   if(/PRL|PREVENCI[ÓO]N|RIESGOS LABORALES|SEGURIDAD Y SALUD/.test(t))return 'PRL';
+   if(/IGUALDAD|LO 3\/2007|ORG[ÁA]NICA 3\/2007|ACOSO POR RAZ[ÓO]N/.test(t))return 'Igualdad';
+   if(/INCOMPATIBILID|53\/1984/.test(t))return 'Incompatibilidades';
+   if(/TREBEP|EBEP|5\/2015|C[ÓO]DIGO DE CONDUCTA/.test(t))return 'TREBEP';
+   if(/ESTATUTO|2395\/2004|ADIF/.test(t))return 'Estatuto ADIF';
+   if(/38\/2015|SECTOR FERROVIARIO/.test(t))return 'Sector ferroviario';
+   return 'Común · '+(q.year||'General');
+ }
+ if(/842\/2002|ITC.BT|BAJA TENSI[ÓO]N|ELECTROT[ÉE]CNICO/.test(t))return 'REBT';
+ if(/223\/2008|ITC.LAT|L[IÍ]NEAS EL[ÉE]CTRICAS DE ALTA TENSI[ÓO]N/.test(t))return 'Líneas AT';
+ if(/337\/2014|ITC.RAT|INSTALACIONES DE ALTA TENSI[ÓO]N/.test(t))return 'RAT';
+ if(/RCF|CIRCULACI[ÓO]N FERROVIARIA|BLOQUEO AUTOM[ÁA]TICO/.test(t))return 'RCF';
+ if(/CALIDAD|ARM[ÓO]NICOS|FLICKER|50163/.test(t))return 'Calidad energía';
+ return 'Específica · '+(q.year||'General');
+}
+function balancedSection(q){
+ return q.source==='of' ? officialSection(q) : String(q.topic||'Sin tema');
+}
+function spreadGroups(arr,keyFn){
+ const groups=new Map();
+ for(const q of arr){
+   const k=String(keyFn(q)||'Otros');
+   if(!groups.has(k))groups.set(k,[]);
+   groups.get(k).push(q);
+ }
+ const slots=shuffle([...groups.values()]).map(list=>shuffle(list));
+ const result=[];
+ let remaining=arr.length;
+ while(remaining>0){
+   for(const slot of slots){
+     if(slot.length){result.push(slot.pop());remaining--}
+   }
+ }
+ return result;
+}
+function rotateTopics(arr){
+ return spreadGroups(arr,q=>balancedSection(q)).length===0?[]:
+   spreadSectionsWithSubtopics(arr);
+}
+function spreadSectionsWithSubtopics(arr){
+ const bySection=new Map();
+ for(const q of arr){
+   const k=balancedSection(q);
+   if(!bySection.has(k))bySection.set(k,[]);
+   bySection.get(k).push(q);
+ }
+ const grouped=shuffle([...bySection.values()]).map(list=>{
+   return spreadGroups(list,q=>(q.source==='of'?(q.year||'Año no identificado'):(q.sub||'Subtema general')));
+ });
+ const result=[];let left=arr.length;
+ while(left>0){for(const slot of grouped){if(slot.length){result.push(slot.shift());left--}}}
+ return result;
+}
+function canMixOfficialEnglish(){
+ return src==='ugt'&&!onlyFailed&&filters.block==='all'&&filters.topic==='all'&&filters.sub==='all'&&filters.year==='all';
+}
+function balancedAvailable(){
+ let p=filtered();
+ // UGT carece de inglés. Sólo en un test general se complementa con
+ // preguntas oficiales de inglés, claramente etiquetadas; no se modifica UGT.
+ if(canMixOfficialEnglish() && !p.some(q=>balancedArea(q)==='ING')){
+   p=[...p,...banks.of.filter(q=>!q.hold&&q.block==='ing')];
+ }
+ return p;
+}
+function balancedDeck(){
+ const p=balancedAvailable();
+ const buckets={COM:[],ESP:[],ING:[]};
+ for(const q of p)buckets[balancedArea(q)].push(q);
+ const order={};
+ for(const key of ['COM','ESP','ING'])order[key]=rotateTopics(buckets[key]);
+ const out=[];
+ let active=true;
+ while(active){
+   active=false;
+   for(const key of ['COM','ESP','ING']){
+     if(order[key].length){out.push(order[key].shift());active=true}
+   }
+ }
+ return out;
+}
+function showBalancedInfo(){
+ const el=$('rotationInfo');
+ if(!el)return;
+ const active=mode==='all'||mode==='sim';
+ el.hidden=!active;
+ if(!active)return;
+ const p=balancedAvailable(),counts={COM:0,ESP:0,ING:0};
+ for(const q of p)counts[balancedArea(q)]++;
+ const base='Orden: Común → Específica → Inglés · temas y subtemas alternados · sin repetir preguntas.';
+ const scarce=counts.ING<Math.min(counts.COM,counts.ESP)
+  ?' Cuando se agote inglés, continuarán los bloques pendientes sin repetir preguntas.':'';
+ el.textContent=base+(canMixOfficialEnglish()?' UGT no incluye inglés; se utilizan '+counts.ING+' preguntas oficiales ADIF identificadas como tales.':'')+scarce;
+}
+function makeDeck(){let p=filtered();if(mode==='smart'){let d=shuffle(p.filter(due)),n=shuffle(p.filter(fresh)).slice(0,20);return [...d,...n]}if(mode==='all')return balancedDeck();return []}
+function newSession(){session={ok:0,n:0};answered=false;pos=0;showBalancedInfo();if(mode==='sim'){renderSimSetup();return}deck=makeDeck();renderQuestion()}
+function renderQuestion(){refreshHeader();if(!deck.length){$('counter').textContent='Sin preguntas';$('bar').style.width='0%';$('stage').innerHTML='<div class="question">No hay preguntas con este filtro.</div><p class="muted">Prueba otro bloque o quita “Falladas”.</p>';$('nextBtn').disabled=true;return}if(pos>=deck.length){$('stage').innerHTML=`<div class="question">Sesión terminada</div><div class="big">${session.ok}/${session.n}</div><p class="muted">Aciertos de esta sesión.</p><button class="btn primary" onclick="newSession()">Otra sesión</button>`;$('nextBtn').disabled=true;return}let q=deck[pos],r=rec(q.id);$('counter').textContent=`Pregunta ${pos+1} de ${deck.length}`;$('sessionScore').textContent=`Sesión ${session.ok}/${session.n}`;$('bar').style.width=`${pos/deck.length*100}%`;$('nextBtn').disabled=true;answered=false;let meta=(src==='of'||q.source==='of')?`<span class="tag">${esc(src==='ugt'?'ADIF · Inglés':(q.year||'ADIF'))}</span><span class="tag">${esc(q.topic)}</span>`:src==='ugt'?`<span class="tag">UGT</span><span class="tag">${esc(q.topic)}</span>${q.sub?`<span class="tag">${esc(q.sub)}</span>`:''}`:`<span class="tag warn">🧪 Nueva 2026</span><span class="tag">${esc(q.block==='COM'?'Común':q.block==='ESP'?'Específica':'Inglés')}</span><span class="tag">${esc(q.topic)}</span>`;let opts=(q.opts||[]).map((o,i)=>`<button class="option" data-i="${i}"><b>${String.fromCharCode(65+i)}.</b> ${esc(o)}</button>`).join('');$('stage').innerHTML=`<div class="qmeta">${meta}${r.b?`<span class="tag">Caja ${r.b}</span>`:''}</div><div class="question">${esc(q.q)}</div>${opts}<div id="feedback"></div>`;document.querySelectorAll('.option').forEach(b=>b.onclick=()=>answer(+b.dataset.i))}
 
 const STUDY_KB=[
   {term:'RAT',title:'RAT',keys:['rat','alta tension','instalaciones alta tension'],text:'RAT = Reglamento sobre condiciones técnicas y garantías de seguridad en instalaciones eléctricas de alta tensión. Categorías: 3.ª >1 kV y ≤30 kV; 2.ª >30 kV y ≤66 kV; 1.ª >66 kV y <220 kV; especial ≥220 kV (y determinados casos de la red de transporte).'},
@@ -316,8 +426,8 @@ function renderFilters(){let el=$('filters');if(src==='of'){let years=[...new Se
 document.querySelectorAll('[data-src]').forEach(b=>b.onclick=()=>{src=b.dataset.src;filters={block:'all',year:'all',topic:'all',sub:'all'};document.querySelectorAll('[data-src]').forEach(x=>x.classList.toggle('on',x===b));renderFilters();newSession();renderStudy();renderStats()});
 document.querySelectorAll('[data-mode]').forEach(b=>b.onclick=()=>{mode=b.dataset.mode;document.querySelectorAll('[data-mode]').forEach(x=>x.classList.toggle('on',x===b));newSession()});
 $('failedToggle').onclick=()=>{onlyFailed=!onlyFailed;$('failedToggle').classList.toggle('primary',onlyFailed);newSession();renderStudy()};
-function renderSimSetup(){let p=filtered();$('counter').textContent='Simulacro';$('bar').style.width='0';$('nextBtn').disabled=true;$('stage').innerHTML=`<div class="question">Configura el simulacro</div><p class="muted">Sin corrección hasta el final. El banco se elige con los filtros superiores.</p><div class="grid grid2">${[20,40,60,100].map(n=>`<button class="btn" onclick="startSim(${n})">${n} preguntas</button>`).join('')}</div><p class="tiny muted">Disponibles con el filtro actual: ${p.length}</p>`}
-function startSim(n){let qs=shuffle(filtered()).slice(0,n);if(!qs.length)return;let answers=new Array(qs.length).fill(null),i=0;function draw(){let q=qs[i];$('counter').textContent=`Simulacro ${i+1}/${qs.length}`;$('bar').style.width=`${i/qs.length*100}%`;$('stage').innerHTML=`<div class="qmeta"><span class="tag">Simulacro</span><span class="tag">${esc(q.topic||q.year||'')}</span></div><div class="question">${esc(q.q)}</div>${q.opts.map((o,j)=>`<button class="option ${answers[i]===j?'correct':''}" data-i="${j}"><b>${String.fromCharCode(65+j)}.</b> ${esc(o)}</button>`).join('')}<div class="actions"><button class="btn" id="simPrev" ${i===0?'disabled':''}>← Anterior</button><button class="btn primary" id="simNext">${i===qs.length-1?'Entregar':'Siguiente →'}</button></div>`;document.querySelectorAll('.option').forEach(b=>b.onclick=()=>{answers[i]=+b.dataset.i;draw()});$('simPrev').onclick=()=>{i--;draw()};$('simNext').onclick=()=>{if(i<qs.length-1){i++;draw()}else finish()}}
+function renderSimSetup(){let p=balancedAvailable();$('counter').textContent='Simulacro';$('bar').style.width='0';$('nextBtn').disabled=true;$('stage').innerHTML=`<div class="question">Configura el simulacro</div><p class="muted">Sin corrección hasta el final. El banco se elige con los filtros superiores.</p><div class="grid grid2">${[20,40,60,100].map(n=>`<button class="btn" onclick="startSim(${n})">${n} preguntas</button>`).join('')}</div><p class="tiny muted">Disponibles con el filtro actual: ${p.length}</p>`}
+function startSim(n){let qs=balancedDeck().slice(0,n);if(!qs.length)return;let answers=new Array(qs.length).fill(null),i=0;function draw(){let q=qs[i];$('counter').textContent=`Simulacro ${i+1}/${qs.length}`;$('bar').style.width=`${i/qs.length*100}%`;$('stage').innerHTML=`<div class="qmeta"><span class="tag">Simulacro</span><span class="tag">${esc(q.source==='of'&&src==='ugt'?'ADIF · Inglés':q.topic||q.year||'')}</span></div><div class="question">${esc(q.q)}</div>${q.opts.map((o,j)=>`<button class="option ${answers[i]===j?'correct':''}" data-i="${j}"><b>${String.fromCharCode(65+j)}.</b> ${esc(o)}</button>`).join('')}<div class="actions"><button class="btn" id="simPrev" ${i===0?'disabled':''}>← Anterior</button><button class="btn primary" id="simNext">${i===qs.length-1?'Entregar':'Siguiente →'}</button></div>`;document.querySelectorAll('.option').forEach(b=>b.onclick=()=>{answers[i]=+b.dataset.i;draw()});$('simPrev').onclick=()=>{i--;draw()};$('simNext').onclick=()=>{if(i<qs.length-1){i++;draw()}else finish()}}
  function finish(){let ok=0,wrong=[];qs.forEach((q,k)=>{let good=answers[k]===q.ans;if(good)ok++;else wrong.push({q,a:answers[k]});if(answers[k]!=null)bump(q.id,good)});$('stage').innerHTML=`<div class="question">Resultado</div><div class="big">${ok}/${qs.length}</div><p class="muted">${Math.round(ok/qs.length*100)}% de aciertos · ${wrong.length} fallos/blancos.</p><button class="btn primary" onclick="newSession()">Nuevo simulacro</button>`;$('bar').style.width='100%'}draw()}
 function renderStudy(){if(!$('studyList'))return;let p=filtered(),s=$('search').value.trim().toLowerCase();if(s)p=p.filter(q=>[q.q,...(q.opts||[]),q.ref,q.note,q.explanation,q.topic,q.sub].join(' ').toLowerCase().includes(s));$('studyCount').textContent=`${p.length} preguntas`;$('studyList').innerHTML=p.slice(0,250).map(q=>`<div class="listitem"><div class="qmeta"><span class="tag ${src==='exp'?'warn':''}">${esc(src==='of'?(q.year||'ADIF'):src==='ugt'?'UGT':'🧪 Nueva 2026')}</span><span class="tag">${esc(q.topic||'')}</span></div><b>${esc(q.q)}</b>${showAllAnswers?`<div class="answer"><b>${String.fromCharCode(65+q.ans)}.</b> ${esc(q.opts[q.ans])}${src==='exp'&&q.explanation?`<div style="margin-top:6px"><b>Explicación:</b> ${esc(q.explanation)}</div>`:''}${q.ref?`<div class="tiny muted" style="margin-top:5px">${esc(q.ref)}</div>`:''}</div>`:''}</div>`).join('')+(p.length>250?`<p class="muted">Mostrando las primeras 250. Usa el buscador para acotar.</p>`:'')}
 $('search').oninput=renderStudy;$('showAnswers').onclick=()=>{showAllAnswers=!showAllAnswers;$('showAnswers').textContent=showAllAnswers?'Ocultar respuestas':'Mostrar respuestas';renderStudy()};

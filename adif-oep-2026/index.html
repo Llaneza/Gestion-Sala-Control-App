@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="ADIF 26/11PO">
 <link rel="manifest" href="manifest.webmanifest">
-<title>ADIF 26/11PO · OEP 2026 · Alejandro · Experimental v1.2</title>
+<title>ADIF 26/11PO · OEP 2026 · Alejandro · Experimental v1.3</title>
 <style>
 :root{--bg:#f3f5f2;--card:#fff;--ink:#162119;--muted:#66736b;--line:#dce3de;--green:#0b5d3b;--green2:#e3f1e9;--bad:#bd3b31;--bad2:#f9e7e4;--amber:#a96e00;--shadow:0 3px 14px rgba(20,42,28,.07);--r:16px}
 @media(prefers-color-scheme:dark){:root{--bg:#0d1410;--card:#151f19;--ink:#e9f0eb;--muted:#99a99f;--line:#2a3a31;--green:#36b67b;--green2:#173126;--bad:#ff7568;--bad2:#391c18;--amber:#efb443;--shadow:none}}
@@ -50,7 +50,7 @@ main.wrap{padding-bottom:calc(var(--footer-clearance) + 30px)}
       <div class="seg" style="width:100%;min-width:0">
         <button class="on" style="flex:1" id="pdfTabComun">Parte común</button>
         <button style="flex:1" id="pdfTabEspecifica">Parte específica</button>
-        <button style="flex:1" id="pdfTabReview">Repaso falladas</button>
+        <button style="flex:1" id="pdfTabReview">Falladas <span id="pdfReviewCount" aria-label="Preguntas pendientes">0</span></button>
       </div>
       <p id="pdfExamHint" class="tiny muted" style="margin-bottom:0"></p>
     </div>
@@ -484,6 +484,7 @@ function renderPdfExamHome(){
  $('pdfTabComun').classList.toggle('on',pdfExamPage!=='review'&&pdfExamArea==='comun');
  $('pdfTabEspecifica').classList.toggle('on',pdfExamPage!=='review'&&pdfExamArea==='especifica');
  $('pdfTabReview').classList.toggle('on',pdfExamPage==='review');
+ pdfUpdateReviewCount();
  const topicList=PDF_CATALOG.filter(x=>x.area===pdfExamArea);
  const total=topicList.reduce((n,x)=>n+x.exams.reduce((a,e)=>a+e.questions.length,0),0);
  $('pdfExamHint').textContent=pdfExamPage==='review'?'Repaso mezclado de preguntas falladas en parte común y específica · corrección inmediata':total+' preguntas en '+topicList.reduce((n,x)=>n+x.exams.length,0)+' exámenes · '+topicList.length+' materias';
@@ -675,6 +676,7 @@ function pdfMixAnswer(option){
  prev.last=Date.now();pdfMixProgress[id]=prev;
  writeJSON(PDF_MIX_PROGRESS_KEY,pdfMixProgress);
  if(!ok)pdfReviewMark(id,true);
+ pdfUpdateReviewCount();
  pdfPaintMixed();
  const feedback=$('pdfMixFeedback');
  if(feedback)feedback.scrollIntoView({behavior:'smooth',block:'nearest'});
@@ -748,11 +750,15 @@ const PDF_REVIEW_PROGRESS_KEY='adif26-pdf-exams-review-v01';
 const PDF_REVIEW_SESSION_KEY='adif26-pdf-exams-review-session-v01';
 let pdfReviewProgress=readJSON(PDF_REVIEW_PROGRESS_KEY,{});
 let pdfReviewRound=readJSON(PDF_REVIEW_SESSION_KEY,null);
+function pdfUpdateReviewCount(){
+ const node=$('pdfReviewCount');if(node)node.textContent=String(pdfReviewPending().length);
+}
 function pdfReviewMark(id,pending){
  if(!PDF_MIX_BY_ID.has(id))return;
  const prev=pdfReviewProgress[id]||{};
  pdfReviewProgress[id]={...prev,pending,last:Date.now()};
  writeJSON(PDF_REVIEW_PROGRESS_KEY,pdfReviewProgress);
+ pdfUpdateReviewCount();
 }
 function pdfReviewCaptureFullExam(p){
  // Las versiones anteriores guardaban sólo la nota global de cada examen,
@@ -765,7 +771,7 @@ function pdfReviewCaptureFullExam(p){
    pdfReviewProgress[id]={...(pdfReviewProgress[id]||{}),pending:true,last:Date.now()};
    changed=true;
  });
- if(changed)writeJSON(PDF_REVIEW_PROGRESS_KEY,pdfReviewProgress);
+ if(changed){writeJSON(PDF_REVIEW_PROGRESS_KEY,pdfReviewProgress);pdfUpdateReviewCount()}
 }
 function pdfReviewPending(){
  return PDF_MIX_ALL.filter(x=>{

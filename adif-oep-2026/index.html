@@ -796,7 +796,7 @@ function pdfReviewBuildOrder(){
 }
 function pdfReviewSession(){
  const ids=pdfReviewRound?.ids, answers=pdfReviewRound?.answers;
- if(Array.isArray(ids)&&new Set(ids).size===ids.length&&
+ if(Array.isArray(ids)&&!(ids.length===0&&pdfReviewPending().length>0)&&new Set(ids).size===ids.length&&
    ids.every(id=>PDF_MIX_BY_ID.has(id))&&
    Number.isInteger(pdfReviewRound.pos)&&pdfReviewRound.pos>=0&&
    pdfReviewRound.pos<=ids.length&&answers&&typeof answers==='object'&&!Array.isArray(answers)){

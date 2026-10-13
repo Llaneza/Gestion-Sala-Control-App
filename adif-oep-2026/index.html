@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="ADIF 26/11PO">
 <link rel="manifest" href="manifest.webmanifest">
-<title>ADIF 26/11PO · OEP 2026 · Alejandro · Experimental v1.3</title>
+<title>ADIF 26/11PO · OEP 2026 · Alejandro · Experimental v1.3.1</title>
 <style>
 :root{--bg:#f3f5f2;--card:#fff;--ink:#162119;--muted:#66736b;--line:#dce3de;--green:#0b5d3b;--green2:#e3f1e9;--bad:#bd3b31;--bad2:#f9e7e4;--amber:#a96e00;--shadow:0 3px 14px rgba(20,42,28,.07);--r:16px}
 @media(prefers-color-scheme:dark){:root{--bg:#0d1410;--card:#151f19;--ink:#e9f0eb;--muted:#99a99f;--line:#2a3a31;--green:#36b67b;--green2:#173126;--bad:#ff7568;--bad2:#391c18;--amber:#efb443;--shadow:none}}
@@ -487,7 +487,7 @@ function renderPdfExamHome(){
  pdfUpdateReviewCount();
  const topicList=PDF_CATALOG.filter(x=>x.area===pdfExamArea);
  const total=topicList.reduce((n,x)=>n+x.exams.reduce((a,e)=>a+e.questions.length,0),0);
- $('pdfExamHint').textContent=pdfExamPage==='review'?'Repaso mezclado de preguntas falladas en parte común y específica · corrección inmediata':total+' preguntas en '+topicList.reduce((n,x)=>n+x.exams.length,0)+' exámenes · '+topicList.length+' materias';
+ $('pdfExamHint').textContent=pdfExamPage==='review'?'Repaso intercalado: común → específica · cuando se agota una parte, continúa la otra · guardado automático':total+' preguntas en '+topicList.reduce((n,x)=>n+x.exams.length,0)+' exámenes · '+topicList.length+' materias';
  $('pdfMixedPractice').hidden=pdfExamPage!=='mix';
  $('pdfReviewPractice').hidden=pdfExamPage!=='review';
  $('pdfExamCatalog').hidden=pdfExamPage!=='catalog';
@@ -926,7 +926,7 @@ $('refreshBanks').textContent='Banco integrado';
 $('refreshBanks').disabled=true;
 $('clearBanks').style.display='none';
 $('exportBtn').onclick=()=>{
-  let payload={version:3,exported:new Date().toISOString(),progress:store,log:dlog,expProgress:expStore,expLog:expLog,pdfExamProgress:pdfExamProgress,pdfExamDraft:readJSON(PDF_EXAM_DRAFT_KEY,null)};
+  let payload={version:3,exported:new Date().toISOString(),progress:store,log:dlog,expProgress:expStore,expLog:expLog,pdfExamProgress:pdfExamProgress,pdfExamDraft:readJSON(PDF_EXAM_DRAFT_KEY,null),pdfMixedSession:pdfMixSessions,pdfMixedProgress:pdfMixProgress,pdfReviewProgress:pdfReviewProgress,pdfReviewSession:pdfReviewRound};
   let blob=new Blob([JSON.stringify(payload)],{type:'application/json'}),a=document.createElement('a');
   a.href=URL.createObjectURL(blob);a.download='ADIF26-progreso-'+dayKey()+'.json';a.click();URL.revokeObjectURL(a.href);
 };
@@ -940,6 +940,15 @@ $('importInput').onchange=async e=>{
     if(x.expLog)expLog=x.expLog;
     if(x.pdfExamProgress)pdfExamProgress=x.pdfExamProgress;
     if(x.pdfExamDraft)writeJSON(PDF_EXAM_DRAFT_KEY,x.pdfExamDraft);
+    // Campos opcionales: las copias antiguas conservan el progreso PDF actual.
+    if(x.pdfMixedSession)pdfMixSessions=x.pdfMixedSession;
+    if(x.pdfMixedProgress)pdfMixProgress=x.pdfMixedProgress;
+    if(x.pdfReviewProgress)pdfReviewProgress=x.pdfReviewProgress;
+    if(x.pdfReviewSession)pdfReviewRound=x.pdfReviewSession;
+    writeJSON(PDF_MIX_SESSION_KEY,pdfMixSessions);
+    writeJSON(PDF_MIX_PROGRESS_KEY,pdfMixProgress);
+    writeJSON(PDF_REVIEW_PROGRESS_KEY,pdfReviewProgress);
+    if(pdfReviewRound)writeJSON(PDF_REVIEW_SESSION_KEY,pdfReviewRound);
     writeJSON(STORE_KEY,store);writeJSON(LOG_KEY,dlog);writeJSON(EXP_STORE_KEY,expStore);writeJSON(EXP_LOG_KEY,expLog);writeJSON(PDF_EXAM_PROGRESS_KEY,pdfExamProgress);
     alert('Progreso restaurado');renderAll();newSession();
   }catch{alert('El archivo no parece una copia válida')}
